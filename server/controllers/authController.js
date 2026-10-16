@@ -11,7 +11,8 @@ const generateToken = (userId) => {
 
 // POST /api/auth/register
 export const register = async (req, res) => {
-  const { name, email, password } = req.body;
+  // req.body is undefined in Express 5 if no JSON body was sent
+  const { name, email, password } = req.body ?? {};
 
   if (!name?.trim() || !email?.trim() || !password) {
     res.status(400);
@@ -40,7 +41,7 @@ export const register = async (req, res) => {
 
 // POST /api/auth/login
 export const login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password } = req.body ?? {};
 
   if (!email?.trim() || !password) {
     res.status(400);
