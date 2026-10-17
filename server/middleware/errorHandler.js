@@ -33,6 +33,17 @@ export const errorHandler = (err, req, res, next) => {
     message = "That value is already in use";
   }
 
+  // File upload problems (from multer)
+  if (err.name === "MulterError") {
+    const uploadMessages = {
+      LIMIT_FILE_SIZE: "File is too large. The maximum size is 5 MB.",
+      LIMIT_FILE_COUNT: "Please upload one file at a time.",
+      LIMIT_UNEXPECTED_FILE: 'Please upload one file in a form field named "file".',
+    };
+    statusCode = err.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+    message = uploadMessages[err.code] ?? err.message;
+  }
+
   // Malformed JSON in the request body
   if (err.type === "entity.parse.failed") {
     statusCode = 400;

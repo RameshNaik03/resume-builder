@@ -9,3 +9,14 @@ export const authLimiter = rateLimit({
   // Same { message } shape as our other errors, so the client shows it as-is
   message: { message: "Too many attempts. Please try again in 15 minutes." },
 });
+
+// Limits resume imports per logged-in user (imports parse files and may call the AI)
+// Must run after the protect middleware, which sets req.user.
+export const importLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 10, // Max 10 imports per user per hour
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user._id.toString(), // Count per user, not per IP address
+  message: { message: "You've reached the limit of 10 imports per hour. Please try again later." },
+});
