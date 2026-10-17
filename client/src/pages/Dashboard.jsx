@@ -8,6 +8,7 @@ import usePageTitle from "../hooks/usePageTitle";
 import ResumeCard, { ResumeCardSkeleton } from "../components/ResumeCard";
 import ConfirmModal from "../components/ConfirmModal";
 import EmptyState from "../components/EmptyState";
+import ImportResumeModal from "../components/ImportResumeModal";
 
 // "Good morning" / "Good afternoon" / "Good evening" based on the current hour
 const getGreeting = () => {
@@ -29,6 +30,7 @@ export default function Dashboard() {
   const [deleting, setDeleting] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0); // Increase it to fetch the list again
+  const [isImportOpen, setIsImportOpen] = useState(false);
 
   usePageTitle("Dashboard");
 
@@ -107,12 +109,20 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <button type="button" onClick={handleCreate} disabled={creating} className="btn-primary self-start sm:self-auto">
-          <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-          {creating ? "Creating..." : "Create new resume"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => setIsImportOpen(true)} className="btn-secondary">
+            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
+            </svg>
+            Upload existing resume
+          </button>
+          <button type="button" onClick={handleCreate} disabled={creating} className="btn-primary">
+            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            {creating ? "Creating..." : "Create new resume"}
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -132,7 +142,7 @@ export default function Dashboard() {
             </button>
           </div>
         ) : resumes.length === 0 ? (
-          <EmptyState onCreate={handleCreate} creating={creating} />
+          <EmptyState onCreate={handleCreate} onUpload={() => setIsImportOpen(true)} creating={creating} />
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {resumes.map((resume) => (
@@ -157,6 +167,16 @@ export default function Dashboard() {
         onCancel={() => setResumeToDelete(null)}
         loading={deleting}
       />
+
+      {isImportOpen && (
+        <ImportResumeModal
+          onClose={() => setIsImportOpen(false)}
+          onStartFromScratch={() => {
+            setIsImportOpen(false);
+            handleCreate();
+          }}
+        />
+      )}
     </div>
   );
 }

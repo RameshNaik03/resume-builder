@@ -1,5 +1,5 @@
 // Shown on the dashboard when the user has no resumes yet
-export default function EmptyState({ onCreate, creating }) {
+export default function EmptyState({ onCreate, onUpload, creating }) {
   return (
     <div className="card flex flex-col items-center border-dashed px-6 py-16 text-center">
       <div className="grid size-14 place-items-center rounded-2xl bg-indigo-50 text-indigo-600">
@@ -10,11 +10,17 @@ export default function EmptyState({ onCreate, creating }) {
       </div>
       <h2 className="mt-4 text-lg font-semibold text-slate-900">No resumes yet</h2>
       <p className="mt-1 max-w-sm text-sm text-slate-500">
-        Create your first resume. You can make as many versions as you like and tailor each one to a job.
+        Create your first resume, or upload one you already have and we'll fill in the editor for you.
       </p>
-      <button type="button" onClick={onCreate} disabled={creating} className="btn-primary mt-6">
-        {creating ? "Creating..." : "Create your first resume"}
-      </button>
+      <div className="mt-6 flex flex-wrap justify-center gap-3">
+        <button type="button" onClick={onCreate} disabled={creating} className="btn-primary">
+          {creating ? "Creating..." : "Create your first resume"}
+        </button>
+        <button type="button" onClick={onUpload} className="btn-secondary">
+          Upload existing resume
+        </button>
+      </div>
+      <p className="mt-3 text-xs text-slate-400">PDF or DOCX, up to 5 MB</p>
     </div>
   );
 }

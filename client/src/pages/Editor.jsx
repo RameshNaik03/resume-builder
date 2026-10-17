@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import toast from "react-hot-toast";
 import { getTemplate } from "../templates/registry";
@@ -44,6 +44,15 @@ export default function Editor() {
   const [activeTab, setActiveTab] = useState("edit"); // Mobile only: "edit" or "preview"
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
+  // After importing a file, the dashboard sends us here with { imported: true }
+  const location = useLocation();
+  const [showImportBanner, setShowImportBanner] = useState(Boolean(location.state?.imported));
+  const dismissImportBanner = () => {
+    setShowImportBanner(false);
+    // Clear the flag so the banner doesn't come back when the page is refreshed
+    navigate(location.pathname, { replace: true, state: null });
+  };
+
   usePageTitle(resume?.title?.trim() || "Editor");
 
   // The A4 sheet inside ResumePreview; react-to-print turns it into the PDF.
@@ -71,6 +80,7 @@ export default function Editor() {
   const handleSelectTemplate = (template) => {
     updateResume({ template: template.id });
     setIsPickerOpen(false);
+    if (showImportBanner) dismissImportBanner(); // Picking a template was the banner's last step
     toast.success(`Template changed to ${template.name}`, { id: "template-changed" });
   };
 
@@ -198,6 +208,39 @@ export default function Editor() {
           </span>
         </div>
       </div>
+
+      {/* Shown once, right after importing a file */}
+      {showImportBanner && (
+        <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
+          <div
+            className="flex flex-col gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 sm:flex-row sm:items-center"
+            role="status"
+          >
+            <svg className="hidden size-5 shrink-0 text-indigo-600 sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            <p className="flex-1 text-sm text-indigo-900">
+              <span className="font-semibold">We imported your resume.</span> Please check each section, then pick a
+              template.
+            </p>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setIsPickerOpen(true)} className="btn-primary px-3 py-1.5">
+                Pick a template
+              </button>
+              <button
+                type="button"
+                onClick={dismissImportBanner}
+                aria-label="Dismiss"
+                className="grid size-8 place-items-center rounded-lg text-indigo-400 hover:bg-indigo-100 hover:text-indigo-700"
+              >
+                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Two columns on large screens; tabs decide which one shows on small screens */}
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-2">
