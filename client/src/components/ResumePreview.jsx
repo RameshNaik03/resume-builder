@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import ClassicTemplate from "./templates/ClassicTemplate";
+import TemplateRenderer from "../templates/TemplateRenderer";
+import ResumeSheet from "./ResumeSheet";
 
 const A4_WIDTH_PX = 794; // 210mm at 96 DPI (how browsers convert mm to pixels)
 const A4_HEIGHT_PX = 1123; // 297mm
@@ -33,13 +34,9 @@ export default function ResumePreview({ resume, printRef }) {
       {/* transform: scale() doesn't change layout size, so reserve the scaled height ourselves */}
       <div style={{ height: sheetHeight * scale }}>
         <div style={{ width: A4_WIDTH_PX, transform: `scale(${scale})`, transformOrigin: "top left" }}>
-          {/* The A4 sheet. box-decoration-clone repeats the padding on every printed page. */}
-          <div
-            ref={printRef}
-            className="min-h-[297mm] w-[210mm] bg-white px-[16mm] py-[14mm] shadow-lg ring-1 ring-slate-200 box-decoration-clone print:min-h-0 print:shadow-none print:ring-0"
-          >
-            <ClassicTemplate resume={resume} />
-          </div>
+          <ResumeSheet ref={printRef} className="shadow-lg ring-1 ring-slate-200 print:shadow-none print:ring-0">
+            <TemplateRenderer resume={resume} />
+          </ResumeSheet>
         </div>
       </div>
     </div>

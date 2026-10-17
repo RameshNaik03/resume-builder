@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
+import toast from "react-hot-toast";
+import { getTemplate } from "../templates/registry";
 import useResume from "../hooks/useResume";
 import usePageTitle from "../hooks/usePageTitle";
 import Loader from "../components/Loader";
@@ -12,6 +14,7 @@ import SkillsForm from "../components/editor/SkillsForm";
 import ExperienceForm from "../components/editor/ExperienceForm";
 import EducationForm from "../components/editor/EducationForm";
 import ProjectsForm from "../components/editor/ProjectsForm";
+import TemplatePicker from "../components/editor/TemplatePicker";
 
 // Text and dot colour for each save status
 const STATUS_STYLES = {
@@ -39,6 +42,7 @@ export default function Editor() {
   const navigate = useNavigate();
   const { resume, loading, loadError, status, updateResume, save } = useResume(id);
   const [activeTab, setActiveTab] = useState("edit"); // Mobile only: "edit" or "preview"
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   usePageTitle(resume?.title?.trim() || "Editor");
 
@@ -62,6 +66,13 @@ export default function Editor() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [save]);
+
+  // Apply a template from the picker (autosave stores it in resume.template)
+  const handleSelectTemplate = (template) => {
+    updateResume({ template: template.id });
+    setIsPickerOpen(false);
+    toast.success(`Template changed to ${template.name}`, { id: "template-changed" });
+  };
 
   // Save any pending changes before going back to the dashboard
   const handleBack = async () => {
@@ -125,6 +136,21 @@ export default function Editor() {
             <span className={`size-2 rounded-full ${statusStyle.dot}`} />
             {statusStyle.text}
           </span>
+
+          <button
+            type="button"
+            onClick={() => setIsPickerOpen(true)}
+            className="btn-secondary shrink-0"
+            aria-label="Templates"
+          >
+            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="9" rx="1" />
+              <rect x="14" y="3" width="7" height="5" rx="1" />
+              <rect x="14" y="12" width="7" height="9" rx="1" />
+              <rect x="3" y="16" width="7" height="5" rx="1" />
+            </svg>
+            <span className="hidden md:inline">Templates</span>
+          </button>
 
           <button
             type="button"
@@ -209,13 +235,24 @@ export default function Editor() {
         <div className={`${activeTab === "preview" ? "block" : "hidden"} lg:block`}>
           {/* On large screens the preview stays in view and scrolls on its own */}
           <div className="lg:sticky lg:top-36 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:p-1">
-            <p className="mb-3 hidden text-xs font-medium tracking-wider text-slate-400 uppercase lg:block">
-              Live preview
-            </p>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="hidden text-xs font-medium tracking-wider text-slate-400 uppercase lg:block">Live preview</p>
+              <button
+                type="button"
+                onClick={() => setIsPickerOpen(true)}
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+              >
+                {getTemplate(resume.template).name} · Change
+              </button>
+            </div>
             <ResumePreview resume={resume} printRef={printRef} />
           </div>
         </div>
       </div>
+
+      {isPickerOpen && (
+        <TemplatePicker resume={resume} onSelect={handleSelectTemplate} onClose={() => setIsPickerOpen(false)} />
+      )}
     </div>
   );
 }

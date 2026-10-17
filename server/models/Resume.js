@@ -30,9 +30,10 @@ const resumeSchema = new mongoose.Schema(
       index: true, // We always look up resumes by their owner
     },
     title: { type: String, trim: true, default: "Untitled Resume" },
-    template: { type: String, trim: true, default: "classic" },
+    template: { type: String, trim: true, default: "classic-navy" },
     personalInfo: {
       fullName: { type: String, trim: true, default: "" },
+      headline: { type: String, trim: true, default: "" }, // e.g. "Full Stack Developer"
       email: { type: String, trim: true, default: "" },
       phone: { type: String, trim: true, default: "" },
       location: { type: String, trim: true, default: "" },

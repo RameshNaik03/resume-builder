@@ -1,6 +1,7 @@
 // The list of inputs to show, so we don't repeat the same JSX six times
 const FIELDS = [
   { name: "fullName", label: "Full name", placeholder: "Ramesh Naik", type: "text" },
+  { name: "headline", label: "Professional title", placeholder: "Full Stack Developer", type: "text" },
   { name: "email", label: "Email", placeholder: "you@example.com", type: "email" },
   { name: "phone", label: "Phone", placeholder: "+91 98765 43210", type: "tel" },
   { name: "location", label: "Location", placeholder: "Bengaluru, India", type: "text" },
