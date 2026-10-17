@@ -6,15 +6,14 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true); // true until we've checked the saved token
+  // Only "loading" if there's a saved token to check. Without one we already know
+  // the user is logged out, so pages can show straight away (no spinner flash).
+  const [loading, setLoading] = useState(() => Boolean(localStorage.getItem("token")));
 
   // On app load: if a token is saved, ask the server who it belongs to
   useEffect(() => {
     const checkAuth = async () => {
-      if (!localStorage.getItem("token")) {
-        setLoading(false);
-        return;
-      }
+      if (!localStorage.getItem("token")) return;
 
       try {
         const { data } = await api.get("/auth/me");

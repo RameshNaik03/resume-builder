@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useReactToPrint } from "react-to-print";
 import useResume from "../hooks/useResume";
 import Loader from "../components/Loader";
 import ResumePreview from "../components/ResumePreview";
@@ -7,6 +8,9 @@ import CollapsibleSection from "../components/editor/CollapsibleSection";
 import PersonalInfoForm from "../components/editor/PersonalInfoForm";
 import SummaryForm from "../components/editor/SummaryForm";
 import SkillsForm from "../components/editor/SkillsForm";
+import ExperienceForm from "../components/editor/ExperienceForm";
+import EducationForm from "../components/editor/EducationForm";
+import ProjectsForm from "../components/editor/ProjectsForm";
 
 // Text and dot colour for each save status
 const STATUS_STYLES = {
@@ -16,18 +20,33 @@ const STATUS_STYLES = {
   error: { text: "Couldn't save", dot: "bg-red-500" },
 };
 
-// Sections that will be built in the next phase
-const COMING_SOON = [
-  { title: "Experience", description: "Jobs and internships" },
-  { title: "Education", description: "Schools and degrees" },
-  { title: "Projects", description: "Things you've built" },
-];
+// Print settings for the PDF: A4 paper, no page margins (the sheet has its own padding).
+// Zero margins also stop the browser from adding its date/URL headers and footers.
+const PRINT_PAGE_STYLE = `
+  @page { size: A4; margin: 0; }
+  @media print {
+    html, body { margin: 0; padding: 0; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+`;
+
+// e.g. "Jobs and internships · 2 added"
+const withCount = (text, list) => (list.length > 0 ? `${text} · ${list.length} added` : text);
 
 export default function Editor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { resume, loading, loadError, status, updateResume, save } = useResume(id);
   const [activeTab, setActiveTab] = useState("edit"); // Mobile only: "edit" or "preview"
+
+  // The A4 sheet inside ResumePreview; react-to-print turns it into the PDF.
+  // The PDF file name comes from documentTitle.
+  const printRef = useRef(null);
+  const handleDownloadPdf = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: resume?.title?.trim() || "Resume",
+    pageStyle: PRINT_PAGE_STYLE,
+  });
 
   // Ctrl+S / Cmd+S saves instead of opening the browser's "Save page" dialog
   useEffect(() => {
@@ -101,6 +120,18 @@ export default function Editor() {
 
           <button
             type="button"
+            onClick={() => handleDownloadPdf()}
+            className="btn-secondary shrink-0"
+            aria-label="Download PDF"
+          >
+            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
+            </svg>
+            <span className="hidden md:inline">Download PDF</span>
+          </button>
+
+          <button
+            type="button"
             onClick={save}
             disabled={status === "saved" || status === "saving"}
             className="btn-primary shrink-0"
@@ -153,20 +184,27 @@ export default function Editor() {
             <SkillsForm skills={resume.skills} onChange={(skills) => updateResume({ skills })} />
           </CollapsibleSection>
 
-          {COMING_SOON.map((section) => (
-            <CollapsibleSection key={section.title} title={section.title} description={section.description}>
-              <p className="text-sm text-slate-400">Coming soon.</p>
-            </CollapsibleSection>
-          ))}
+          <CollapsibleSection title="Experience" description={withCount("Jobs and internships", resume.experience)}>
+            <ExperienceForm items={resume.experience} onChange={(experience) => updateResume({ experience })} />
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Education" description={withCount("Schools and degrees", resume.education)}>
+            <EducationForm items={resume.education} onChange={(education) => updateResume({ education })} />
+          </CollapsibleSection>
+
+          <CollapsibleSection title="Projects" description={withCount("Things you've built", resume.projects)}>
+            <ProjectsForm items={resume.projects} onChange={(projects) => updateResume({ projects })} />
+          </CollapsibleSection>
         </div>
 
         {/* Right: live preview */}
         <div className={`${activeTab === "preview" ? "block" : "hidden"} lg:block`}>
-          <div className="lg:sticky lg:top-36">
+          {/* On large screens the preview stays in view and scrolls on its own */}
+          <div className="lg:sticky lg:top-36 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:p-1">
             <p className="mb-3 hidden text-xs font-medium tracking-wider text-slate-400 uppercase lg:block">
               Live preview
             </p>
-            <ResumePreview resume={resume} />
+            <ResumePreview resume={resume} printRef={printRef} />
           </div>
         </div>
       </div>

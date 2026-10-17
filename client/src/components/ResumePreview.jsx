@@ -1,50 +1,47 @@
-// A simple live preview of the resume.
-// The real, print-ready template replaces this in Phase 7.
-export default function ResumePreview({ resume }) {
-  const { personalInfo = {}, summary, skills = [] } = resume;
+import { useEffect, useRef, useState } from "react";
+import ClassicTemplate from "./templates/ClassicTemplate";
 
-  // Only show contact details that have been filled in
-  const contactItems = [
-    personalInfo.email,
-    personalInfo.phone,
-    personalInfo.location,
-    personalInfo.linkedin,
-    personalInfo.github,
-  ].filter(Boolean);
+const A4_WIDTH_PX = 794; // 210mm at 96 DPI (how browsers convert mm to pixels)
+const A4_HEIGHT_PX = 1123; // 297mm
 
-  const isEmpty = !personalInfo.fullName && contactItems.length === 0 && !summary && skills.length === 0;
+// Shows the resume on a real-size A4 sheet, shrunk to fit the panel.
+// printRef points at the sheet itself, which is what gets printed to PDF.
+export default function ResumePreview({ resume, printRef }) {
+  const containerRef = useRef(null);
+  const [scale, setScale] = useState(1);
+  const [sheetHeight, setSheetHeight] = useState(A4_HEIGHT_PX);
+
+  // Recalculate the scale whenever the panel or the sheet changes size
+  useEffect(() => {
+    const container = containerRef.current;
+    const sheet = printRef.current;
+
+    const observer = new ResizeObserver(() => {
+      const availableWidth = container.clientWidth;
+      // Width is 0 while the panel is hidden (mobile "Edit" tab), so skip that
+      if (availableWidth > 0) setScale(Math.min(availableWidth / A4_WIDTH_PX, 1));
+      setSheetHeight(sheet.offsetHeight); // Taller than A4 if the content needs 2 pages
+    });
+
+    observer.observe(container);
+    observer.observe(sheet);
+    return () => observer.disconnect();
+  }, [printRef]);
 
   return (
-    <div className="min-h-[600px] bg-white p-8 text-slate-800 shadow-sm ring-1 ring-slate-200 sm:p-10">
-      {isEmpty ? (
-        <p className="pt-40 text-center text-sm text-slate-400">Start filling in the form to see your resume here.</p>
-      ) : (
-        <>
-          {/* Header */}
-          <header className="border-b border-slate-200 pb-4">
-            <h1 className="text-2xl font-bold text-slate-900">{personalInfo.fullName || "Your Name"}</h1>
-            {contactItems.length > 0 && (
-              <p className="mt-2 text-xs text-slate-600">{contactItems.join("  •  ")}</p>
-            )}
-          </header>
-
-          {summary && (
-            <section className="mt-5">
-              <h2 className="text-xs font-bold tracking-wider text-indigo-700 uppercase">Summary</h2>
-              <p className="mt-2 text-sm leading-relaxed whitespace-pre-line">{summary}</p>
-            </section>
-          )}
-
-          {skills.length > 0 && (
-            <section className="mt-5">
-              <h2 className="text-xs font-bold tracking-wider text-indigo-700 uppercase">Skills</h2>
-              <p className="mt-2 text-sm">{skills.join(", ")}</p>
-            </section>
-          )}
-
-          {/* Experience, Education and Projects will be added in the next phase */}
-        </>
-      )}
+    <div ref={containerRef}>
+      {/* transform: scale() doesn't change layout size, so reserve the scaled height ourselves */}
+      <div style={{ height: sheetHeight * scale }}>
+        <div style={{ width: A4_WIDTH_PX, transform: `scale(${scale})`, transformOrigin: "top left" }}>
+          {/* The A4 sheet. box-decoration-clone repeats the padding on every printed page. */}
+          <div
+            ref={printRef}
+            className="min-h-[297mm] w-[210mm] bg-white px-[16mm] py-[14mm] shadow-lg ring-1 ring-slate-200 box-decoration-clone print:min-h-0 print:shadow-none print:ring-0"
+          >
+            <ClassicTemplate resume={resume} />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

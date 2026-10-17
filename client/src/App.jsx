@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -10,16 +10,19 @@ import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
 
 export default function App() {
+  // The landing page has its own top bar, so hide the shared Navbar there
+  const { pathname } = useLocation();
+  const showNavbar = pathname !== "/";
+
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
-      <Navbar />
+      {showNavbar && <Navbar />}
 
       <main className="flex-1">
         <Routes>
-          <Route path="/" element={<Landing />} />
-
-          {/* Only for logged-out users */}
+          {/* Only for logged-out users (logged-in users go to the dashboard) */}
           <Route element={<PublicRoute />}>
+            <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
           </Route>
