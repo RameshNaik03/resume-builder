@@ -7,6 +7,9 @@ import CompactLayout from "./layouts/CompactLayout";
 import ModernHeaderLayout from "./layouts/ModernHeaderLayout";
 import SidebarLayout from "./layouts/SidebarLayout";
 import TimelineLayout from "./layouts/TimelineLayout";
+import ExecutiveLayout from "./layouts/ExecutiveLayout";
+import CreativeLayout from "./layouts/CreativeLayout";
+import SplitModernLayout from "./layouts/SplitModernLayout";
 
 // Maps a template's "layout" id to the component that draws it
 const LAYOUT_COMPONENTS = {
@@ -16,6 +19,9 @@ const LAYOUT_COMPONENTS = {
   "modern-header": ModernHeaderLayout,
   sidebar: SidebarLayout,
   timeline: TimelineLayout,
+  executive: ExecutiveLayout,
+  creative: CreativeLayout,
+  "split-modern": SplitModernLayout,
 };
 
 // Renders a resume with any template.
@@ -36,6 +42,8 @@ export default function TemplateRenderer({ resume, templateId, withLinks = true 
         "--accent": theme.accent,
         "--soft": theme.soft ?? "#f1f5f9",
         "--on-accent": theme.onAccent ?? "#ffffff",
+        "--deep": theme.deep ?? theme.accent,
+        "--gradient": theme.gradient ?? theme.accent,
         "--text": theme.text,
         "--muted": theme.muted,
         "--line": theme.line,

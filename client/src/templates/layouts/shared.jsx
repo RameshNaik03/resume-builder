@@ -8,7 +8,8 @@ export function ContactLine({ contacts, separator = "·", className = "" }) {
   return (
     <p className={className}>
       {contacts.map((item, index) => (
-        <span key={item.text}>
+        // whitespace-nowrap: wrap between items, never inside one (e.g. "Austin, / TX")
+        <span key={item.text} className="whitespace-nowrap">
           {index > 0 && <span className="mx-[5pt] opacity-60">{separator}</span>}
           {item.href ? (
             <a href={item.href} className="hover:text-(--accent)">

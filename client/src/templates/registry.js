@@ -1,4 +1,4 @@
-import { ADVANCED_THEMES, THEMES } from "./themes";
+import { ADVANCED_THEMES, PREMIUM_THEMES, THEMES } from "./themes";
 
 // The three tiers shown as tabs in the template picker
 export const TIERS = [
@@ -9,7 +9,12 @@ export const TIERS = [
     description:
       "Bolder designs with colour and two-column layouts. Templates without the ATS-friendly badge look great but can be harder for applicant tracking systems to read.",
   },
-  { id: "premium", name: "Premium", description: "Our most polished, design-forward templates." },
+  {
+    id: "premium",
+    name: "Premium",
+    description:
+      "Our most polished, design-forward templates, free for everyone. Executive is ATS-friendly; Creative and Split Modern are best when a person, not software, reads your resume first.",
+  },
 ];
 
 // Which layouts and themes make up each tier.
@@ -37,6 +42,16 @@ const TIER_CONFIG = [
       { id: "timeline", name: "Timeline", atsFriendly: false }, // Graphic timeline
     ],
     themes: ADVANCED_THEMES,
+  },
+  {
+    tier: "premium",
+    atsFriendly: true,
+    layouts: [
+      { id: "executive", name: "Executive" },
+      { id: "creative", name: "Creative", fullBleed: true, atsFriendly: false }, // Decorative shapes
+      { id: "split-modern", name: "Split Modern", fullBleed: true, atsFriendly: false }, // Two columns
+    ],
+    themes: PREMIUM_THEMES,
   },
 ];
 

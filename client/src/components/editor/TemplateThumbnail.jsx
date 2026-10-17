@@ -7,7 +7,7 @@ const A4_WIDTH_PX = 794; // 210mm at 96 DPI
 const TIER_BADGE_STYLES = {
   basic: "bg-slate-100 text-slate-600",
   advanced: "bg-sky-50 text-sky-700",
-  premium: "bg-amber-50 text-amber-700",
+  premium: "bg-linear-to-r from-amber-100 to-yellow-50 text-amber-800 ring-1 ring-amber-200",
 };
 
 // One card in the template picker: a small live preview using the user's own data.
@@ -81,7 +81,15 @@ export default function TemplateThumbnail({ template, resume, selected, onSelect
       <div className="mt-2 px-1">
         <p className="truncate text-sm font-medium text-slate-900">{template.name}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
-          <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${TIER_BADGE_STYLES[template.tier]}`}>
+          {/* Tier badge (all templates are free; the badge only shows the tier) */}
+          <span
+            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${TIER_BADGE_STYLES[template.tier]}`}
+          >
+            {template.tier === "premium" && (
+              <svg className="size-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z" />
+              </svg>
+            )}
             {template.tier}
           </span>
           {template.atsFriendly && (
