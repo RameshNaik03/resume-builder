@@ -18,6 +18,15 @@ export default function ConfirmModal({
     if (open) cancelButtonRef.current?.focus();
   }, [open]);
 
+  // Stop the page behind the modal from scrolling (mainly an issue on phones)
+  useEffect(() => {
+    if (!open) return;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [open]);
+
   // Close on Escape
   useEffect(() => {
     if (!open) return;

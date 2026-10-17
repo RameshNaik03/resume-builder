@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import useResume from "../hooks/useResume";
+import usePageTitle from "../hooks/usePageTitle";
 import Loader from "../components/Loader";
 import ResumePreview from "../components/ResumePreview";
 import CollapsibleSection from "../components/editor/CollapsibleSection";
@@ -38,6 +39,8 @@ export default function Editor() {
   const navigate = useNavigate();
   const { resume, loading, loadError, status, updateResume, save } = useResume(id);
   const [activeTab, setActiveTab] = useState("edit"); // Mobile only: "edit" or "preview"
+
+  usePageTitle(resume?.title?.trim() || "Editor");
 
   // The A4 sheet inside ResumePreview; react-to-print turns it into the PDF.
   // The PDF file name comes from documentTitle.
@@ -76,9 +79,14 @@ export default function Editor() {
         <div className="card w-full max-w-md p-8 text-center">
           <h1 className="text-xl font-semibold text-slate-900">Couldn't open this resume</h1>
           <p className="mt-2 text-sm text-slate-500">{loadError}</p>
-          <Link to="/dashboard" className="btn-primary mt-6">
-            Back to dashboard
-          </Link>
+          <div className="mt-6 flex flex-wrap justify-center gap-3">
+            <button type="button" onClick={() => window.location.reload()} className="btn-secondary">
+              Try again
+            </button>
+            <Link to="/dashboard" className="btn-primary">
+              Back to dashboard
+            </Link>
+          </div>
         </div>
       </div>
     );

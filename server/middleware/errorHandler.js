@@ -8,8 +8,11 @@ export const notFound = (req, res, next) => {
 // Central error handler: every error passed to next() ends up here.
 // Express knows it's an error handler because it takes 4 arguments.
 export const errorHandler = (err, req, res, next) => {
-  // If a route already set an error status, keep it; otherwise use 500
-  let statusCode = res.statusCode >= 400 ? res.statusCode : 500;
+  const isProduction = process.env.NODE_ENV === "production";
+
+  // Use the status a route already set, or one attached to the error
+  // (e.g. 413 "body too large" from express.json), otherwise 500
+  let statusCode = res.statusCode >= 400 ? res.statusCode : err.status || 500;
   let message = err.message || "Server error";
 
   // Invalid MongoDB ObjectId (e.g. /api/resumes/abc)
@@ -36,9 +39,16 @@ export const errorHandler = (err, req, res, next) => {
     message = "Invalid JSON in request body";
   }
 
+  // Unexpected errors: log the details for us, but in production don't send
+  // internal messages (database errors etc.) to the browser
+  if (statusCode >= 500) {
+    console.error(err);
+    if (isProduction) message = "Something went wrong on our side. Please try again.";
+  }
+
   res.status(statusCode).json({
     message,
     // Only show the stack trace while developing
-    stack: process.env.NODE_ENV === "production" ? undefined : err.stack,
+    stack: isProduction ? undefined : err.stack,
   });
 };

@@ -4,8 +4,10 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 import getErrorMessage from "../utils/getErrorMessage";
+import usePageTitle from "../hooks/usePageTitle";
 
 export default function Login() {
+  usePageTitle("Log in");
   const { login } = useAuth();
   const [serverError, setServerError] = useState("");
 

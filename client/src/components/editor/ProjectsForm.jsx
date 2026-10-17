@@ -17,7 +17,7 @@ export default function ProjectsForm({ items, onChange }) {
               label="Project name"
               value={project.name}
               onChange={(name) => update({ name })}
-              placeholder="Resume Builder"
+              placeholder="Portfolio Website"
             />
             <TextField
               label="Link"

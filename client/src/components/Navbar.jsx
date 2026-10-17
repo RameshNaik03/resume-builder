@@ -19,7 +19,8 @@ export default function Navbar() {
           <span className="grid size-8 place-items-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
             R
           </span>
-          Resume Builder
+          {/* Hide the name on very narrow phones so the buttons fit */}
+          <span className="max-[400px]:sr-only">ResumeCraft</span>
         </Link>
 
         {user ? (

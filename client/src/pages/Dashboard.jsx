@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import getErrorMessage from "../utils/getErrorMessage";
+import usePageTitle from "../hooks/usePageTitle";
 import ResumeCard, { ResumeCardSkeleton } from "../components/ResumeCard";
 import ConfirmModal from "../components/ConfirmModal";
 import EmptyState from "../components/EmptyState";
@@ -26,22 +27,28 @@ export default function Dashboard() {
   const [duplicatingId, setDuplicatingId] = useState(null);
   const [resumeToDelete, setResumeToDelete] = useState(null); // The resume shown in the modal
   const [deleting, setDeleting] = useState(false);
+  const [loadError, setLoadError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0); // Increase it to fetch the list again
 
-  // Load the user's resumes when the page opens
+  usePageTitle("Dashboard");
+
+  // Load the user's resumes when the page opens (and again on "Try again")
   useEffect(() => {
     const fetchResumes = async () => {
+      setLoading(true);
+      setLoadError(null);
       try {
         const { data } = await api.get("/resumes");
         setResumes(data);
       } catch (error) {
-        toast.error(getErrorMessage(error));
+        setLoadError(getErrorMessage(error));
       } finally {
         setLoading(false);
       }
     };
 
     fetchResumes();
-  }, []);
+  }, [reloadKey]);
 
   const handleCreate = async () => {
     setCreating(true);
@@ -94,7 +101,9 @@ export default function Dashboard() {
           <p className="mt-1 text-sm text-slate-500">
             {loading
               ? "Loading your resumes..."
-              : `You have ${resumes.length} ${resumes.length === 1 ? "resume" : "resumes"}.`}
+              : loadError
+                ? "Your resumes couldn't be loaded."
+                : `You have ${resumes.length} ${resumes.length === 1 ? "resume" : "resumes"}.`}
           </p>
         </div>
 
@@ -113,6 +122,14 @@ export default function Dashboard() {
             {[1, 2, 3].map((n) => (
               <ResumeCardSkeleton key={n} />
             ))}
+          </div>
+        ) : loadError ? (
+          <div className="card flex flex-col items-center px-6 py-16 text-center" role="alert">
+            <h2 className="text-lg font-semibold text-slate-900">Couldn't load your resumes</h2>
+            <p className="mt-1 max-w-sm text-sm text-slate-500">{loadError}</p>
+            <button type="button" onClick={() => setReloadKey((key) => key + 1)} className="btn-primary mt-6">
+              Try again
+            </button>
           </div>
         ) : resumes.length === 0 ? (
           <EmptyState onCreate={handleCreate} creating={creating} />

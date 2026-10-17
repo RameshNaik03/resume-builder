@@ -65,6 +65,9 @@ export default function useResume(id) {
 
   // 3. Send the latest resume to the server
   const save = useCallback(async () => {
+    // Nothing to save yet (still loading, or the resume failed to load)
+    if (!resumeRef.current) return;
+
     // Only one save at a time; if one is running, save again when it finishes
     if (isSavingRef.current) {
       saveAgainRef.current = true;

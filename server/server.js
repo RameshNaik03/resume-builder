@@ -9,6 +9,10 @@ import { notFound, errorHandler } from "./middleware/errorHandler.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Hosting platforms (Render, Railway...) put a proxy in front of the app.
+// This lets Express (and the rate limiter) see the real visitor IP address.
+app.set("trust proxy", 1);
+
 // Middleware
 app.use(express.json()); // Parse JSON request bodies
 app.use(

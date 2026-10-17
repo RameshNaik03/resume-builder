@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
+import usePageTitle from "../hooks/usePageTitle";
 
 // Animations use "motion-safe:", so they only run if the user hasn't turned on
 // "reduce motion" in their system settings.
 export default function Landing() {
+  usePageTitle("Create a Resume That Stands Out");
+
   return (
     <div className="relative isolate flex min-h-svh flex-col overflow-hidden bg-indigo-950 text-white">
       {/* ---------- Background layers (decorative) ---------- */}
@@ -19,7 +22,7 @@ export default function Landing() {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgb(30_10_60/0.55),transparent_70%)]" />
 
         {/* 4. Grid that fades out towards the edges, plus film grain */}
-        <div className="absolute inset-0 bg-grid [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_75%)]" />
+        <div className="absolute inset-0 bg-grid mask-[radial-gradient(ellipse_at_center,black_20%,transparent_75%)]" />
         <div className="absolute inset-0 bg-grain opacity-20 mix-blend-overlay" />
       </div>
 
@@ -29,7 +32,7 @@ export default function Landing() {
           <span className="grid size-9 place-items-center rounded-xl bg-white text-sm font-bold text-indigo-700 shadow-lg shadow-black/20">
             R
           </span>
-          Resume Builder
+          ResumeCraft
         </Link>
         <Link
           to="/login"
