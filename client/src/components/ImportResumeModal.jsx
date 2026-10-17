@@ -3,7 +3,12 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/axios";
 import getErrorMessage from "../utils/getErrorMessage";
+import { TEMPLATES } from "../templates/registry";
 import Modal from "./Modal";
+import TemplatePicker from "./editor/TemplatePicker";
+
+// Used when the user closes the "choose a template" step without picking one
+const FALLBACK_TEMPLATE = TEMPLATES.find((template) => template.tier === "basic");
 
 const MAX_SIZE_MB = 5;
 const ACCEPTED_TYPES = {
@@ -31,7 +36,9 @@ export default function ImportResumeModal({ onClose, onStartFromScratch }) {
   const navigate = useNavigate();
   const inputRef = useRef(null);
 
-  const [status, setStatus] = useState("idle"); // "idle" | "uploading" | "reading" | "failed"
+  const [status, setStatus] = useState("idle"); // "idle" | "uploading" | "reading" | "failed" | "choose"
+  const [importedResume, setImportedResume] = useState(null); // Set when the upload worked
+  const [savingTemplateId, setSavingTemplateId] = useState(null);
   const [progress, setProgress] = useState(0); // Upload progress, 0-100
   const [fileName, setFileName] = useState("");
   const [fileError, setFileError] = useState(""); // Problem found before uploading
@@ -79,13 +86,33 @@ export default function ImportResumeModal({ onClose, onStartFromScratch }) {
         },
       });
 
-      toast.success("Resume imported");
-      // The editor shows a "please check your resume" banner when it sees imported: true
-      navigate(`/editor/${data.resume._id}`, { state: { imported: true } });
+      // Next step: the user picks a template (the resume was saved without one)
+      setImportedResume(data.resume);
+      setStatus("choose");
     } catch (error) {
       setServerError(getErrorMessage(error));
       setStatus("failed");
     }
+  };
+
+  // Saves the chosen template, then opens the editor.
+  // The editor shows a "please check your resume" banner when it sees imported: true.
+  const saveTemplateAndOpenEditor = async (template, wasChosen) => {
+    setSavingTemplateId(template.id);
+    try {
+      await api.put(`/resumes/${importedResume._id}`, { template: template.id });
+      if (wasChosen) {
+        toast.success("Resume imported");
+      } else {
+        toast.success(`We used the ${template.name} template. You can change it anytime with the Templates button.`, {
+          duration: 6000,
+        });
+      }
+    } catch (error) {
+      // The resume itself is already saved, so carry on to the editor anyway
+      toast.error(`Couldn't save the template: ${getErrorMessage(error)}`);
+    }
+    navigate(`/editor/${importedResume._id}`, { state: { imported: true } });
   };
 
   const handleFiles = (files) => {
@@ -106,6 +133,22 @@ export default function ImportResumeModal({ onClose, onStartFromScratch }) {
     setStatus("idle");
     setServerError("");
   };
+
+  // Step 2 after a successful upload: choose a template (full screen, with the imported data)
+  if (status === "choose") {
+    return (
+      <TemplatePicker
+        resume={importedResume}
+        fullScreen
+        title="Choose a template for your resume"
+        description="Every template below is filled with your imported resume. Pick one to continue. You can change it later."
+        closeLabel="Skip for now"
+        savingId={savingTemplateId}
+        onSelect={(template) => saveTemplateAndOpenEditor(template, true)}
+        onClose={() => saveTemplateAndOpenEditor(FALLBACK_TEMPLATE, false)}
+      />
+    );
+  }
 
   return (
     // While uploading, Escape and outside clicks don't close the modal

@@ -16,7 +16,9 @@ async function readPdf(buffer) {
   // pdf-parse may take over the memory it's given, so pass a copy of the bytes
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   try {
-    const result = await parser.getText();
+    // Reads every page (no page range is set). pageJoiner "\n" replaces pdf-parse's
+    // default "-- 1 of 2 --" separator lines, which the parsers mistook for content.
+    const result = await parser.getText({ pageJoiner: "\n" });
     return result.text;
   } finally {
     await parser.destroy(); // Free the memory pdf.js used
@@ -28,13 +30,17 @@ async function readDocx(buffer) {
   return result.value;
 }
 
-// Tidies extracted text: consistent line breaks, no repeated spaces or blank lines
+// Page-number footers such as "Page 2 of 3", "2 / 3" or "-- 2 of 3 --"
+const PAGE_NUMBER_LINE = /^(?:-+\s*)?(?:page\s*)?\d+\s*(?:of|\/)\s*\d+(?:\s*-+)?$/i;
+
+// Tidies extracted text: consistent line breaks, no repeated spaces, page numbers or blank lines
 const normalize = (text) =>
   text
     .replace(/\r\n?/g, "\n")
     .replace(/[ \t ]+/g, " ")
     .split("\n")
     .map((line) => line.trim())
+    .filter((line) => !PAGE_NUMBER_LINE.test(line))
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();

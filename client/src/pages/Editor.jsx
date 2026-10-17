@@ -14,6 +14,7 @@ import SkillsForm from "../components/editor/SkillsForm";
 import ExperienceForm from "../components/editor/ExperienceForm";
 import EducationForm from "../components/editor/EducationForm";
 import ProjectsForm from "../components/editor/ProjectsForm";
+import AdditionalForm from "../components/editor/AdditionalForm";
 import TemplatePicker from "../components/editor/TemplatePicker";
 
 // Text and dot colour for each save status
@@ -80,7 +81,7 @@ export default function Editor() {
   const handleSelectTemplate = (template) => {
     updateResume({ template: template.id });
     setIsPickerOpen(false);
-    if (showImportBanner) dismissImportBanner(); // Picking a template was the banner's last step
+    if (showImportBanner) dismissImportBanner(); // They've seen the template option, so the banner can go
     toast.success(`Template changed to ${template.name}`, { id: "template-changed" });
   };
 
@@ -220,12 +221,12 @@ export default function Editor() {
               <path d="M20 6 9 17l-5-5" />
             </svg>
             <p className="flex-1 text-sm text-indigo-900">
-              <span className="font-semibold">We imported your resume.</span> Please check each section, then pick a
-              template.
+              <span className="font-semibold">We imported your resume.</span> Please check each section, as imports
+              aren't always perfect. You can change the template anytime.
             </p>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setIsPickerOpen(true)} className="btn-primary px-3 py-1.5">
-                Pick a template
+              <button type="button" onClick={() => setIsPickerOpen(true)} className="btn-secondary px-3 py-1.5">
+                Change template
               </button>
               <button
                 type="button"
@@ -271,6 +272,13 @@ export default function Editor() {
 
           <CollapsibleSection title="Projects" description={withCount("Things you've built", resume.projects)}>
             <ProjectsForm items={resume.projects} onChange={(projects) => updateResume({ projects })} />
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Additional sections"
+            description={withCount("Certifications, languages, awards…", resume.additional ?? [])}
+          >
+            <AdditionalForm items={resume.additional ?? []} onChange={(additional) => updateResume({ additional })} />
           </CollapsibleSection>
         </div>
 

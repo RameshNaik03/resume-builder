@@ -1,5 +1,5 @@
 import { space } from "../themes";
-import { ContactLine, MaybeLink, SectionTitle } from "./shared";
+import { BulletList, ContactLine, MaybeLink, SectionTitle } from "./shared";
 
 // Minimal: left-aligned, lots of white space, no divider lines.
 // Name in the accent colour; company and dates sit on a quieter second line.
@@ -7,7 +7,9 @@ import { ContactLine, MaybeLink, SectionTitle } from "./shared";
 function Section({ title, theme, children }) {
   return (
     <section style={{ marginTop: space(theme, 16) }}>
-      <SectionTitle theme={theme}>{title}</SectionTitle>
+      <SectionTitle theme={theme} data-block data-keep>
+        {title}
+      </SectionTitle>
       <div style={{ marginTop: space(theme, 6) }}>{children}</div>
     </section>
   );
@@ -16,7 +18,7 @@ function Section({ title, theme, children }) {
 export default function MinimalLayout({ data, theme }) {
   return (
     <div className="text-[10pt] leading-[1.45]">
-      <header>
+      <header data-block>
         <h1 className="text-[26pt] leading-tight font-semibold tracking-tight text-(--accent)">{data.name}</h1>
         {data.headline && <p className="mt-[2pt] text-[12pt] text-(--muted)">{data.headline}</p>}
         {/* Short decorative rule under the name */}
@@ -26,7 +28,9 @@ export default function MinimalLayout({ data, theme }) {
 
       {data.summary && (
         <Section title="Summary" theme={theme}>
-          <p className="whitespace-pre-line">{data.summary}</p>
+          <p className="whitespace-pre-line" data-block>
+            {data.summary}
+          </p>
         </Section>
       )}
 
@@ -34,22 +38,20 @@ export default function MinimalLayout({ data, theme }) {
         <Section title="Experience" theme={theme}>
           <div className="flex flex-col" style={{ gap: space(theme, 10) }}>
             {data.experience.map((job) => (
-              <div key={job.key} className="break-inside-avoid">
-                <p className="font-bold">{job.role || job.company}</p>
-                <p className="text-[9.5pt] text-(--muted)">
-                  {job.role && job.company}
-                  {job.role && job.company && job.dates && "  ·  "}
-                  {job.dates}
-                </p>
-                {job.bullets.length > 0 && (
-                  <ul className="mt-[4pt] list-disc space-y-[2pt] pl-[13pt] marker:text-(--accent)">
-                    {job.bullets.map((bullet, i) => (
-                      <li key={i} className="pl-[2pt]">
-                        {bullet}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+              <div key={job.key}>
+                <div data-block data-keep={job.bullets.length > 0}>
+                  <p className="font-bold">{job.role || job.company}</p>
+                  <p className="text-[9.5pt] text-(--muted)">
+                    {job.role && job.company}
+                    {job.role && job.company && job.dates && "  ·  "}
+                    {job.dates}
+                  </p>
+                </div>
+                <BulletList
+                  items={job.bullets}
+                  className="mt-[4pt] space-y-[2pt] pl-[13pt] marker:text-(--accent)"
+                  itemClassName="pl-[2pt]"
+                />
               </div>
             ))}
           </div>
@@ -60,7 +62,7 @@ export default function MinimalLayout({ data, theme }) {
         <Section title="Education" theme={theme}>
           <div className="flex flex-col" style={{ gap: space(theme, 6) }}>
             {data.education.map((entry) => (
-              <div key={entry.key} className="break-inside-avoid">
+              <div key={entry.key} data-block>
                 <p className="font-bold">{entry.degree || entry.school}</p>
                 <p className="text-[9.5pt] text-(--muted)">
                   {entry.degree && entry.school}
@@ -75,7 +77,7 @@ export default function MinimalLayout({ data, theme }) {
 
       {data.skills.length > 0 && (
         <Section title="Skills" theme={theme}>
-          <p>{data.skills.join("  ·  ")}</p>
+          <p data-block>{data.skills.join("  ·  ")}</p>
         </Section>
       )}
 
@@ -83,8 +85,8 @@ export default function MinimalLayout({ data, theme }) {
         <Section title="Projects" theme={theme}>
           <div className="flex flex-col" style={{ gap: space(theme, 8) }}>
             {data.projects.map((project) => (
-              <div key={project.key} className="break-inside-avoid">
-                <p>
+              <div key={project.key}>
+                <p data-block data-keep={Boolean(project.description)}>
                   <span className="font-bold">{project.name}</span>
                   {project.name && project.linkText && <span className="text-(--muted)">  —  </span>}
                   {project.linkText && (
@@ -93,12 +95,22 @@ export default function MinimalLayout({ data, theme }) {
                     </MaybeLink>
                   )}
                 </p>
-                {project.description && <p className="mt-[2pt] whitespace-pre-line">{project.description}</p>}
+                {project.description && (
+                  <p className="mt-[2pt] whitespace-pre-line" data-block>
+                    {project.description}
+                  </p>
+                )}
               </div>
             ))}
           </div>
         </Section>
       )}
+
+      {data.additional.map((section) => (
+        <Section key={section.key} title={section.heading} theme={theme}>
+          <BulletList items={section.items} className="space-y-[2pt] pl-[13pt] marker:text-(--accent)" itemClassName="pl-[2pt]" />
+        </Section>
+      ))}
     </div>
   );
 }

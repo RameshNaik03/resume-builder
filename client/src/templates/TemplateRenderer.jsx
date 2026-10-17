@@ -54,8 +54,8 @@ export default function TemplateRenderer({ resume, templateId, withLinks = true 
       {template.fullBleed ? (
         <Layout data={data} theme={theme} />
       ) : (
-        // Standard page margins. box-decoration-clone repeats them on every printed page.
-        <div className="box-decoration-clone px-[16mm] py-[14mm]">
+        // Standard page margins (pages 2, 3... get their top margin from templates/pagination.js)
+        <div className="px-[16mm] py-[14mm]">
           <Layout data={data} theme={theme} />
         </div>
       )}

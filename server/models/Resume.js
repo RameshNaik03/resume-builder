@@ -21,6 +21,12 @@ const projectSchema = new mongoose.Schema({
   link: { type: String, trim: true, default: "" },
 });
 
+// Anything that doesn't fit the sections above: certifications, languages, awards...
+const additionalSectionSchema = new mongoose.Schema({
+  heading: { type: String, trim: true, default: "" }, // e.g. "Certifications"
+  items: { type: [String], default: [] },
+});
+
 const resumeSchema = new mongoose.Schema(
   {
     userId: {
@@ -45,6 +51,7 @@ const resumeSchema = new mongoose.Schema(
     education: { type: [educationSchema], default: [] },
     skills: { type: [String], default: [] },
     projects: { type: [projectSchema], default: [] },
+    additional: { type: [additionalSectionSchema], default: [] },
   },
   { timestamps: true, versionKey: false }
 );

@@ -34,7 +34,16 @@ const HEADINGS = {
   education: ["education", "academic background", "academics", "education and training", "qualifications", "academic qualifications"],
   skills: ["skills", "technical skills", "key skills", "core skills", "skills and tools", "technologies", "tech stack", "core competencies", "tools and technologies"],
   projects: ["projects", "personal projects", "academic projects", "key projects", "selected projects", "side projects"],
-  other: ["certifications", "certificates", "awards", "achievements", "languages", "interests", "hobbies", "references", "volunteering", "volunteer experience", "publications", "activities", "extracurricular activities", "courses", "training"],
+  // Kept as "additional" sections under their own heading
+  other: [
+    "certifications", "certificates", "licenses and certifications", "certifications and licenses",
+    "awards", "honors", "honors and awards", "awards and honors", "achievements", "awards and achievements",
+    "languages", "interests", "hobbies", "hobbies and interests", "references",
+    "volunteering", "volunteer", "volunteer work", "volunteer experience", "leadership", "leadership experience",
+    "publications", "patents", "conferences", "memberships", "professional memberships", "affiliations",
+    "activities", "extracurricular activities", "courses", "relevant coursework", "training",
+    "professional development", "additional information", "personal details", "strengths",
+  ],
 };
 
 // "WORK EXPERIENCE:" -> "experience"; returns null if the line isn't a heading
@@ -234,14 +243,28 @@ function parseProjects(lines) {
 
 // ---------- Main ----------
 
+// "CERTIFICATIONS:" -> "Certifications" (keeps the resume's own wording for the heading)
+const toHeading = (line) => {
+  const text = line.replace(/[:\s]+$/, "").trim();
+  return text === text.toUpperCase() ? text.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase()) : text;
+};
+
 export default function parseWithRules(text) {
-  const sections = { header: [], summary: [], experience: [], education: [], skills: [], projects: [], other: [] };
-  let current = "header";
+  const sections = { header: [], summary: [], experience: [], education: [], skills: [], projects: [] };
+  const additional = []; // Sections like Certifications or Languages: [{ heading, items }]
+  let currentLines = sections.header; // Where the next line goes
 
   for (const line of text.split("\n").map((l) => l.trim()).filter(Boolean)) {
     const heading = headingOf(line);
-    if (heading) current = heading;
-    else sections[current].push(line);
+    if (heading === "other") {
+      const section = { heading: toHeading(line), items: [] };
+      additional.push(section);
+      currentLines = section.items;
+    } else if (heading) {
+      currentLines = sections[heading];
+    } else {
+      currentLines.push(line);
+    }
   }
 
   // Contact details can be anywhere, but the top of the resume is checked first
@@ -261,5 +284,9 @@ export default function parseWithRules(text) {
     education: parseEducation(sections.education),
     skills: parseSkills(sections.skills),
     projects: parseProjects(sections.projects),
+    additional: additional.map((section) => ({
+      heading: section.heading,
+      items: section.items.map(stripBullet).filter(Boolean),
+    })),
   };
 }

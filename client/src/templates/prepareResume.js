@@ -50,5 +50,14 @@ export default function prepareResume(resume, withLinks = true) {
         href: project.link ? link(toUrl(project.link)) : undefined,
         linkText: project.link ? toDisplayText(project.link) : "",
       })),
+
+    // Extra sections such as Certifications or Languages
+    additional: (resume.additional ?? [])
+      .map((section, index) => ({
+        key: section._id ?? index,
+        heading: section.heading?.trim() || "Additional Information",
+        items: (section.items ?? []).filter((item) => item.trim()),
+      }))
+      .filter((section) => section.items.length > 0),
   };
 }

@@ -1,3 +1,4 @@
+import ItemsEditor from "./ItemsEditor";
 import ListEditor from "./ListEditor";
 import TextField from "./TextField";
 
@@ -8,51 +9,6 @@ const getTitle = (job) => {
   if (job.role && job.company) return `${job.role} at ${job.company}`;
   return job.role || job.company || "New position";
 };
-
-// The bullet point list inside one job
-function BulletsEditor({ bullets, onChange }) {
-  const updateBullet = (index, text) => onChange(bullets.map((b, i) => (i === index ? text : b)));
-  const removeBullet = (index) => onChange(bullets.filter((_, i) => i !== index));
-  const addBullet = () => onChange([...bullets, ""]);
-
-  return (
-    <div>
-      <p className="label">Key achievements</p>
-      <ul className="space-y-2">
-        {bullets.map((bullet, index) => (
-          <li key={index} className="flex items-center gap-2">
-            <span className="text-slate-400" aria-hidden="true">•</span>
-            <input
-              type="text"
-              value={bullet}
-              onChange={(event) => updateBullet(index, event.target.value)}
-              placeholder="e.g. Built a dashboard used by 500+ customers"
-              aria-label={`Bullet point ${index + 1}`}
-              className="input"
-            />
-            <button
-              type="button"
-              onClick={() => removeBullet(index)}
-              aria-label={`Remove bullet point ${index + 1}`}
-              className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"
-            >
-              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </li>
-        ))}
-      </ul>
-      <button
-        type="button"
-        onClick={addBullet}
-        className="mt-2 text-sm font-medium text-indigo-600 hover:text-indigo-700"
-      >
-        + Add bullet point
-      </button>
-    </div>
-  );
-}
 
 export default function ExperienceForm({ items, onChange }) {
   return (
@@ -96,7 +52,14 @@ export default function ExperienceForm({ items, onChange }) {
               Currently working here
             </label>
 
-            <BulletsEditor bullets={job.bullets ?? []} onChange={(bullets) => update({ bullets })} />
+            <ItemsEditor
+              label="Key achievements"
+              items={job.bullets ?? []}
+              onChange={(bullets) => update({ bullets })}
+              placeholder="e.g. Built a dashboard used by 500+ customers"
+              addLabel="+ Add bullet point"
+              itemName="Bullet point"
+            />
           </>
         );
       }}

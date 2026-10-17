@@ -1,5 +1,5 @@
 import { space } from "../themes";
-import { ContactLine, MaybeLink, SectionTitle } from "./shared";
+import { BulletList, ContactLine, MaybeLink, SectionTitle } from "./shared";
 
 // Modern Header: a bold coloured band across the top with name, title and contacts,
 // then a single column of sections (still easy for ATS systems to read).
@@ -8,10 +8,12 @@ import { ContactLine, MaybeLink, SectionTitle } from "./shared";
 function Section({ title, theme, children }) {
   return (
     <section style={{ marginTop: space(theme, 13) }}>
-      {/* Heading with a short accent bar on the left */}
-      <SectionTitle theme={theme} className="border-l-[3pt] border-(--accent) pl-[6pt] leading-none">
-        {title}
-      </SectionTitle>
+      {/* Plain wrapper is the page-break block, so the accent bar never stretches */}
+      <div data-block data-keep>
+        <SectionTitle theme={theme} className="border-l-[3pt] border-(--accent) pl-[6pt] leading-none">
+          {title}
+        </SectionTitle>
+      </div>
       <div style={{ marginTop: space(theme, 7) }}>{children}</div>
     </section>
   );
@@ -26,11 +28,12 @@ export default function ModernHeaderLayout({ data, theme }) {
         <ContactLine contacts={data.contacts} className="mt-[9pt] text-[9pt] opacity-90" />
       </header>
 
-      {/* box-decoration-clone repeats this padding at the top of page 2 */}
-      <div className="box-decoration-clone px-[16mm] pt-[6mm] pb-[14mm]">
+      <div className="px-[16mm] pt-[6mm] pb-[14mm]">
         {data.summary && (
           <Section title="Summary" theme={theme}>
-            <p className="whitespace-pre-line">{data.summary}</p>
+            <p className="whitespace-pre-line" data-block>
+              {data.summary}
+            </p>
           </Section>
         )}
 
@@ -38,8 +41,8 @@ export default function ModernHeaderLayout({ data, theme }) {
           <Section title="Experience" theme={theme}>
             <div className="flex flex-col" style={{ gap: space(theme, 9) }}>
               {data.experience.map((job) => (
-                <div key={job.key} className="break-inside-avoid">
-                  <div className="flex items-baseline justify-between gap-[12pt]">
+                <div key={job.key}>
+                  <div className="flex items-baseline justify-between gap-[12pt]" data-block data-keep={job.bullets.length > 0}>
                     <p>
                       <span className="font-bold">{job.role}</span>
                       {job.role && job.company && <span className="text-(--muted)"> at </span>}
@@ -47,15 +50,11 @@ export default function ModernHeaderLayout({ data, theme }) {
                     </p>
                     {job.dates && <p className="shrink-0 text-[9pt] text-(--muted)">{job.dates}</p>}
                   </div>
-                  {job.bullets.length > 0 && (
-                    <ul className="mt-[3pt] list-disc space-y-[2pt] pl-[14pt] marker:text-(--accent)">
-                      {job.bullets.map((bullet, i) => (
-                        <li key={i} className="pl-[2pt]">
-                          {bullet}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                  <BulletList
+                    items={job.bullets}
+                    className="mt-[3pt] space-y-[2pt] pl-[14pt] marker:text-(--accent)"
+                    itemClassName="pl-[2pt]"
+                  />
                 </div>
               ))}
             </div>
@@ -66,7 +65,7 @@ export default function ModernHeaderLayout({ data, theme }) {
           <Section title="Education" theme={theme}>
             <div className="flex flex-col" style={{ gap: space(theme, 5) }}>
               {data.education.map((entry) => (
-                <div key={entry.key} className="flex items-baseline justify-between gap-[12pt] break-inside-avoid">
+                <div key={entry.key} className="flex items-baseline justify-between gap-[12pt]" data-block>
                   <p>
                     <span className="font-bold">{entry.degree}</span>
                     {entry.degree && entry.school && ", "}
@@ -81,7 +80,7 @@ export default function ModernHeaderLayout({ data, theme }) {
 
         {data.skills.length > 0 && (
           <Section title="Skills" theme={theme}>
-            <p>{data.skills.join("  ·  ")}</p>
+            <p data-block>{data.skills.join("  ·  ")}</p>
           </Section>
         )}
 
@@ -89,8 +88,8 @@ export default function ModernHeaderLayout({ data, theme }) {
           <Section title="Projects" theme={theme}>
             <div className="flex flex-col" style={{ gap: space(theme, 7) }}>
               {data.projects.map((project) => (
-                <div key={project.key} className="break-inside-avoid">
-                  <div className="flex items-baseline justify-between gap-[12pt]">
+                <div key={project.key}>
+                  <div className="flex items-baseline justify-between gap-[12pt]" data-block data-keep={Boolean(project.description)}>
                     <p className="font-bold">{project.name}</p>
                     {project.linkText && (
                       <MaybeLink href={project.href} className="shrink-0 text-[9pt] text-(--accent)">
@@ -98,12 +97,22 @@ export default function ModernHeaderLayout({ data, theme }) {
                       </MaybeLink>
                     )}
                   </div>
-                  {project.description && <p className="mt-[2pt] whitespace-pre-line">{project.description}</p>}
+                  {project.description && (
+                    <p className="mt-[2pt] whitespace-pre-line" data-block>
+                      {project.description}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
           </Section>
         )}
+
+        {data.additional.map((section) => (
+          <Section key={section.key} title={section.heading} theme={theme}>
+            <BulletList items={section.items} className="space-y-[2pt] pl-[14pt] marker:text-(--accent)" itemClassName="pl-[2pt]" />
+          </Section>
+        ))}
       </div>
     </div>
   );

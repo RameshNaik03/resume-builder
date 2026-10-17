@@ -1,5 +1,5 @@
 import { space } from "../themes";
-import { ContactLine, MaybeLink, SectionTitle } from "./shared";
+import { BulletList, ContactLine, MaybeLink, SectionTitle } from "./shared";
 
 // Compact: smaller text and tighter spacing to fit more on one page.
 // Accent rule under the header; headings followed by a thin line to the edge.
@@ -7,7 +7,7 @@ import { ContactLine, MaybeLink, SectionTitle } from "./shared";
 function Section({ title, theme, children }) {
   return (
     <section style={{ marginTop: space(theme, 10) }}>
-      <div className="flex items-center gap-[6pt]">
+      <div className="flex items-center gap-[6pt]" data-block data-keep>
         <SectionTitle theme={theme} size="sm" className="shrink-0">
           {title}
         </SectionTitle>
@@ -21,7 +21,7 @@ function Section({ title, theme, children }) {
 export default function CompactLayout({ data, theme }) {
   return (
     <div className="text-[9.5pt] leading-[1.35]">
-      <header className="border-b-[1.5pt] border-(--accent) pb-[6pt]">
+      <header className="border-b-[1.5pt] border-(--accent) pb-[6pt]" data-block>
         <h1 className="text-[20pt] leading-tight font-bold tracking-tight">
           {data.name}
           {data.headline && <span className="ml-[8pt] text-[11pt] font-normal text-(--accent)">{data.headline}</span>}
@@ -31,7 +31,9 @@ export default function CompactLayout({ data, theme }) {
 
       {data.summary && (
         <Section title="Summary" theme={theme}>
-          <p className="whitespace-pre-line">{data.summary}</p>
+          <p className="whitespace-pre-line" data-block>
+            {data.summary}
+          </p>
         </Section>
       )}
 
@@ -39,8 +41,8 @@ export default function CompactLayout({ data, theme }) {
         <Section title="Experience" theme={theme}>
           <div className="flex flex-col" style={{ gap: space(theme, 6) }}>
             {data.experience.map((job) => (
-              <div key={job.key} className="break-inside-avoid">
-                <div className="flex items-baseline justify-between gap-[10pt]">
+              <div key={job.key}>
+                <div className="flex items-baseline justify-between gap-[10pt]" data-block data-keep={job.bullets.length > 0}>
                   <p>
                     <span className="font-bold">{job.role}</span>
                     {job.role && job.company && <span className="text-(--muted)"> | </span>}
@@ -48,13 +50,7 @@ export default function CompactLayout({ data, theme }) {
                   </p>
                   {job.dates && <p className="shrink-0 text-[9pt] text-(--muted)">{job.dates}</p>}
                 </div>
-                {job.bullets.length > 0 && (
-                  <ul className="mt-[2pt] list-disc space-y-[1pt] pl-[12pt] marker:text-(--muted)">
-                    {job.bullets.map((bullet, i) => (
-                      <li key={i}>{bullet}</li>
-                    ))}
-                  </ul>
-                )}
+                <BulletList items={job.bullets} className="mt-[2pt] space-y-[1pt] pl-[12pt] marker:text-(--muted)" />
               </div>
             ))}
           </div>
@@ -65,7 +61,7 @@ export default function CompactLayout({ data, theme }) {
         <Section title="Education" theme={theme}>
           <div className="flex flex-col" style={{ gap: space(theme, 3) }}>
             {data.education.map((entry) => (
-              <div key={entry.key} className="flex items-baseline justify-between gap-[10pt] break-inside-avoid">
+              <div key={entry.key} className="flex items-baseline justify-between gap-[10pt]" data-block>
                 <p>
                   <span className="font-bold">{entry.degree}</span>
                   {entry.degree && entry.school && <span className="text-(--muted)"> | </span>}
@@ -80,7 +76,7 @@ export default function CompactLayout({ data, theme }) {
 
       {data.skills.length > 0 && (
         <Section title="Skills" theme={theme}>
-          <p>{data.skills.join(", ")}</p>
+          <p data-block>{data.skills.join(", ")}</p>
         </Section>
       )}
 
@@ -88,8 +84,8 @@ export default function CompactLayout({ data, theme }) {
         <Section title="Projects" theme={theme}>
           <div className="flex flex-col" style={{ gap: space(theme, 5) }}>
             {data.projects.map((project) => (
-              <div key={project.key} className="break-inside-avoid">
-                <div className="flex items-baseline justify-between gap-[10pt]">
+              <div key={project.key}>
+                <div className="flex items-baseline justify-between gap-[10pt]" data-block data-keep={Boolean(project.description)}>
                   <p className="font-bold">{project.name}</p>
                   {project.linkText && (
                     <MaybeLink href={project.href} className="shrink-0 text-[9pt] text-(--accent)">
@@ -97,12 +93,22 @@ export default function CompactLayout({ data, theme }) {
                     </MaybeLink>
                   )}
                 </div>
-                {project.description && <p className="whitespace-pre-line">{project.description}</p>}
+                {project.description && (
+                  <p className="whitespace-pre-line" data-block>
+                    {project.description}
+                  </p>
+                )}
               </div>
             ))}
           </div>
         </Section>
       )}
+
+      {data.additional.map((section) => (
+        <Section key={section.key} title={section.heading} theme={theme}>
+          <BulletList items={section.items} className="space-y-[1pt] pl-[12pt] marker:text-(--muted)" />
+        </Section>
+      ))}
     </div>
   );
 }
