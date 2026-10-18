@@ -4,37 +4,20 @@ import toast from "react-hot-toast";
 import api from "../api/axios";
 import getErrorMessage from "../utils/getErrorMessage";
 import { TEMPLATES } from "../templates/registry";
+import { ACCEPT_ATTRIBUTE, MAX_SIZE_MB, toUploadFile, validateFile } from "../utils/resumeFile";
 import Modal from "./Modal";
 import TemplatePicker from "./editor/TemplatePicker";
 
 // Used when the user closes the "choose a template" step without picking one
 const FALLBACK_TEMPLATE = TEMPLATES.find((template) => template.tier === "basic");
 
-const MAX_SIZE_MB = 5;
-const ACCEPTED_TYPES = {
-  ".pdf": "application/pdf",
-  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-};
-
-// Returns an error message for files we can't import, or null if the file looks fine
-function validateFile(file) {
-  const extension = file.name.toLowerCase().match(/\.[^.]+$/)?.[0];
-  if (extension === ".doc") {
-    return "Old .doc files aren't supported. In Word, use File → Save As → Word Document (.docx), then try again.";
-  }
-  if (!ACCEPTED_TYPES[extension]) return "Please choose a PDF or DOCX file.";
-  if (file.size === 0) return "This file is empty.";
-  if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-    return `This file is ${(file.size / 1024 / 1024).toFixed(1)} MB. The maximum size is ${MAX_SIZE_MB} MB.`;
-  }
-  return null;
-}
-
 // Modal to upload an existing resume (PDF/DOCX). The server reads it and creates a new resume.
 //   onStartFromScratch - called when the user gives up on importing and wants a blank resume
-export default function ImportResumeModal({ onClose, onStartFromScratch }) {
+//   initialFile        - optional file to import straight away (e.g. one checked on the ATS page)
+export default function ImportResumeModal({ onClose, onStartFromScratch, initialFile = null }) {
   const navigate = useNavigate();
   const inputRef = useRef(null);
+  const startedInitialUpload = useRef(false); // StrictMode runs effects twice in development
 
   const [status, setStatus] = useState("idle"); // "idle" | "uploading" | "reading" | "failed" | "choose"
   const [importedResume, setImportedResume] = useState(null); // Set when the upload worked
@@ -71,10 +54,8 @@ export default function ImportResumeModal({ onClose, onStartFromScratch }) {
     setProgress(0);
     setStatus("uploading");
 
-    // Re-wrap the file with the correct type (some systems report .docx files with no type)
-    const extension = file.name.toLowerCase().match(/\.[^.]+$/)[0];
     const formData = new FormData();
-    formData.append("file", new File([file], file.name, { type: ACCEPTED_TYPES[extension] }));
+    formData.append("file", toUploadFile(file));
 
     try {
       const { data } = await api.post("/resumes/import", formData, {
@@ -94,6 +75,15 @@ export default function ImportResumeModal({ onClose, onStartFromScratch }) {
       setStatus("failed");
     }
   };
+
+  // Import a file we were handed straight away, without the "choose a file" step
+  useEffect(() => {
+    if (initialFile && !startedInitialUpload.current) {
+      startedInitialUpload.current = true;
+      uploadFile(initialFile);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only on open
+  }, []);
 
   // Saves the chosen template, then opens the editor.
   // The editor shows a "please check your resume" banner when it sees imported: true.
@@ -240,7 +230,7 @@ export default function ImportResumeModal({ onClose, onStartFromScratch }) {
             <input
               ref={inputRef}
               type="file"
-              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              accept={ACCEPT_ATTRIBUTE}
               className="hidden"
               onChange={(event) => {
                 handleFiles(event.target.files);

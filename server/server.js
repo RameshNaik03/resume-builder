@@ -4,6 +4,7 @@ import cors from "cors";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import resumeRoutes from "./routes/resumeRoutes.js";
+import atsRoutes from "./routes/atsRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
@@ -28,6 +29,7 @@ app.get("/api/health", (req, res) => {
 });
 app.use("/api/auth", authRoutes);
 app.use("/api/resumes", resumeRoutes);
+app.use("/api/ats", atsRoutes);
 
 // Error handling (must come after all routes)
 app.use(notFound);

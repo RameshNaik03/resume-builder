@@ -4,6 +4,7 @@ import Navbar from "./components/Navbar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import Landing from "./pages/Landing";
+import AtsChecker from "./pages/AtsChecker";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -23,6 +24,7 @@ export default function App() {
         <Routes>
           {/* Everyone (its buttons point logged-in users to the dashboard) */}
           <Route path="/" element={<Landing />} />
+          <Route path="/ats-checker" element={<AtsChecker />} />
 
           {/* Only for logged-out users (logged-in users go to the dashboard) */}
           <Route element={<PublicRoute />}>

@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 // Limits login/register attempts per IP address to slow down password guessing
 export const authLimiter = rateLimit({
@@ -19,4 +19,17 @@ export const importLimiter = rateLimit({
   legacyHeaders: false,
   keyGenerator: (req) => req.user._id.toString(), // Count per user, not per IP address
   message: { message: "You've reached the limit of 10 imports per hour. Please try again later." },
+});
+
+// Limits ATS checks (they parse files and may call the AI). Open to guests, so
+// logged-in users are counted per account and guests per IP address.
+// Must run after the optionalAuth middleware.
+export const atsLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 15, // Max 15 checks per user (or IP) per hour
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  // ipKeyGenerator groups IPv6 addresses by network, so one device can't rotate addresses
+  keyGenerator: (req) => (req.user ? `user:${req.user._id}` : ipKeyGenerator(req.ip)),
+  message: { message: "You've reached the limit of 15 checks per hour. Please try again later." },
 });

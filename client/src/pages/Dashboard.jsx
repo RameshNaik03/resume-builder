@@ -9,6 +9,7 @@ import ResumeCard, { ResumeCardSkeleton } from "../components/ResumeCard";
 import ConfirmModal from "../components/ConfirmModal";
 import EmptyState from "../components/EmptyState";
 import ImportResumeModal from "../components/ImportResumeModal";
+import { clearPendingImport, getPendingImport } from "../utils/resumeFile";
 
 // "Good morning" / "Good afternoon" / "Good evening" based on the current hour
 const getGreeting = () => {
@@ -30,9 +31,20 @@ export default function Dashboard() {
   const [deleting, setDeleting] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0); // Increase it to fetch the list again
-  const [isImportOpen, setIsImportOpen] = useState(false);
+  // A resume a guest checked on the ATS page before signing up: import it right away
+  const [pendingFile, setPendingFile] = useState(getPendingImport);
+  const [isImportOpen, setIsImportOpen] = useState(() => Boolean(getPendingImport()));
 
   usePageTitle("Dashboard");
+
+  useEffect(() => {
+    if (pendingFile) clearPendingImport(); // Only once, even if the user comes back later
+  }, [pendingFile]);
+
+  const closeImport = () => {
+    setIsImportOpen(false);
+    setPendingFile(null);
+  };
 
   // Load the user's resumes when the page opens (and again on "Try again")
   useEffect(() => {
@@ -170,9 +182,10 @@ export default function Dashboard() {
 
       {isImportOpen && (
         <ImportResumeModal
-          onClose={() => setIsImportOpen(false)}
+          initialFile={pendingFile}
+          onClose={closeImport}
           onStartFromScratch={() => {
-            setIsImportOpen(false);
+            closeImport();
             handleCreate();
           }}
         />
