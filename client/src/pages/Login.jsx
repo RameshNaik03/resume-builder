@@ -31,11 +31,11 @@ export default function Login() {
   return (
     <div className="flex justify-center px-4 py-16">
       <div className="card w-full max-w-md p-8">
-        <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
-        <p className="mt-1 text-sm text-slate-500">Log in to continue building your resumes.</p>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome back</h1>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Log in to continue building your resumes.</p>
 
         {serverError && (
-          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
+          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300" role="alert">
             {serverError}
           </div>
         )}
@@ -77,9 +77,9 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="mt-6 text-center text-sm text-slate-500">
+        <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
           Don't have an account?{" "}
-          <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-700">
+          <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
             Sign up
           </Link>
         </p>

@@ -155,10 +155,10 @@ export default function ImportResumeModal({ onClose, onStartFromScratch }) {
     <Modal onClose={() => !isBusy && onClose()} labelledBy="import-modal-title" className="max-w-lg p-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 id="import-modal-title" className="text-lg font-semibold text-slate-900">
+          <h2 id="import-modal-title" className="text-lg font-semibold text-slate-900 dark:text-white">
             Upload your existing resume
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             We'll read your PDF or Word file and fill in the editor for you.
           </p>
         </div>
@@ -167,7 +167,7 @@ export default function ImportResumeModal({ onClose, onStartFromScratch }) {
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
           >
             <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M18 6 6 18M6 6l12 12" />
@@ -178,15 +178,15 @@ export default function ImportResumeModal({ onClose, onStartFromScratch }) {
 
       {/* ---------- Uploading / reading ---------- */}
       {isBusy && (
-        <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-6 py-10 text-center" role="status" aria-live="polite">
-          <div className="mx-auto size-10 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
-          <p className="mt-4 font-medium text-slate-900">
+        <div className="mt-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-6 py-10 text-center" role="status" aria-live="polite">
+          <div className="mx-auto size-10 animate-spin rounded-full border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600" />
+          <p className="mt-4 font-medium text-slate-900 dark:text-white">
             {status === "uploading" ? `Uploading… ${progress}%` : "Reading your resume..."}
           </p>
-          <p className="mt-1 truncate text-sm text-slate-500">{fileName}</p>
-          {status === "reading" && <p className="mt-3 text-xs text-slate-400">This usually takes a few seconds.</p>}
+          <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">{fileName}</p>
+          {status === "reading" && <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">This usually takes a few seconds.</p>}
           {status === "uploading" && (
-            <div className="mx-auto mt-4 h-1.5 max-w-xs overflow-hidden rounded-full bg-slate-200">
+            <div className="mx-auto mt-4 h-1.5 max-w-xs overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
               <div className="h-full rounded-full bg-indigo-600 transition-all" style={{ width: `${progress}%` }} />
             </div>
           )}
@@ -195,9 +195,9 @@ export default function ImportResumeModal({ onClose, onStartFromScratch }) {
 
       {/* ---------- Failed ---------- */}
       {status === "failed" && (
-        <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-5" role="alert">
-          <p className="font-medium text-red-800">We couldn't import {fileName || "this file"}</p>
-          <p className="mt-1 text-sm text-red-700">{serverError}</p>
+        <div className="mt-6 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50 p-5" role="alert">
+          <p className="font-medium text-red-800 dark:text-red-200">We couldn't import {fileName || "this file"}</p>
+          <p className="mt-1 text-sm text-red-700 dark:text-red-300">{serverError}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <button type="button" onClick={tryAgain} className="btn-secondary">
               Try another file
@@ -220,22 +220,22 @@ export default function ImportResumeModal({ onClose, onStartFromScratch }) {
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
             className={`mt-6 rounded-xl border-2 border-dashed px-6 py-10 text-center transition ${
-              isDragging ? "border-indigo-500 bg-indigo-50" : "border-slate-300 bg-slate-50/50"
+              isDragging ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60" : "border-slate-300 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/30"
             }`}
           >
-            <div className="mx-auto grid size-12 place-items-center rounded-xl bg-indigo-50 text-indigo-600">
+            <div className="mx-auto grid size-12 place-items-center rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
               <svg className="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
               </svg>
             </div>
-            <p className="mt-4 font-medium text-slate-900">
+            <p className="mt-4 font-medium text-slate-900 dark:text-white">
               {isDragging ? "Drop your file here" : "Drag and drop your resume here"}
             </p>
-            <p className="mt-1 text-sm text-slate-500">or</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">or</p>
             <button type="button" onClick={() => inputRef.current.click()} className="btn-primary mt-3">
               Choose file
             </button>
-            <p className="mt-4 text-xs text-slate-400">PDF or DOCX, up to {MAX_SIZE_MB} MB</p>
+            <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">PDF or DOCX, up to {MAX_SIZE_MB} MB</p>
 
             <input
               ref={inputRef}
@@ -250,12 +250,12 @@ export default function ImportResumeModal({ onClose, onStartFromScratch }) {
           </div>
 
           {fileError && (
-            <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+            <p className="mt-3 rounded-lg bg-red-50 dark:bg-red-950/50 px-3 py-2 text-sm text-red-700 dark:text-red-300" role="alert">
               {fileError}
             </p>
           )}
 
-          <p className="mt-4 text-xs text-slate-400">
+          <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
             Tip: text-based PDFs (exported from Word or Google Docs) work best. Scanned images can't be read.
           </p>
         </>

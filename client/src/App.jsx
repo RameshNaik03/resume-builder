@@ -16,14 +16,16 @@ export default function App() {
   const showNavbar = pathname !== "/";
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+    <div className="flex min-h-screen flex-col">
       {showNavbar && <Navbar />}
 
       <main className="flex-1">
         <Routes>
+          {/* Everyone (its buttons point logged-in users to the dashboard) */}
+          <Route path="/" element={<Landing />} />
+
           {/* Only for logged-out users (logged-in users go to the dashboard) */}
           <Route element={<PublicRoute />}>
-            <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
           </Route>
@@ -39,7 +41,13 @@ export default function App() {
         </Routes>
       </main>
 
-      <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 3000,
+          className: "dark:bg-slate-800! dark:text-slate-100!",
+        }}
+      />
     </div>
   );
 }

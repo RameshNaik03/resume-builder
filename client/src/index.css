@@ -1,58 +1,26 @@
 @import "tailwindcss";
 
-/* Use the Inter font (loaded in index.html) as the default sans-serif font */
+/* Dark mode is switched by a "dark" class on <html> (see utils/theme.js),
+   so "dark:" utilities follow the toggle instead of only the system setting */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Fonts are loaded in index.html.
+   font-sans (Inter) is the default; font-display (Plus Jakarta Sans) is for big headings. */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-
-  /* Landing page animations, used as animate-gradient-pan, animate-blob, animate-fade-up */
-  --animate-gradient-pan: gradient-pan 18s ease infinite;
-  --animate-blob: blob-drift 22s ease-in-out infinite;
-  --animate-fade-up: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
-
-  @keyframes gradient-pan {
-    0%,
-    100% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-  }
-  @keyframes blob-drift {
-    0%,
-    100% {
-      transform: translate(0, 0) scale(1);
-    }
-    33% {
-      transform: translate(8%, -6%) scale(1.1);
-    }
-    66% {
-      transform: translate(-6%, 6%) scale(0.95);
-    }
-  }
-  @keyframes fade-up {
-    from {
-      opacity: 0;
-      transform: translateY(16px);
-    }
-    to {
-      opacity: 1;
-      transform: none;
-    }
-  }
+  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Film-grain texture (an SVG noise filter) */
-@utility bg-grain {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* Faint grid lines */
-@utility bg-grid {
-  background-image:
-    linear-gradient(to right, rgb(255 255 255 / 0.07) 1px, transparent 1px),
-    linear-gradient(to bottom, rgb(255 255 255 / 0.07) 1px, transparent 1px);
-  background-size: 48px 48px;
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  :root.dark {
+    color-scheme: dark; /* Dark scrollbars and form controls */
+  }
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+  }
 }
 
 /* Small set of reusable classes so every page looks consistent */
@@ -63,21 +31,21 @@
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-60;
   }
   .btn-primary {
-    @apply bg-indigo-600 text-white shadow-sm hover:bg-indigo-700;
+    @apply bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400;
   }
   .btn-secondary {
-    @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+    @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800;
   }
   .card {
-    @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900;
   }
   .label {
-    @apply mb-1.5 block text-sm font-medium text-slate-700;
+    @apply mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300;
   }
   .input {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 aria-invalid:border-red-500 aria-invalid:focus:ring-red-500/20;
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 aria-invalid:border-red-500 aria-invalid:focus:ring-red-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500;
   }
   .field-error {
-    @apply mt-1.5 text-sm text-red-600;
+    @apply mt-1.5 text-sm text-red-600 dark:text-red-400;
   }
 }

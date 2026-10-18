@@ -99,8 +99,8 @@ export default function Editor() {
     return (
       <div className="flex justify-center px-4 py-16">
         <div className="card w-full max-w-md p-8 text-center">
-          <h1 className="text-xl font-semibold text-slate-900">Couldn't open this resume</h1>
-          <p className="mt-2 text-sm text-slate-500">{loadError}</p>
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Couldn't open this resume</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{loadError}</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <button type="button" onClick={() => window.location.reload()} className="btn-secondary">
               Try again
@@ -119,12 +119,12 @@ export default function Editor() {
   return (
     <div>
       {/* Top bar (sits just below the 4rem-tall Navbar) */}
-      <div className="sticky top-16 z-5 border-b border-slate-200 bg-white">
+      <div className="sticky top-16 z-5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
           <button
             type="button"
             onClick={handleBack}
-            className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+            className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
             aria-label="Back to dashboard"
             title="Back to dashboard"
           >
@@ -140,10 +140,10 @@ export default function Editor() {
             onBlur={() => !resume.title.trim() && updateResume({ title: "Untitled Resume" })}
             maxLength={100}
             aria-label="Resume title"
-            className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 text-lg font-semibold text-slate-900 outline-none hover:bg-slate-100 focus:bg-white focus:ring-2 focus:ring-indigo-500/30"
+            className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 text-lg font-semibold text-slate-900 dark:text-white outline-none hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/30"
           />
 
-          <span className="hidden items-center gap-2 text-sm text-slate-500 sm:flex" aria-live="polite">
+          <span className="hidden items-center gap-2 text-sm text-slate-500 dark:text-slate-400 sm:flex" aria-live="polite">
             <span className={`size-2 rounded-full ${statusStyle.dot}`} />
             {statusStyle.text}
           </span>
@@ -187,7 +187,7 @@ export default function Editor() {
 
         {/* Mobile: status + Edit/Preview tabs */}
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pb-3 lg:hidden">
-          <div className="flex rounded-lg bg-slate-100 p-1" role="tablist">
+          <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1" role="tablist">
             {["edit", "preview"].map((tab) => (
               <button
                 key={tab}
@@ -196,14 +196,14 @@ export default function Editor() {
                 aria-selected={activeTab === tab}
                 onClick={() => setActiveTab(tab)}
                 className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition ${
-                  activeTab === tab ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  activeTab === tab ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
                 }`}
               >
                 {tab}
               </button>
             ))}
           </div>
-          <span className="flex items-center gap-2 text-sm text-slate-500 sm:hidden">
+          <span className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400 sm:hidden">
             <span className={`size-2 rounded-full ${statusStyle.dot}`} />
             {statusStyle.text}
           </span>
@@ -214,13 +214,13 @@ export default function Editor() {
       {showImportBanner && (
         <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
           <div
-            className="flex flex-col gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 sm:flex-row sm:items-center"
+            className="flex flex-col gap-3 rounded-xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-950/60 px-4 py-3 sm:flex-row sm:items-center"
             role="status"
           >
-            <svg className="hidden size-5 shrink-0 text-indigo-600 sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <svg className="hidden size-5 shrink-0 text-indigo-600 dark:text-indigo-400 sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M20 6 9 17l-5-5" />
             </svg>
-            <p className="flex-1 text-sm text-indigo-900">
+            <p className="flex-1 text-sm text-indigo-900 dark:text-indigo-100">
               <span className="font-semibold">We imported your resume.</span> Please check each section, as imports
               aren't always perfect. You can change the template anytime.
             </p>
@@ -232,7 +232,7 @@ export default function Editor() {
                 type="button"
                 onClick={dismissImportBanner}
                 aria-label="Dismiss"
-                className="grid size-8 place-items-center rounded-lg text-indigo-400 hover:bg-indigo-100 hover:text-indigo-700"
+                className="grid size-8 place-items-center rounded-lg text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900 hover:text-indigo-700 dark:hover:text-indigo-300"
               >
                 <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                   <path d="M18 6 6 18M6 6l12 12" />
@@ -287,11 +287,11 @@ export default function Editor() {
           {/* On large screens the preview stays in view and scrolls on its own */}
           <div className="lg:sticky lg:top-36 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:p-1">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="hidden text-xs font-medium tracking-wider text-slate-400 uppercase lg:block">Live preview</p>
+              <p className="hidden text-xs font-medium tracking-wider text-slate-400 dark:text-slate-500 uppercase lg:block">Live preview</p>
               <button
                 type="button"
                 onClick={() => setIsPickerOpen(true)}
-                className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+                className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
               >
                 {getTemplate(resume.template).name} · Change
               </button>

@@ -97,10 +97,10 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl dark:text-white">
             {getGreeting()}, {user.name.split(" ")[0]} 👋
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {loading
               ? "Loading your resumes..."
               : loadError
@@ -135,8 +135,8 @@ export default function Dashboard() {
           </div>
         ) : loadError ? (
           <div className="card flex flex-col items-center px-6 py-16 text-center" role="alert">
-            <h2 className="text-lg font-semibold text-slate-900">Couldn't load your resumes</h2>
-            <p className="mt-1 max-w-sm text-sm text-slate-500">{loadError}</p>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Couldn't load your resumes</h2>
+            <p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">{loadError}</p>
             <button type="button" onClick={() => setReloadKey((key) => key + 1)} className="btn-primary mt-6">
               Try again
             </button>

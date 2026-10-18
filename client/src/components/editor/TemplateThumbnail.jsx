@@ -5,7 +5,7 @@ import ResumeSheet from "../ResumeSheet";
 const A4_WIDTH_PX = 794; // 210mm at 96 DPI
 
 const TIER_BADGE_STYLES = {
-  basic: "bg-slate-100 text-slate-600",
+  basic: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300",
   advanced: "bg-sky-50 text-sky-700",
   premium: "bg-linear-to-r from-amber-100 to-yellow-50 text-amber-800 ring-1 ring-amber-200",
 };
@@ -49,7 +49,7 @@ export default function TemplateThumbnail({ template, resume, selected, onSelect
       aria-pressed={selected}
       aria-label={`${template.name} template${selected ? " (selected)" : ""}`}
       className={`group rounded-xl p-2 text-left transition disabled:cursor-wait ${
-        selected ? "bg-indigo-50 ring-2 ring-indigo-600" : "ring-1 ring-slate-200 hover:bg-slate-50 hover:ring-indigo-300"
+        selected ? "bg-indigo-50 dark:bg-indigo-950/60 ring-2 ring-indigo-600" : "ring-1 ring-slate-200 dark:ring-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:ring-indigo-300"
       }`}
     >
       <div
@@ -67,12 +67,12 @@ export default function TemplateThumbnail({ template, resume, selected, onSelect
             </ResumeSheet>
           </div>
         ) : (
-          <div className="absolute inset-0 animate-pulse bg-slate-100" />
+          <div className="absolute inset-0 animate-pulse bg-slate-100 dark:bg-slate-800" />
         )}
 
         {saving && (
           <div className="absolute inset-0 grid place-items-center bg-white/70">
-            <div className="size-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600" />
+            <div className="size-8 animate-spin rounded-full border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600" />
           </div>
         )}
 
@@ -86,7 +86,7 @@ export default function TemplateThumbnail({ template, resume, selected, onSelect
       </div>
 
       <div className="mt-2 px-1">
-        <p className="truncate text-sm font-medium text-slate-900">{template.name}</p>
+        <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{template.name}</p>
         <div className="mt-1.5 flex flex-wrap gap-1.5">
           {/* Tier badge (all templates are free; the badge only shows the tier) */}
           <span
@@ -100,7 +100,7 @@ export default function TemplateThumbnail({ template, resume, selected, onSelect
             {template.tier}
           </span>
           {template.atsFriendly && (
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700">
+            <span className="rounded-full bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
               ATS-friendly
             </span>
           )}

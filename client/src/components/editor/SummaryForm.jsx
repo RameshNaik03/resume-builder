@@ -16,7 +16,7 @@ export default function SummaryForm({ value, onChange }) {
         placeholder="2–4 sentences about who you are, what you're good at, and what you're looking for."
         className="input resize-y"
       />
-      <p className={`mt-1.5 text-right text-xs ${length > RECOMMENDED_LENGTH ? "text-amber-600" : "text-slate-400"}`}>
+      <p className={`mt-1.5 text-right text-xs ${length > RECOMMENDED_LENGTH ? "text-amber-600 dark:text-amber-400" : "text-slate-400 dark:text-slate-500"}`}>
         {length} / {RECOMMENDED_LENGTH} characters recommended
       </p>
     </div>

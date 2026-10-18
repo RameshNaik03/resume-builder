@@ -42,12 +42,12 @@ export default function ExperienceForm({ items, onChange }) {
               />
             </div>
 
-            <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-700">
+            <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
               <input
                 type="checkbox"
                 checked={isCurrent}
                 onChange={(event) => update({ endDate: event.target.checked ? PRESENT : "" })}
-                className="size-4 rounded border-slate-300 accent-indigo-600"
+                className="size-4 rounded border-slate-300 dark:border-slate-600 accent-indigo-600"
               />
               Currently working here
             </label>

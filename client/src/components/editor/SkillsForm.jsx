@@ -56,13 +56,13 @@ export default function SkillsForm({ skills, onChange }) {
           {skills.map((skill) => (
             <li
               key={skill}
-              className="flex items-center gap-1 rounded-full bg-indigo-50 py-1 pl-3 pr-1 text-sm font-medium text-indigo-700"
+              className="flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 py-1 pl-3 pr-1 text-sm font-medium text-indigo-700 dark:text-indigo-300"
             >
               {skill}
               <button
                 type="button"
                 onClick={() => removeSkill(skill)}
-                className="grid size-5 place-items-center rounded-full text-indigo-400 hover:bg-indigo-100 hover:text-indigo-700"
+                className="grid size-5 place-items-center rounded-full text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900 hover:text-indigo-700 dark:hover:text-indigo-300"
                 aria-label={`Remove ${skill}`}
               >
                 <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
@@ -73,7 +73,7 @@ export default function SkillsForm({ skills, onChange }) {
           ))}
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-slate-400">No skills added yet.</p>
+        <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">No skills added yet.</p>
       )}
     </div>
   );

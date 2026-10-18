@@ -31,8 +31,8 @@ export default function Modal({ onClose, labelledBy, fullScreen = false, classNa
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className={`w-full bg-white shadow-xl ${
-          fullScreen ? "h-full" : "rounded-2xl border border-slate-200"
+        className={`w-full bg-white shadow-xl dark:bg-slate-900 ${
+          fullScreen ? "h-full" : "rounded-2xl border border-slate-200 dark:border-slate-800"
         } ${className}`}
         onClick={(event) => event.stopPropagation()} // Clicks inside shouldn't close it
       >

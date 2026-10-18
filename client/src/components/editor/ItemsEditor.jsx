@@ -11,7 +11,7 @@ export default function ItemsEditor({ label, items, onChange, placeholder, addLa
       <ul className="space-y-2">
         {items.map((item, index) => (
           <li key={index} className="flex items-center gap-2">
-            <span className="text-slate-400" aria-hidden="true">•</span>
+            <span className="text-slate-400 dark:text-slate-500" aria-hidden="true">•</span>
             <input
               type="text"
               value={item}
@@ -24,7 +24,7 @@ export default function ItemsEditor({ label, items, onChange, placeholder, addLa
               type="button"
               onClick={() => removeItem(index)}
               aria-label={`Remove ${itemName} ${index + 1}`}
-              className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600"
+              className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-red-50 dark:hover:bg-red-950/50 hover:text-red-600 dark:hover:text-red-400"
             >
               <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <path d="M18 6 6 18M6 6l12 12" />
@@ -33,7 +33,7 @@ export default function ItemsEditor({ label, items, onChange, placeholder, addLa
           </li>
         ))}
       </ul>
-      <button type="button" onClick={addItem} className="mt-2 text-sm font-medium text-indigo-600 hover:text-indigo-700">
+      <button type="button" onClick={addItem} className="mt-2 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300">
         {addLabel}
       </button>
     </div>

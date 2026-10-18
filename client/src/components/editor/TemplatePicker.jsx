@@ -40,12 +40,12 @@ export default function TemplatePicker({
       className={`flex flex-col ${fullScreen ? "" : "max-h-[90vh] max-w-5xl"}`}
     >
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 pt-5 pb-4 sm:px-6">
+      <div className="flex items-start justify-between gap-4 border-b border-slate-200 dark:border-slate-800 px-5 pt-5 pb-4 sm:px-6">
         <div>
-          <h2 id="template-picker-title" className="text-lg font-semibold text-slate-900">
+          <h2 id="template-picker-title" className="text-lg font-semibold text-slate-900 dark:text-white">
             {title}
           </h2>
-          <p className="mt-0.5 text-sm text-slate-500">{description}</p>
+          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{description}</p>
         </div>
         {closeLabel ? (
           <button type="button" onClick={onClose} disabled={isSaving} className="btn-secondary shrink-0">
@@ -56,7 +56,7 @@ export default function TemplatePicker({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
           >
             <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M18 6 6 18M6 6l12 12" />
@@ -66,7 +66,7 @@ export default function TemplatePicker({
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-slate-200 px-5 sm:px-6" role="tablist">
+      <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800 px-5 sm:px-6" role="tablist">
         {TIERS.map((t) => {
           const count = TEMPLATES.filter((template) => template.tier === t.id).length;
           const isActive = t.id === activeTier;
@@ -78,11 +78,11 @@ export default function TemplatePicker({
               aria-selected={isActive}
               onClick={() => setActiveTier(t.id)}
               className={`-mb-px border-b-2 px-3 py-2.5 text-sm font-medium transition ${
-                isActive ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-500 hover:text-slate-800"
+                isActive ? "border-indigo-600 text-indigo-600 dark:text-indigo-400" : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-100"
               }`}
             >
               {t.name}
-              <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500">{count}</span>
+              <span className="ml-1.5 rounded-full bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-xs text-slate-500 dark:text-slate-400">{count}</span>
             </button>
           );
         })}
@@ -91,7 +91,7 @@ export default function TemplatePicker({
       {/* Grid (only the active tab is rendered, which keeps the modal fast) */}
       <div className="flex-1 overflow-y-auto px-5 py-5 sm:px-6" role="tabpanel">
         <div className={fullScreen ? "mx-auto max-w-7xl" : ""}>
-          <p className="mb-4 text-sm text-slate-500">{tier.description}</p>
+          <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">{tier.description}</p>
 
           {templates.length > 0 ? (
             <div className={`grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 ${fullScreen ? "xl:grid-cols-4" : ""}`}>
@@ -108,9 +108,9 @@ export default function TemplatePicker({
               ))}
             </div>
           ) : (
-            <div className="rounded-xl border-2 border-dashed border-slate-200 px-6 py-14 text-center">
-              <p className="font-medium text-slate-700">{tier.name} templates are coming soon</p>
-              <p className="mt-1 text-sm text-slate-500">For now, pick any Basic template. They're all ATS-friendly.</p>
+            <div className="rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 px-6 py-14 text-center">
+              <p className="font-medium text-slate-700 dark:text-slate-300">{tier.name} templates are coming soon</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">For now, pick any Basic template. They're all ATS-friendly.</p>
             </div>
           )}
         </div>
