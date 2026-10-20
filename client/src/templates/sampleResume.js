@@ -54,7 +54,10 @@ const SAMPLE = {
   ],
 };
 
-const CONTACT_FIELDS = ["email", "phone", "location", "linkedin", "github"];
+// The full example resume (a fictional person), also used by the landing page
+export const SAMPLE_RESUME = SAMPLE;
+
+const CONTACT_FIELDS =["email", "phone", "location", "linkedin", "github"];
 
 // True if no entry in the list has any of these fields filled in
 const isEmptyList = (list, fields) => !(list ?? []).some((item) => fields.some((field) => item[field]?.trim()));
