@@ -1,0 +1,138 @@
+@import "tailwindcss";
+
+/* Dark mode is switched by a "dark" class on <html> (see utils/theme.js),
+   so "dark:" utilities follow the toggle instead of only the system setting */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Fonts are loaded in index.html.
+   font-sans (Inter) is the default; font-display (Plus Jakarta Sans) is for big headings. */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* ---------- "Paper & Ink" (landing page) ---------- */
+  --font-ink-serif: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-ink-sans: "Inter Tight", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-ink-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --color-paper: #f6f1e7; /* Warm off-white page */
+  --color-ink: #1b1b1f; /* Deep ink text and lines */
+  --color-tomato: #e4572e; /* The one accent, used sparingly */
+  --color-carbon: #1b1b1f; /* Ink that stays dark in dark mode (text on the red button) */
+
+  --animate-ink-draw: ink-draw 0.9s 0.5s cubic-bezier(0.65, 0, 0.35, 1) both;
+  --animate-ink-in: ink-in 0.45s ease-out both;
+  --animate-stamp: stamp-land 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  --animate-marquee: marquee 70s linear infinite;
+
+  /* Hand-drawn underline: the path uses pathLength="1", so 1 = fully hidden */
+  @keyframes ink-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes ink-in {
+    from {
+      opacity: 0;
+      transform: translateY(3px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  /* Rubber stamp: drops in large, overshoots a little, settles.
+     (Its tilt comes from the element's own rotate class, which composes with this.) */
+  @keyframes stamp-land {
+    0% {
+      opacity: 0;
+      transform: scale(2.2);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(0.92);
+    }
+    80% {
+      transform: scale(1.04);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+  /* The strip holds two copies of the row, so moving by half loops seamlessly */
+  @keyframes marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+/* "Night ink": the same tokens, inverted, so every bg-paper / text-ink follows dark mode */
+.dark {
+  --color-paper: #141414;
+  --color-ink: #efe7d8;
+}
+
+/* Paper grain (an SVG noise filter), laid over the page at low opacity */
+@utility bg-paper-grain {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+}
+
+/* Scroll-in: elements with data-reveal fade up once the landing page marks them "shown".
+   Only when the user hasn't asked for reduced motion; otherwise they're simply visible. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+      opacity 0.7s ease,
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  [data-reveal="shown"] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  :root.dark {
+    color-scheme: dark; /* Dark scrollbars and form controls */
+  }
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+  }
+}
+
+/* Small set of reusable classes so every page looks consistent */
+@layer components {
+  /* Shared button base */
+  .btn-primary,
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-60;
+  }
+  .btn-primary {
+    @apply bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400;
+  }
+  .btn-secondary {
+    @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800;
+  }
+  .card {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300;
+  }
+  .input {
+    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 aria-invalid:border-red-500 aria-invalid:focus:ring-red-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500;
+  }
+  .field-error {
+    @apply mt-1.5 text-sm text-red-600 dark:text-red-400;
+  }
+}
