@@ -1,6 +1,11 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
+// True if the token was issued before the user's last password reset
+// (jwt "iat" is in seconds, Dates are in milliseconds)
+const issuedBeforePasswordChange = (decoded, user) =>
+  Boolean(user.passwordChangedAt) && decoded.iat * 1000 < user.passwordChangedAt.getTime();
+
 // Protects routes: only lets the request through if it has a valid JWT.
 // Expects the header: Authorization: Bearer <token>
 export const protect = async (req, res, next) => {
@@ -27,6 +32,10 @@ export const protect = async (req, res, next) => {
     res.status(401);
     throw new Error("Not authorized, user no longer exists");
   }
+  if (issuedBeforePasswordChange(decoded, user)) {
+    res.status(401);
+    throw new Error("Not authorized, password was changed. Please log in again");
+  }
 
   req.user = user;
   next();
@@ -39,7 +48,8 @@ export const optionalAuth = async (req, res, next) => {
   if (authHeader?.startsWith("Bearer ")) {
     try {
       const decoded = jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET);
-      req.user = (await User.findById(decoded.id)) ?? undefined;
+      const user = await User.findById(decoded.id);
+      req.user = user && !issuedBeforePasswordChange(decoded, user) ? user : undefined;
     } catch {
       // Invalid or expired token: treat the request as a guest
     }

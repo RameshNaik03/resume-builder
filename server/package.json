@@ -5,7 +5,9 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon server.js",
+    "dev": "docker compose up -d --wait && nodemon server.js",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
     "start": "node server.js"
   },
   "author": "Ramesh Naik",
@@ -22,6 +24,7 @@
     "mongoose": "^9.11.2",
     "multer": "^2.4.0",
     "pdf-parse": "^2.4.5",
+    "resend": "^6.34.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {

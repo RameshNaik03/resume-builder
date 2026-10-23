@@ -1,0 +1,19 @@
+# Local MongoDB for development. `pnpm run dev` starts it automatically.
+# Data is kept in the "mongo-data" volume, so it survives restarts.
+services:
+  mongo:
+    image: mongo:8.0
+    container_name: resume-builder-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mongo-data:

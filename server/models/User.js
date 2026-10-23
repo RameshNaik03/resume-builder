@@ -20,6 +20,11 @@ const userSchema = new mongoose.Schema(
       required: true,
       select: false, // Never included in queries unless we ask for it
     },
+    // Forgot password: we store a hash of the emailed token, never the token itself
+    resetPasswordTokenHash: { type: String, select: false },
+    resetPasswordExpires: { type: Date, select: false },
+    // Logins (JWTs) issued before this time stop working after a password reset
+    passwordChangedAt: Date,
   },
   { timestamps: true } // Adds createdAt and updatedAt
 );
@@ -28,6 +33,9 @@ const userSchema = new mongoose.Schema(
 userSchema.set("toJSON", {
   transform: (doc, ret) => {
     delete ret.passwordHash;
+    delete ret.resetPasswordTokenHash;
+    delete ret.resetPasswordExpires;
+    delete ret.passwordChangedAt;
     delete ret.__v;
     return ret;
   },

@@ -7,6 +7,8 @@ import Landing from "./pages/Landing";
 import AtsChecker from "./pages/AtsChecker";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
 import NotFound from "./pages/NotFound";
@@ -30,6 +32,8 @@ export default function App() {
           <Route element={<PublicRoute />}>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password/:token" element={<ResetPassword />} />
           </Route>
 
           {/* Only for logged-in users */}

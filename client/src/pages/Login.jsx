@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 import getErrorMessage from "../utils/getErrorMessage";
 import usePageTitle from "../hooks/usePageTitle";
+import PasswordInput from "../components/PasswordInput";
 
 export default function Login() {
   usePageTitle("Log in");
@@ -59,13 +60,16 @@ export default function Login() {
           </div>
 
           <div>
-            <label htmlFor="password" className="label">Password</label>
-            <input
+            <div className="flex items-center justify-between">
+              <label htmlFor="password" className="label">Password</label>
+              <Link to="/forgot-password" className="mb-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
+                Forgot password?
+              </Link>
+            </div>
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="current-password"
               placeholder="••••••••"
-              className="input"
               aria-invalid={errors.password ? "true" : "false"}
               {...register("password", { required: "Password is required" })}
             />
