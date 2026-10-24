@@ -13,6 +13,7 @@ const EDITABLE_FIELDS = [
   "skills",
   "projects",
   "additional",
+  "design",
 ];
 
 // Copies only the editable fields out of the request body

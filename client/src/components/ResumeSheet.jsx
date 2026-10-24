@@ -1,13 +1,22 @@
-// A white A4 page (210 × 297 mm), or several pages stacked (pages={2} -> 594 mm tall).
+import { PAGE_SIZES } from "../templates/design";
+
+// A blank page (A4 or US Letter), or several pages stacked (pages={2} -> two pages tall).
 // Used by the live preview (whose hidden full-length sheet is printed to PDF) and by
 // template thumbnails. Page margins are added by TemplateRenderer and the layouts.
 // When printing it's 1mm shorter than its pages, so rounding never adds a blank page.
-export default function ResumeSheet({ ref, pages = 1, className = "", children }) {
+//   background - the design's page colour (white by default)
+export default function ResumeSheet({ ref, pages = 1, pageSize = "A4", background = "#ffffff", className = "", children }) {
+  const page = PAGE_SIZES[pageSize] ?? PAGE_SIZES.A4;
+
   return (
     <div
       ref={ref}
-      style={{ "--sheet-height": `calc(${pages} * 297mm)` }}
-      className={`min-h-(--sheet-height) w-[210mm] bg-white print:min-h-[calc(var(--sheet-height)-1mm)] ${className}`}
+      style={{
+        "--sheet-height": `calc(${pages} * ${page.heightMm}mm)`,
+        width: `${page.widthMm}mm`,
+        backgroundColor: background,
+      }}
+      className={`min-h-(--sheet-height) print:min-h-[calc(var(--sheet-height)-1mm)] ${className}`}
     >
       {children}
     </div>

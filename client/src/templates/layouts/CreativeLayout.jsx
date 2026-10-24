@@ -1,5 +1,7 @@
-import { space } from "../themes";
-import { BulletList, ContactLine, MaybeLink } from "./shared";
+import { Fragment } from "react";
+import { itemGap, sectionGap } from "../themes";
+import { BulletList, ContactLine, MaybeLink, SectionColumns, Skills } from "./shared";
+import { HEADER_ALIGN } from "./sectionLayout";
 
 // Creative: bold and colourful. Gradient shapes in the top corner, a big name,
 // bold section headings with a gradient marker, skills as tags and dates as pills.
@@ -11,10 +13,10 @@ const GRADIENT = { backgroundImage: "var(--gradient)" };
 function Section({ title, theme, children }) {
   const isCaps = theme.headingStyle === "caps";
   return (
-    <section style={{ marginTop: space(theme, 15) }}>
+    <section style={{ marginTop: sectionGap(15) }}>
       <h2
-        className={`flex items-center gap-[7pt] font-extrabold text-(--deep) ${
-          isCaps ? "text-[11.5pt] tracking-[0.1em] uppercase" : "text-[14pt]"
+        className={`font-heading divider-b flex items-center gap-[7pt] font-extrabold text-(--heading) ${
+          isCaps ? "hfs-11.5 tracking-[0.1em] uppercase" : "hfs-14"
         }`}
         data-block
         data-keep
@@ -23,14 +25,106 @@ function Section({ title, theme, children }) {
         <span className="size-[8pt] shrink-0 rotate-45 rounded-[2pt]" style={GRADIENT} aria-hidden="true" />
         {title}
       </h2>
-      <div style={{ marginTop: space(theme, 7) }}>{children}</div>
+      <div style={{ marginTop: itemGap(7) }}>{children}</div>
     </section>
   );
 }
 
 export default function CreativeLayout({ data, theme }) {
+  // One renderer per section; the design decides their order, headings and columns
+  const SECTIONS = {
+    summary: (title) => (
+      <Section title={title} theme={theme}>
+        <p className="whitespace-pre-line" data-block>
+          {data.summary}
+        </p>
+      </Section>
+    ),
+    experience: (title) => (
+      <Section title={title} theme={theme}>
+        <div className="flex flex-col" style={{ gap: itemGap(10) }}>
+          {data.experience.map((job) => (
+            <div key={job.key}>
+              <div className="flex items-center justify-between gap-[12pt]" data-block data-keep={job.bullets.length > 0}>
+                <p>
+                  <span className="fs-10.5 font-bold">{job.role}</span>
+                  {job.role && job.company && <span className="text-(--muted)"> @ </span>}
+                  <span className="font-semibold text-(--accent)">{job.company}</span>
+                </p>
+                {job.dates && (
+                  <p className="shrink-0 rounded-full bg-(--soft) px-[7pt] py-[1.5pt] fs-8.5 font-semibold text-(--accent)">
+                    {job.dates}
+                  </p>
+                )}
+              </div>
+              <BulletList items={job.bullets} className="mt-[4pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[13pt] marker:text-(--accent)" />
+            </div>
+          ))}
+        </div>
+      </Section>
+    ),
+    projects: (title) => (
+      <Section title={title} theme={theme}>
+        <div className="flex flex-col" style={{ gap: itemGap(8) }}>
+          {data.projects.map((project) => (
+            <div key={project.key}>
+              <p data-block data-keep={Boolean(project.description)}>
+                <span className="font-bold">{project.name}</span>
+                {project.name && project.linkText && <span className="text-(--muted)"> — </span>}
+                {project.linkText && (
+                  <MaybeLink href={project.href} className="fs-9 text-(--accent)">
+                    {project.linkText}
+                  </MaybeLink>
+                )}
+              </p>
+              {project.description && (
+                <p className="mt-[2pt] whitespace-pre-line" data-block>
+                  {project.description}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </Section>
+    ),
+    skills: (title) => (
+      <Section title={title} theme={theme}>
+        <Skills
+          skills={data.skills}
+          display={data.skillsDisplay}
+          defaultDisplay="tags"
+          tagsClassName="flex flex-wrap gap-[5pt]"
+          tagClassName="rounded-full bg-(--soft) px-[8pt] py-[2.5pt] fs-9 font-semibold text-(--deep)"
+          bulletClassName="space-y-[calc(2pt*var(--bullet-space,1))] pl-[13pt] marker:text-(--accent)"
+        />
+      </Section>
+    ),
+    education: (title) => (
+      <Section title={title} theme={theme}>
+        <div className="flex flex-col" style={{ gap: itemGap(6) }}>
+          {data.education.map((entry) => (
+            <div key={entry.key} className="flex items-baseline justify-between gap-[12pt]" data-block>
+              <p>
+                <span className="font-bold">{entry.degree}</span>
+                {entry.degree && entry.school && <span className="text-(--muted)"> · </span>}
+                {entry.school}
+              </p>
+              {entry.year && <p className="shrink-0 fs-9 text-(--muted)">{entry.year}</p>}
+            </div>
+          ))}
+        </div>
+      </Section>
+    ),
+    additional: () =>
+      data.additional.map((section) => (
+        <Section key={section.key} title={section.heading} theme={theme}>
+          <BulletList items={section.items} className="space-y-[calc(2pt*var(--bullet-space,1))] pl-[13pt] marker:text-(--accent)" />
+        </Section>
+      )),
+  };
+
   return (
-    <div className="relative overflow-hidden text-[10pt] leading-[1.4]">
+    <div className="relative overflow-hidden fs-10 leading-(--lh)">
       {/* ---------- Decorative shapes (top right corner of page 1) ---------- */}
       <div aria-hidden="true">
         <div className="absolute -top-[42mm] -right-[34mm] size-[100mm] rounded-full" style={GRADIENT} />
@@ -39,104 +133,16 @@ export default function CreativeLayout({ data, theme }) {
       </div>
 
       {/* relative keeps the content above the shapes */}
-      <div className="relative px-[16mm] py-[15mm]">
-        <header className="max-w-[118mm]" data-block>
-          <h1 className="text-[32pt] leading-[1.05] font-extrabold tracking-tight text-(--deep)">{data.name}</h1>
-          {data.headline && <p className="mt-[5pt] text-[13pt] font-semibold text-(--accent)">{data.headline}</p>}
-          <ContactLine contacts={data.contacts} separator="/" className="mt-[8pt] text-[9pt] text-(--muted)" />
+      {/* Page margins come from the design (--m-top etc.) */}
+      <div className="relative pt-(--m-top) pr-(--m-right) pb-(--m-bottom) pl-(--m-left)">
+        {/* The header block (kept clear of the shapes) also follows the header alignment */}
+        <header className="mr-(--header-mr) ml-(--header-ml) max-w-[118mm]" style={HEADER_ALIGN} data-block>
+          <h1 className="font-heading hfs-32 leading-[1.05] font-extrabold tracking-tight text-(--deep)">{data.name}</h1>
+          {data.headline && <p className="mt-[5pt] fs-13 font-semibold text-(--accent)">{data.headline}</p>}
+          <ContactLine contacts={data.contacts} separator="/" className="mt-[8pt] fs-9 text-(--muted)" />
         </header>
 
-        {data.summary && (
-          <Section title="About Me" theme={theme}>
-            <p className="whitespace-pre-line" data-block>
-              {data.summary}
-            </p>
-          </Section>
-        )}
-
-        {data.experience.length > 0 && (
-          <Section title="Experience" theme={theme}>
-            <div className="flex flex-col" style={{ gap: space(theme, 10) }}>
-              {data.experience.map((job) => (
-                <div key={job.key}>
-                  <div className="flex items-center justify-between gap-[12pt]" data-block data-keep={job.bullets.length > 0}>
-                    <p>
-                      <span className="text-[10.5pt] font-bold">{job.role}</span>
-                      {job.role && job.company && <span className="text-(--muted)"> @ </span>}
-                      <span className="font-semibold text-(--accent)">{job.company}</span>
-                    </p>
-                    {job.dates && (
-                      <p className="shrink-0 rounded-full bg-(--soft) px-[7pt] py-[1.5pt] text-[8.5pt] font-semibold text-(--accent)">
-                        {job.dates}
-                      </p>
-                    )}
-                  </div>
-                  <BulletList items={job.bullets} className="mt-[4pt] space-y-[2pt] pl-[13pt] marker:text-(--accent)" />
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {data.projects.length > 0 && (
-          <Section title="Projects" theme={theme}>
-            <div className="flex flex-col" style={{ gap: space(theme, 8) }}>
-              {data.projects.map((project) => (
-                <div key={project.key}>
-                  <p data-block data-keep={Boolean(project.description)}>
-                    <span className="font-bold">{project.name}</span>
-                    {project.name && project.linkText && <span className="text-(--muted)"> — </span>}
-                    {project.linkText && (
-                      <MaybeLink href={project.href} className="text-[9pt] text-(--accent)">
-                        {project.linkText}
-                      </MaybeLink>
-                    )}
-                  </p>
-                  {project.description && (
-                    <p className="mt-[2pt] whitespace-pre-line" data-block>
-                      {project.description}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {data.skills.length > 0 && (
-          <Section title="Skills" theme={theme}>
-            <ul className="flex flex-wrap gap-[5pt]" data-block>
-              {data.skills.map((skill) => (
-                <li key={skill} className="rounded-full bg-(--soft) px-[8pt] py-[2.5pt] text-[9pt] font-semibold text-(--deep)">
-                  {skill}
-                </li>
-              ))}
-            </ul>
-          </Section>
-        )}
-
-        {data.education.length > 0 && (
-          <Section title="Education" theme={theme}>
-            <div className="flex flex-col" style={{ gap: space(theme, 6) }}>
-              {data.education.map((entry) => (
-                <div key={entry.key} className="flex items-baseline justify-between gap-[12pt]" data-block>
-                  <p>
-                    <span className="font-bold">{entry.degree}</span>
-                    {entry.degree && entry.school && <span className="text-(--muted)"> · </span>}
-                    {entry.school}
-                  </p>
-                  {entry.year && <p className="shrink-0 text-[9pt] text-(--muted)">{entry.year}</p>}
-                </div>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {data.additional.map((section) => (
-          <Section key={section.key} title={section.heading} theme={theme}>
-            <BulletList items={section.items} className="space-y-[2pt] pl-[13pt] marker:text-(--accent)" />
-          </Section>
-        ))}
+        <SectionColumns data={data} render={(section) => <Fragment key={section.key}>{SECTIONS[section.id](section.title)}</Fragment>} />
       </div>
     </div>
   );

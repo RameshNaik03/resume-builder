@@ -1,19 +1,16 @@
-// Splits a resume into A4 pages, the same way for the on-screen preview and the PDF.
+// Splits a resume into pages (A4 or US Letter), the same way for the on-screen preview and the PDF.
 //
 // How it works:
 //   1. Layouts mark every piece that must not be split across pages with `data-block`
 //      (a heading, a job's title line, one bullet point, an education entry...).
 //      Headings and job titles also get `data-keep` so they stay with the next block.
-//      Two-column layouts add `data-flow="side"` (or "all" for full-width parts above the columns).
+//      Two-column layouts add `data-flow="side"` (or "all" for full-width parts above the columns),
+//      either on each block or once on a column wrapper as `data-column="side"`.
 //   2. paginate() measures the blocks on the full-length (hidden) resume.
 //   3. Any block that would cross the bottom of a page gets extra top padding (a "gap")
 //      that moves it to the top of the next page.
 //   4. applyGaps() adds the same padding to the printed sheet and to every visible page.
-
-const MM = 96 / 25.4; // CSS pixels per millimetre
-export const PAGE_HEIGHT = 297 * MM; // A4
-const PAGE_MARGIN = 14 * MM; // Empty space at the bottom of each page and the top of pages 2, 3...
-const USABLE_HEIGHT = PAGE_HEIGHT - 2 * PAGE_MARGIN;
+// Page height and margins come from the resume's design (see pageMetrics in design.js).
 
 // Removes gaps from earlier runs, so we measure the natural layout
 function clearGaps(container) {
@@ -34,8 +31,12 @@ export function applyGaps(container, gaps) {
   });
 }
 
-// Works out the gaps and the number of pages for a rendered resume sheet
-export function paginate(sheet) {
+// Works out the gaps and the number of pages for a rendered resume sheet.
+//   heightPx       - page height
+//   marginTopPx    - empty space at the top of pages 2, 3... (page 1 has the layout's own padding)
+//   marginBottomPx - empty space at the bottom of every page
+export function paginate(sheet, { heightPx: PAGE_HEIGHT, marginTopPx: MARGIN_TOP, marginBottomPx: MARGIN_BOTTOM }) {
+  const USABLE_HEIGHT = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM;
   clearGaps(sheet);
 
   const sheetTop = sheet.getBoundingClientRect().top;
@@ -43,7 +44,8 @@ export function paginate(sheet) {
     const rect = el.getBoundingClientRect();
     return {
       index,
-      flow: el.dataset.flow ?? "main",
+      // A block's column: its own data-flow, or the data-column it sits in
+      flow: el.dataset.flow ?? el.closest("[data-column]")?.dataset.column ?? "main",
       keepWithNext: el.dataset.keep === "true",
       top: rect.top - sheetTop,
       bottom: rect.bottom - sheetTop,
@@ -61,7 +63,7 @@ export function paginate(sheet) {
     const current = { ...block, top: block.top + offset, bottom: block.bottom + offset };
 
     const page = Math.floor(current.top / PAGE_HEIGHT);
-    const pageLimit = (page + 1) * PAGE_HEIGHT - PAGE_MARGIN;
+    const pageLimit = (page + 1) * PAGE_HEIGHT - MARGIN_BOTTOM;
     const height = current.bottom - current.top;
 
     // Crosses the bottom of the page (and is small enough to fit on a page by itself)?
@@ -72,13 +74,13 @@ export function paginate(sheet) {
       let firstToMove = column.length;
       while (firstToMove > 0) {
         const previous = column[firstToMove - 1];
-        const isAtPageTop = previous.top <= page * PAGE_HEIGHT + PAGE_MARGIN + 1;
+        const isAtPageTop = previous.top <= page * PAGE_HEIGHT + MARGIN_TOP + 1;
         if (!previous.keepWithNext || Math.floor(previous.top / PAGE_HEIGHT) !== page || isAtPageTop) break;
         firstToMove -= 1;
       }
 
       const target = firstToMove < column.length ? column[firstToMove] : current;
-      const gap = (page + 1) * PAGE_HEIGHT + PAGE_MARGIN - target.top;
+      const gap = (page + 1) * PAGE_HEIGHT + MARGIN_TOP - target.top;
       gaps[target.index] = (gaps[target.index] ?? 0) + gap;
 
       for (const moved of column.slice(firstToMove)) {

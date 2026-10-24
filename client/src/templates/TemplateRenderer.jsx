@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { getTemplate } from "./registry";
 import prepareResume from "./prepareResume";
+import { designCssVars, resolveDesign } from "./design";
 import ClassicLayout from "./layouts/ClassicLayout";
 import MinimalLayout from "./layouts/MinimalLayout";
 import CompactLayout from "./layouts/CompactLayout";
@@ -27,35 +28,32 @@ const LAYOUT_COMPONENTS = {
 // Renders a resume with any template.
 //   templateId - optional; defaults to the resume's own template
 //   withLinks  - false for thumbnails (no clickable links)
-export default function TemplateRenderer({ resume, templateId, withLinks = true }) {
+//   design     - the resume's design overrides (fonts, sizes, colours...). Leave it out to
+//                show the template as designed (thumbnails, landing page).
+export default function TemplateRenderer({ resume, templateId, withLinks = true, design }) {
   const template = getTemplate(templateId ?? resume.template);
   const Layout = LAYOUT_COMPONENTS[template.layout];
   const { theme } = template;
 
-  // Only re-clean the data when the resume actually changes
-  const data = useMemo(() => prepareResume(resume, withLinks), [resume, withLinks]);
+  // Template defaults + design overrides (see design.js): the visual settings become
+  // CSS variables the layouts read; the layout settings (section order, columns,
+  // date format...) are applied to the data by prepareResume
+  const resolvedDesign = useMemo(() => resolveDesign(template, design), [template, design]);
+  const style = useMemo(() => designCssVars(template, resolvedDesign), [template, resolvedDesign]);
+
+  // Only re-clean the data when the resume or its design actually changes
+  const data = useMemo(
+    () => prepareResume(resume, withLinks, resolvedDesign.resolved, resolvedDesign.overrides),
+    [resume, withLinks, resolvedDesign]
+  );
 
   return (
-    <div
-      // Theme colours as CSS variables, used by the layouts as text-(--accent) etc.
-      style={{
-        "--accent": theme.accent,
-        "--soft": theme.soft ?? "#f1f5f9",
-        "--on-accent": theme.onAccent ?? "#ffffff",
-        "--deep": theme.deep ?? theme.accent,
-        "--gradient": theme.gradient ?? theme.accent,
-        "--text": theme.text,
-        "--muted": theme.muted,
-        "--line": theme.line,
-        color: theme.text,
-        fontFamily: theme.fontFamily,
-      }}
-    >
+    <div style={style}>
       {template.fullBleed ? (
         <Layout data={data} theme={theme} />
       ) : (
         // Standard page margins (pages 2, 3... get their top margin from templates/pagination.js)
-        <div className="px-[16mm] py-[14mm]">
+        <div className="pt-(--m-top) pr-(--m-right) pb-(--m-bottom) pl-(--m-left)">
           <Layout data={data} theme={theme} />
         </div>
       )}

@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import toast from "react-hot-toast";
 import { getTemplate } from "../templates/registry";
+import { PAGE_SIZES, resolveDesign, usedFontIds } from "../templates/design";
+import { getPrintFonts } from "../templates/fonts";
 import useResume from "../hooks/useResume";
 import usePageTitle from "../hooks/usePageTitle";
 import Loader from "../components/Loader";
@@ -16,6 +18,7 @@ import EducationForm from "../components/editor/EducationForm";
 import ProjectsForm from "../components/editor/ProjectsForm";
 import AdditionalForm from "../components/editor/AdditionalForm";
 import TemplatePicker from "../components/editor/TemplatePicker";
+import DesignPanel from "../components/editor/DesignPanel";
 
 // Text and dot colour for each save status
 const STATUS_STYLES = {
@@ -25,10 +28,11 @@ const STATUS_STYLES = {
   error: { text: "Couldn't save", dot: "bg-red-500" },
 };
 
-// Print settings for the PDF: A4 paper, no page margins (the sheet has its own padding).
+// Print settings for the PDF: the design's paper size (A4 or US Letter) and no page margins
+// (the resume draws its own margins, and pagination adds them to every page).
 // Zero margins also stop the browser from adding its date/URL headers and footers.
-const PRINT_PAGE_STYLE = `
-  @page { size: A4; margin: 0; }
+const printPageStyle = (pageSize) => `
+  @page { size: ${PAGE_SIZES[pageSize].css}; margin: 0; }
   @media print {
     html, body { margin: 0; padding: 0; }
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -43,6 +47,7 @@ export default function Editor() {
   const navigate = useNavigate();
   const { resume, loading, loadError, status, updateResume, save } = useResume(id);
   const [activeTab, setActiveTab] = useState("edit"); // Mobile only: "edit" or "preview"
+  const [formPanel, setFormPanel] = useState("content"); // Left column: "content" or "design"
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   // After importing a file, the dashboard sends us here with { imported: true }
@@ -59,10 +64,30 @@ export default function Editor() {
   // The A4 sheet inside ResumePreview; react-to-print turns it into the PDF.
   // The PDF file name comes from documentTitle.
   const printRef = useRef(null);
+
+  // The design's paper size and Google Fonts, so the PDF matches the preview
+  const templateId = resume?.template;
+  const design = resume?.design;
+  const resolvedDesign = useMemo(
+    () => (templateId === undefined ? null : resolveDesign(getTemplate(templateId), design).resolved),
+    [templateId, design]
+  );
+  const pageSize = resolvedDesign?.pageSize ?? "A4";
+  const fontIds = resolvedDesign ? usedFontIds(resolvedDesign).join(",") : "";
+  const [printFonts, setPrintFonts] = useState([]);
+  useEffect(() => {
+    let ignore = false;
+    getPrintFonts(fontIds ? fontIds.split(",") : []).then((fonts) => !ignore && setPrintFonts(fonts));
+    return () => {
+      ignore = true;
+    };
+  }, [fontIds]);
+
   const handleDownloadPdf = useReactToPrint({
     contentRef: printRef,
     documentTitle: resume?.title?.trim() || "Resume",
-    pageStyle: PRINT_PAGE_STYLE,
+    pageStyle: printPageStyle(pageSize),
+    fonts: printFonts, // react-to-print waits for these font files before printing
   });
 
   // Ctrl+S / Cmd+S saves instead of opening the browser's "Save page" dialog
@@ -245,41 +270,69 @@ export default function Editor() {
 
       {/* Two columns on large screens; tabs decide which one shows on small screens */}
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-2">
-        {/* Left: form */}
+        {/* Left: content form or design settings */}
         <div className={`space-y-4 ${activeTab === "edit" ? "block" : "hidden"} lg:block`}>
-          <CollapsibleSection title="Personal info" description="Name and contact details" defaultOpen>
-            <PersonalInfoForm
-              data={resume.personalInfo}
-              onChange={(personalInfo) => updateResume({ personalInfo })}
-            />
-          </CollapsibleSection>
+          <div className="flex rounded-lg bg-slate-100 p-1 dark:bg-slate-800" role="tablist" aria-label="Editor panels">
+            {[
+              { id: "content", label: "Content" },
+              { id: "design", label: "Design" },
+            ].map((panel) => (
+              <button
+                key={panel.id}
+                type="button"
+                role="tab"
+                aria-selected={formPanel === panel.id}
+                onClick={() => setFormPanel(panel.id)}
+                className={`flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition ${
+                  formPanel === panel.id
+                    ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                }`}
+              >
+                {panel.label}
+              </button>
+            ))}
+          </div>
 
-          <CollapsibleSection title="Summary" description="A short introduction about you">
-            <SummaryForm value={resume.summary} onChange={(summary) => updateResume({ summary })} />
-          </CollapsibleSection>
+          {formPanel === "design" ? (
+            <DesignPanel resume={resume} onChange={(design) => updateResume({ design })} />
+          ) : (
+            <>
+              <CollapsibleSection title="Personal info" description="Name and contact details" defaultOpen>
+                <PersonalInfoForm
+                  data={resume.personalInfo}
+                  onChange={(personalInfo) => updateResume({ personalInfo })}
+                />
+              </CollapsibleSection>
 
-          <CollapsibleSection title="Skills" description="Tools, languages and technologies">
-            <SkillsForm skills={resume.skills} onChange={(skills) => updateResume({ skills })} />
-          </CollapsibleSection>
+              <CollapsibleSection title="Summary" description="A short introduction about you">
+                <SummaryForm value={resume.summary} onChange={(summary) => updateResume({ summary })} />
+              </CollapsibleSection>
 
-          <CollapsibleSection title="Experience" description={withCount("Jobs and internships", resume.experience)}>
-            <ExperienceForm items={resume.experience} onChange={(experience) => updateResume({ experience })} />
-          </CollapsibleSection>
+              <CollapsibleSection title="Skills" description="Tools, languages and technologies">
+                <SkillsForm skills={resume.skills} onChange={(skills) => updateResume({ skills })} />
+              </CollapsibleSection>
 
-          <CollapsibleSection title="Education" description={withCount("Schools and degrees", resume.education)}>
-            <EducationForm items={resume.education} onChange={(education) => updateResume({ education })} />
-          </CollapsibleSection>
+              <CollapsibleSection title="Experience" description={withCount("Jobs and internships", resume.experience)}>
+                <ExperienceForm items={resume.experience} onChange={(experience) => updateResume({ experience })} />
+              </CollapsibleSection>
 
-          <CollapsibleSection title="Projects" description={withCount("Things you've built", resume.projects)}>
-            <ProjectsForm items={resume.projects} onChange={(projects) => updateResume({ projects })} />
-          </CollapsibleSection>
+              <CollapsibleSection title="Education" description={withCount("Schools and degrees", resume.education)}>
+                <EducationForm items={resume.education} onChange={(education) => updateResume({ education })} />
+              </CollapsibleSection>
 
-          <CollapsibleSection
-            title="Additional sections"
-            description={withCount("Certifications, languages, awards…", resume.additional ?? [])}
-          >
-            <AdditionalForm items={resume.additional ?? []} onChange={(additional) => updateResume({ additional })} />
-          </CollapsibleSection>
+              <CollapsibleSection title="Projects" description={withCount("Things you've built", resume.projects)}>
+                <ProjectsForm items={resume.projects} onChange={(projects) => updateResume({ projects })} />
+              </CollapsibleSection>
+
+              <CollapsibleSection
+                title="Additional sections"
+                description={withCount("Certifications, languages, awards…", resume.additional ?? [])}
+              >
+                <AdditionalForm items={resume.additional ?? []} onChange={(additional) => updateResume({ additional })} />
+              </CollapsibleSection>
+            </>
+          )}
         </div>
 
         {/* Right: live preview */}

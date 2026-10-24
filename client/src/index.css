@@ -82,6 +82,36 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 
+/* ---------- Resume templates ----------
+   Read the design variables set by TemplateRenderer (see templates/design.js), so every
+   layout follows the resume's font size, heading size, dividers and fonts. */
+
+/* Text size in pt that scales with the design's font size: fs-10 = 10pt at the template default */
+@utility fs-* {
+  font-size: calc(--value(number) * 1pt * var(--fs-scale, 1));
+}
+/* Same for headings (and the name), which also follow the heading size setting */
+@utility hfs-* {
+  font-size: calc(--value(number) * 1pt * var(--fs-scale, 1) * var(--hs-scale, 1));
+}
+/* Heading font (falls back to the body font, or to a layout's own heading font) */
+@utility font-heading {
+  font-family: var(--font-heading, inherit);
+}
+/* Divider lines in the design's style and colour ("none" makes them 0 wide) */
+@utility divider-b {
+  border-bottom: var(--divider-w, 0.75pt) var(--divider-style, solid) var(--line);
+  padding-bottom: var(--divider-pad, 2pt);
+}
+@utility divider-l {
+  border-left: var(--divider-w, 0.75pt) var(--divider-style, solid) var(--line);
+}
+/* A free-standing rule (e.g. the lines either side of a centred heading) */
+@utility divider-rule {
+  height: 0;
+  border-top: var(--divider-w, 0.75pt) var(--divider-style, solid) var(--line);
+}
+
 /* Scroll-in: elements with data-reveal fade up once the landing page marks them "shown".
    Only when the user hasn't asked for reduced motion; otherwise they're simply visible. */
 @media (prefers-reduced-motion: no-preference) {
