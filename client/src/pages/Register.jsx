@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
 import getErrorMessage from "../utils/getErrorMessage";
 import usePageTitle from "../hooks/usePageTitle";
+import PasswordInput from "../components/PasswordInput";
 
 export default function Register() {
   usePageTitle("Sign up");
@@ -80,12 +81,10 @@ export default function Register() {
 
           <div>
             <label htmlFor="password" className="label">Password</label>
-            <input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="new-password"
               placeholder="At least 6 characters"
-              className="input"
               aria-invalid={errors.password ? "true" : "false"}
               {...register("password", {
                 required: "Password is required",
@@ -97,12 +96,10 @@ export default function Register() {
 
           <div>
             <label htmlFor="confirmPassword" className="label">Confirm password</label>
-            <input
+            <PasswordInput
               id="confirmPassword"
-              type="password"
               autoComplete="new-password"
               placeholder="Repeat your password"
-              className="input"
               aria-invalid={errors.confirmPassword ? "true" : "false"}
               {...register("confirmPassword", {
                 required: "Please confirm your password",

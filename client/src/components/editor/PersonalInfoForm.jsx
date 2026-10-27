@@ -9,14 +9,20 @@ const FIELDS = [
   { name: "github", label: "GitHub", placeholder: "github.com/yourname", type: "text" },
 ];
 
-// data = resume.personalInfo, onChange receives the updated personalInfo object
-export default function PersonalInfoForm({ data, onChange }) {
+import PhotoUpload from "./PhotoUpload";
+
+// data = resume.personalInfo, onChange receives the updated personalInfo object.
+// The photo has its own upload route: onPhotoChange receives the new photo URL.
+export default function PersonalInfoForm({ data, onChange, resumeId, onPhotoChange }) {
   const handleChange = (event) => {
     onChange({ ...data, [event.target.name]: event.target.value });
   };
 
   return (
     <div className="grid gap-4 sm:grid-cols-2">
+      <div className="sm:col-span-2">
+        <PhotoUpload resumeId={resumeId} photoUrl={data.photoUrl ?? ""} onPhotoChange={onPhotoChange} />
+      </div>
       {FIELDS.map((field) => (
         <div key={field.name}>
           <label htmlFor={field.name} className="label">

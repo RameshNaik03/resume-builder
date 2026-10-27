@@ -8,9 +8,10 @@ import {
   duplicateResume,
 } from "../controllers/resumeController.js";
 import { importResume } from "../controllers/importController.js";
+import { removePhoto, uploadPhoto } from "../controllers/photoController.js";
 import { protect } from "../middleware/auth.js";
-import { importLimiter } from "../middleware/rateLimiter.js";
-import { uploadResumeFile } from "../middleware/upload.js";
+import { importLimiter, photoLimiter } from "../middleware/rateLimiter.js";
+import { uploadPhotoFile, uploadResumeFile } from "../middleware/upload.js";
 
 const router = express.Router();
 
@@ -22,5 +23,6 @@ router.route("/").get(getResumes).post(createResume);
 router.post("/import", importLimiter, uploadResumeFile, importResume);
 router.route("/:id").get(getResumeById).put(updateResume).delete(deleteResume);
 router.post("/:id/duplicate", duplicateResume);
+router.route("/:id/photo").post(photoLimiter, uploadPhotoFile, uploadPhoto).delete(removePhoto);
 
 export default router;

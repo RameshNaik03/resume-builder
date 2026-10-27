@@ -6,7 +6,8 @@ import mongoose from "mongoose";
 // Using public DNS servers for Node's lookups avoids that.
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
-// Connects to MongoDB Atlas using the MONGO_URI from .env
+// Connects to MongoDB using the MONGO_URI from .env
+// (local Docker database in development, Atlas in production)
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGO_URI);

@@ -1,114 +1,123 @@
-import { space } from "../themes";
-import { BulletList, ContactLine, MaybeLink, SectionTitle } from "./shared";
+import { Fragment } from "react";
+import { itemGap, sectionGap } from "../themes";
+import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
+import { HEADER_ALIGN } from "./sectionLayout";
 
 // Compact: smaller text and tighter spacing to fit more on one page.
 // Accent rule under the header; headings followed by a thin line to the edge.
 
 function Section({ title, theme, children }) {
   return (
-    <section style={{ marginTop: space(theme, 10) }}>
+    <section style={{ marginTop: sectionGap(10) }}>
       <div className="flex items-center gap-[6pt]" data-block data-keep>
         <SectionTitle theme={theme} size="sm" className="shrink-0">
           {title}
         </SectionTitle>
-        <span className="h-px flex-1 bg-(--line)" aria-hidden="true" />
+        <span className="divider-rule flex-1" aria-hidden="true" />
       </div>
-      <div style={{ marginTop: space(theme, 4) }}>{children}</div>
+      <div style={{ marginTop: itemGap(4) }}>{children}</div>
     </section>
   );
 }
 
 export default function CompactLayout({ data, theme }) {
-  return (
-    <div className="text-[9.5pt] leading-[1.35]">
-      <header className="border-b-[1.5pt] border-(--accent) pb-[6pt]" data-block>
-        <h1 className="text-[20pt] leading-tight font-bold tracking-tight">
-          {data.name}
-          {data.headline && <span className="ml-[8pt] text-[11pt] font-normal text-(--accent)">{data.headline}</span>}
-        </h1>
-        <ContactLine contacts={data.contacts} separator="|" className="mt-[3pt] text-[9pt] text-(--muted)" />
-      </header>
-
-      {data.summary && (
-        <Section title="Summary" theme={theme}>
-          <p className="whitespace-pre-line" data-block>
-            {data.summary}
-          </p>
-        </Section>
-      )}
-
-      {data.experience.length > 0 && (
-        <Section title="Experience" theme={theme}>
-          <div className="flex flex-col" style={{ gap: space(theme, 6) }}>
-            {data.experience.map((job) => (
-              <div key={job.key}>
-                <div className="flex items-baseline justify-between gap-[10pt]" data-block data-keep={job.bullets.length > 0}>
-                  <p>
-                    <span className="font-bold">{job.role}</span>
-                    {job.role && job.company && <span className="text-(--muted)"> | </span>}
-                    {job.company}
-                  </p>
-                  {job.dates && <p className="shrink-0 text-[9pt] text-(--muted)">{job.dates}</p>}
-                </div>
-                <BulletList items={job.bullets} className="mt-[2pt] space-y-[1pt] pl-[12pt] marker:text-(--muted)" />
-              </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {data.education.length > 0 && (
-        <Section title="Education" theme={theme}>
-          <div className="flex flex-col" style={{ gap: space(theme, 3) }}>
-            {data.education.map((entry) => (
-              <div key={entry.key} className="flex items-baseline justify-between gap-[10pt]" data-block>
+  // One renderer per section; the design decides their order, headings and columns
+  const SECTIONS = {
+    summary: (title) => (
+      <Section title={title} theme={theme}>
+        <p className="whitespace-pre-line" data-block>
+          {data.summary}
+        </p>
+      </Section>
+    ),
+    experience: (title) => (
+      <Section title={title} theme={theme}>
+        <div className="flex flex-col" style={{ gap: itemGap(6) }}>
+          {data.experience.map((job) => (
+            <div key={job.key}>
+              <div className="flex items-baseline justify-between gap-[10pt]" data-block data-keep={job.bullets.length > 0}>
                 <p>
-                  <span className="font-bold">{entry.degree}</span>
-                  {entry.degree && entry.school && <span className="text-(--muted)"> | </span>}
-                  {entry.school}
+                  <span className="font-bold">{job.role}</span>
+                  {job.role && job.company && <span className="text-(--muted)"> | </span>}
+                  {job.company}
                 </p>
-                {entry.year && <p className="shrink-0 text-[9pt] text-(--muted)">{entry.year}</p>}
+                {job.dates && <p className="shrink-0 fs-9 text-(--muted)">{job.dates}</p>}
               </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {data.skills.length > 0 && (
-        <Section title="Skills" theme={theme}>
-          <p data-block>{data.skills.join(", ")}</p>
-        </Section>
-      )}
-
-      {data.projects.length > 0 && (
-        <Section title="Projects" theme={theme}>
-          <div className="flex flex-col" style={{ gap: space(theme, 5) }}>
-            {data.projects.map((project) => (
-              <div key={project.key}>
-                <div className="flex items-baseline justify-between gap-[10pt]" data-block data-keep={Boolean(project.description)}>
-                  <p className="font-bold">{project.name}</p>
-                  {project.linkText && (
-                    <MaybeLink href={project.href} className="shrink-0 text-[9pt] text-(--accent)">
-                      {project.linkText}
-                    </MaybeLink>
-                  )}
-                </div>
-                {project.description && (
-                  <p className="whitespace-pre-line" data-block>
-                    {project.description}
-                  </p>
+              <BulletList items={job.bullets} className="mt-[2pt] space-y-[calc(1pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--muted)" />
+            </div>
+          ))}
+        </div>
+      </Section>
+    ),
+    education: (title) => (
+      <Section title={title} theme={theme}>
+        <div className="flex flex-col" style={{ gap: itemGap(3) }}>
+          {data.education.map((entry) => (
+            <div key={entry.key} className="flex items-baseline justify-between gap-[10pt]" data-block>
+              <p>
+                <span className="font-bold">{entry.degree}</span>
+                {entry.degree && entry.school && <span className="text-(--muted)"> | </span>}
+                {entry.school}
+              </p>
+              {entry.year && <p className="shrink-0 fs-9 text-(--muted)">{entry.year}</p>}
+            </div>
+          ))}
+        </div>
+      </Section>
+    ),
+    skills: (title) => (
+      <Section title={title} theme={theme}>
+        <Skills
+          skills={data.skills}
+          display={data.skillsDisplay}
+          bulletClassName="space-y-[calc(1pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--muted)"
+        />
+      </Section>
+    ),
+    projects: (title) => (
+      <Section title={title} theme={theme}>
+        <div className="flex flex-col" style={{ gap: itemGap(5) }}>
+          {data.projects.map((project) => (
+            <div key={project.key}>
+              <div className="flex items-baseline justify-between gap-[10pt]" data-block data-keep={Boolean(project.description)}>
+                <p className="font-bold">{project.name}</p>
+                {project.linkText && (
+                  <MaybeLink href={project.href} className="shrink-0 fs-9 text-(--accent)">
+                    {project.linkText}
+                  </MaybeLink>
                 )}
               </div>
-            ))}
-          </div>
-        </Section>
-      )}
-
-      {data.additional.map((section) => (
+              {project.description && (
+                <p className="whitespace-pre-line" data-block>
+                  {project.description}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </Section>
+    ),
+    additional: () =>
+      data.additional.map((section) => (
         <Section key={section.key} title={section.heading} theme={theme}>
-          <BulletList items={section.items} className="space-y-[1pt] pl-[12pt] marker:text-(--muted)" />
+          <BulletList items={section.items} className="space-y-[calc(1pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--muted)" />
         </Section>
-      ))}
+      )),
+  };
+
+  return (
+    <div className="fs-9.5 leading-(--lh)">
+      <header className="border-b-[1.5pt] border-(--accent) pb-[6pt]" style={HEADER_ALIGN} data-block>
+        <WithPhoto photo={data.photo} align={data.headerAlign}>
+          <h1 className="font-heading hfs-20 leading-tight font-bold tracking-tight">
+            {data.name}
+            {data.headline && <span className="ml-[8pt] font-(family-name:--font-body) fs-11 font-normal text-(--accent)">{data.headline}</span>}
+          </h1>
+          <ContactLine contacts={data.contacts} separator="|" className="mt-[3pt] fs-9 text-(--muted)" />
+        </WithPhoto>
+      </header>
+
+      <SectionColumns data={data} render={(section) => <Fragment key={section.key}>{SECTIONS[section.id](section.title)}</Fragment>} />
     </div>
   );
 }

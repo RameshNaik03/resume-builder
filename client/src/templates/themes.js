@@ -15,7 +15,8 @@ export const FONTS = { SANS, HUMANIST, SERIF };
 //   line         - thin divider lines
 //   fontFamily   - font stack for the whole resume
 //   headingStyle - "caps" (small uppercase headings) or "title" (larger normal-case headings)
-//   spacing      - multiplier for vertical gaps (1 = normal, 0.9 = tighter, 1.1 = roomier)
+//   spacing      - default multiplier for vertical gaps (1 = normal, 0.9 = tighter, 1.1 = roomier)
+// These are only defaults: a resume's design settings can override fonts, colours and spacing.
 export const THEMES = [
   {
     id: "navy",
@@ -226,5 +227,9 @@ export const PREMIUM_THEMES = [
   },
 ];
 
-// Scales a gap by the theme's spacing, e.g. space(theme, 12) -> "13.2pt" for Forest
-export const space = (theme, pt) => `${pt * theme.spacing}pt`;
+// Vertical gaps, scaled by the design's spacing settings (CSS variables from design.js,
+// which default to the theme's `spacing`):
+//   sectionGap - space above each section
+//   itemGap    - space between entries, and between a heading and its content
+export const sectionGap = (pt) => `calc(${pt}pt * var(--section-space, 1))`;
+export const itemGap = (pt) => `calc(${pt}pt * var(--para-space, 1))`;

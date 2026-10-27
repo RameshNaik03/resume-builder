@@ -17,6 +17,39 @@ export const TIERS = [
   },
 ];
 
+// Each layout's default design settings (a resume's own design overrides them, see design.js):
+//   baseFontSize - body text size in pt (all other text sizes scale with it)
+//   lineHeight   - body line height
+//   margins      - page margins in mm: [top, right, bottom, left]
+//   headingTone  - section headings use the "accent" or the darker "deep" colour
+//   dividerStyle - "none" | "line" | "thick" | "dotted"
+//   sectionOrder - the order sections appear in (per column when there are two)
+//   sectionTitles - the layout's own section headings (users can rename them)
+//   columns / sideSections / sideRatio - one or two columns, what goes in the side column, its width in %
+//   headerAlign  - "left" | "center" | "right"
+//   photoSize / photoPosition - profile photo size in mm, and "left" | "right" of the name
+//                  (or "sidebar" for the Sidebar layout's coloured column)
+const STANDARD_ORDER = ["summary", "experience", "education", "skills", "projects", "additional"];
+const STANDARD_TITLES = { summary: "Summary", experience: "Experience", education: "Education", skills: "Skills", projects: "Projects" };
+const layoutDefaults = ({ sectionTitles, ...overrides } = {}) => ({
+  baseFontSize: 10,
+  lineHeight: 1.4,
+  margins: [14, 16, 14, 16],
+  headingTone: "accent",
+  dividerStyle: "none",
+  sectionOrder: STANDARD_ORDER,
+  sectionTitles: { ...STANDARD_TITLES, ...sectionTitles },
+  columns: 1,
+  sideSections: ["skills", "education"], // Used when the user switches to two columns
+  sideRatio: 35,
+  headerAlign: "left",
+  photoSize: 28,
+  photoPosition: "left",
+  ...overrides,
+});
+// Sidebar and Split Modern list side-column sections first, as they always appeared
+const SIDE_FIRST_ORDER = ["summary", "experience", "skills", "education", "projects", "additional"];
+
 // Which layouts and themes make up each tier.
 // To add a tier later, add an entry here (and the layout components in TemplateRenderer).
 // Optional per-layout settings:
@@ -27,9 +60,13 @@ const TIER_CONFIG = [
     tier: "basic",
     atsFriendly: true,
     layouts: [
-      { id: "classic", name: "Classic" },
-      { id: "minimal", name: "Minimal" },
-      { id: "compact", name: "Compact" },
+      { id: "classic", name: "Classic", defaults: layoutDefaults({ dividerStyle: "line", headerAlign: "center" }) },
+      { id: "minimal", name: "Minimal", defaults: layoutDefaults({ lineHeight: 1.45 }) },
+      {
+        id: "compact",
+        name: "Compact",
+        defaults: layoutDefaults({ baseFontSize: 9.5, lineHeight: 1.35, dividerStyle: "line", photoSize: 22 }),
+      },
     ],
     themes: THEMES,
   },
@@ -37,9 +74,26 @@ const TIER_CONFIG = [
     tier: "advanced",
     atsFriendly: true,
     layouts: [
-      { id: "modern-header", name: "Modern Header", fullBleed: true },
-      { id: "sidebar", name: "Sidebar", fullBleed: true, atsFriendly: false }, // Two columns
-      { id: "timeline", name: "Timeline", atsFriendly: false }, // Graphic timeline
+      { id: "modern-header", name: "Modern Header", fullBleed: true, defaults: layoutDefaults({ margins: [13, 16, 14, 16] }) },
+      // Two columns
+      {
+        id: "sidebar",
+        name: "Sidebar",
+        fullBleed: true,
+        atsFriendly: false,
+        defaults: layoutDefaults({
+          baseFontSize: 9.5,
+          margins: [14, 10, 14, 8],
+          dividerStyle: "line",
+          sectionOrder: SIDE_FIRST_ORDER,
+          sectionTitles: { summary: "Profile" },
+          columns: 2,
+          sideRatio: 30,
+          photoSize: 34,
+          photoPosition: "sidebar", // At the top of the coloured column
+        }),
+      },
+      { id: "timeline", name: "Timeline", atsFriendly: false, defaults: layoutDefaults() }, // Graphic timeline
     ],
     themes: ADVANCED_THEMES,
   },
@@ -47,9 +101,48 @@ const TIER_CONFIG = [
     tier: "premium",
     atsFriendly: true,
     layouts: [
-      { id: "executive", name: "Executive" },
-      { id: "creative", name: "Creative", fullBleed: true, atsFriendly: false }, // Decorative shapes
-      { id: "split-modern", name: "Split Modern", fullBleed: true, atsFriendly: false }, // Two columns
+      {
+        id: "executive",
+        name: "Executive",
+        defaults: layoutDefaults({
+          lineHeight: 1.45,
+          dividerStyle: "line",
+          headerAlign: "center",
+          sectionTitles: { summary: "Profile", skills: "Expertise", projects: "Selected Projects" },
+        }),
+      },
+      // Decorative shapes
+      {
+        id: "creative",
+        name: "Creative",
+        fullBleed: true,
+        atsFriendly: false,
+        defaults: layoutDefaults({
+          margins: [15, 16, 15, 16],
+          headingTone: "deep",
+          sectionOrder: ["summary", "experience", "projects", "skills", "education", "additional"],
+          sectionTitles: { summary: "About Me" },
+          photoSize: 30,
+          photoPosition: "right", // Next to the decorative circles
+        }),
+      },
+      // Two columns
+      {
+        id: "split-modern",
+        name: "Split Modern",
+        fullBleed: true,
+        atsFriendly: false,
+        defaults: layoutDefaults({
+          baseFontSize: 9.75,
+          margins: [10, 14, 14, 14],
+          headingTone: "deep",
+          dividerStyle: "line",
+          sectionOrder: SIDE_FIRST_ORDER,
+          columns: 2,
+          sideSections: ["skills", "education", "additional"],
+          sideRatio: 30,
+        }),
+      },
     ],
     themes: PREMIUM_THEMES,
   },
@@ -67,6 +160,7 @@ export const TEMPLATES = TIER_CONFIG.flatMap(({ tier, atsFriendly, layouts, them
       theme,
       atsFriendly: layout.atsFriendly ?? atsFriendly,
       fullBleed: layout.fullBleed ?? false,
+      layoutDefaults: layout.defaults,
     }))
   )
 );

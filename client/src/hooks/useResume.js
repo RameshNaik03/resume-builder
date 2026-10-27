@@ -63,6 +63,13 @@ export default function useResume(id) {
     setStatus("unsaved");
   }, []);
 
+  // 2b. The photo is saved by its own API route (POST/DELETE /resumes/:id/photo), so this only
+  // updates the editor's copy - no autosave. The function form uses the latest state, so edits
+  // made while the photo was uploading aren't lost.
+  const setPhotoUrl = useCallback((photoUrl) => {
+    setResume((current) => current && { ...current, personalInfo: { ...current.personalInfo, photoUrl } });
+  }, []);
+
   // 3. Send the latest resume to the server
   const save = useCallback(async () => {
     // Nothing to save yet (still loading, or the resume failed to load)
@@ -125,5 +132,5 @@ export default function useResume(id) {
     };
   }, [id]);
 
-  return { resume, loading, loadError, status, updateResume, save };
+  return { resume, loading, loadError, status, updateResume, setPhotoUrl, save };
 }
