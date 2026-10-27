@@ -34,7 +34,7 @@ A full stack resume builder: create professional, ATS-friendly resumes with a li
 - **Autosave**: saves 2 seconds after you stop typing, with a "Saving… / Saved / Unsaved changes" indicator, Ctrl+S, and a warning before leaving with unsaved changes
 - **All resume sections**: personal info, summary, skills (tag input), experience (with bullet points and "currently working here"), education and projects, with add, remove, reorder and collapse
 - **PDF download**: an ATS-friendly one-page template with clickable links, A4 page size, and entries that don't split across pages
-- **ATS checker** (`/ats-checker`, no login needed): upload a resume or pick a saved one, paste a job description, and get a match score, matched/missing keywords and suggestions, plus AI feedback (missing skills, bullet rewrites, formatting issues) when a Claude API key is configured
+- **ATS checker** (`/ats-checker`, no login needed): upload a resume or pick a saved one, optionally paste a job description, and get an explainable score out of 100 (parseability, structure, content, keywords, polish) with a fix for every failed check, the top fixes, matched/missing keywords and a view of the text an ATS actually reads. A Claude API key adds AI content judgments and tailored suggestions
 - **Private by design**: every API route checks the resume belongs to the logged-in user
 - **Polished UX**: loading skeletons, empty states, toast messages, friendly error messages, 404 page, responsive layout with Edit/Preview tabs on mobile, and `prefers-reduced-motion` support
 - **Security basics**: rate-limited login/register, no stack traces or internal errors in production, server-side input validation
@@ -95,7 +95,7 @@ All routes are prefixed with `/api`. 🔒 = requires `Authorization: Bearer <tok
 | PUT | `/resumes/:id` | Update a resume | 🔒 |
 | DELETE | `/resumes/:id` | Delete a resume | 🔒 |
 | POST | `/resumes/:id/duplicate` | Copy a resume (title gets " (Copy)") | 🔒 |
-| POST | `/ats/check` | Compare a resume with a job description (multipart: `jobDescription` plus `file` or, when logged in, `resumeId`). Returns a 0–100 score, matched/missing keywords, suggestions, and AI feedback when `ANTHROPIC_API_KEY` is set. Rate limited; nothing is saved | Optional |
+| POST | `/ats/analyze` | Score a resume for ATS out of 100 (multipart: `file` or, when logged in, `resumeId`; optional `jobDescription` and `jobTitle`). Returns the grade, five scored categories with every check's reason and fix, matched/missing keywords, the text an ATS sees (`atsView`) and the parsed resume. With `ANTHROPIC_API_KEY` set, AI judges content quality and writes tailored fixes. Rate limited; nothing is saved | Optional |
 
 Errors always return JSON in the form `{ "message": "..." }`. Resumes that belong to another user return `404`.
 

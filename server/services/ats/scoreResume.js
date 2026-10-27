@@ -30,7 +30,7 @@ export const CATEGORIES = [
 
 export const gradeFor = (score) => (score >= 85 ? "Excellent" : score >= 70 ? "Good" : score >= 50 ? "Needs work" : "Poor");
 
-const MIN_READABLE_WORDS = 50; // Below this, the file is treated as unreadable
+const MAX_UNREADABLE_WORDS = 10; // This few words (or every page without text): treated as unreadable
 
 const roundHalf = (value) => Math.round(value * 2) / 2;
 const percent = (part, whole) => (whole ? Math.round((part / whole) * 100) : 0);
@@ -133,8 +133,12 @@ function parseabilityChecks({ inspection, text }) {
           "Single-column layout",
           6,
           0,
-          `The layout has more than one column${columnWhere}. Many ATS read straight across the page, mixing the columns' text together.`,
-          "Use a single-column layout. Put skills and contact details in their own sections from top to bottom instead of a side column."
+          columns.fromTemplate
+            ? "Your template uses two columns. Many ATS read straight across the page, mixing the columns' text together."
+            : `The layout has more than one column${columnWhere}. Many ATS read straight across the page, mixing the columns' text together.`,
+          columns.fromTemplate
+            ? 'In the editor, switch to a single-column template (such as Classic), or set Columns to 1 in the Design tab.'
+            : "Use a single-column layout. Put skills and contact details in their own sections from top to bottom instead of a side column."
         )
       : check(C, "single-column", "Single-column layout", 6, 6, "The text runs in a single column, so it's read in the right order.", "")
   );
@@ -592,8 +596,10 @@ export default function scoreResume({ text, inspection, parsed, jobDescription, 
   ];
 
   // Almost no readable text (e.g. a scanned resume): an ATS sees an empty page, so checks
-  // like "no typos" or "no clichés" can't pass just because there's nothing to read
-  if (info.words < MIN_READABLE_WORDS) {
+  // like "no typos" or "no clichés" can't pass just because there's nothing to read.
+  // (A short resume with real text is scored normally; its length check says it's short.)
+  const unreadable = inspection.imagePages.length >= inspection.pages || info.words <= MAX_UNREADABLE_WORDS;
+  if (unreadable) {
     checks = checks.map((c) =>
       c.category === "parseability"
         ? c

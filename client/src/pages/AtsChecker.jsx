@@ -1,47 +1,34 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  FileText,
-  Info,
-  Lightbulb,
-  PenLine,
-  Sparkles,
-  Upload,
-  X,
-  XCircle,
-} from "lucide-react";
+import { ArrowRight, FileText, Sparkles, Upload, X } from "lucide-react";
+import toast from "react-hot-toast";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
 import usePageTitle from "../hooks/usePageTitle";
+import usePrefersReducedMotion from "../hooks/usePrefersReducedMotion";
 import getErrorMessage from "../utils/getErrorMessage";
 import { ACCEPT_ATTRIBUTE, MAX_SIZE_MB, setPendingImport, toUploadFile, validateFile } from "../utils/resumeFile";
-import ImportResumeModal from "../components/ImportResumeModal";
+import { DEFAULT_TEMPLATE_ID } from "../templates/registry";
 import Modal from "../components/Modal";
+import AnalyzeProgress from "../components/ats/AnalyzeProgress";
+import { ANALYZE_STEPS } from "../components/ats/atsHelpers";
+import AtsResults, { Disclaimer } from "../components/ats/AtsResults";
 
-const MIN_JOB_WORDS = 30; // Same minimum as the server
+const MIN_JOB_WORDS = 30; // Same minimum as the server (when a job description is given)
 const countWords = (text) => text.trim().split(/\s+/).filter(Boolean).length;
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const PRIORITY_STYLES = {
-  high: "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300",
-  medium: "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300",
-  low: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-};
+// When each progress step starts (ms after clicking Analyze). The last step stays
+// in progress until the server answers.
+const STEP_TIMES = [700, 1600, 2500];
+const STEP_TICK_MS = 250; // Pause per step when ticking off the rest after the answer arrives
 
-function Disclaimer() {
-  return (
-    <p className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900/60 dark:text-slate-400">
-      <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-      <span>
-        These results are guidance, not a guarantee. Every company uses different ATS software and settings, and a
-        person usually makes the final decision. Only add skills and experience you really have.
-      </span>
-    </p>
-  );
-}
+// The content fields of a resume (copied into the ATS-friendly version)
+const CONTENT_FIELDS = ["personalInfo", "summary", "experience", "education", "skills", "projects", "additional"];
+const pickContent = (resume) => Object.fromEntries(CONTENT_FIELDS.map((field) => [field, resume[field]]));
+
+// "priya_sharma-resume.pdf" -> "priya sharma resume"
+const titleFromFileName = (name) => name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "My resume";
 
 // ---------- Input: resume source ----------
 
@@ -166,187 +153,16 @@ function SavedResumePicker({ resumes, loading, selectedId, onSelect }) {
   );
 }
 
-// ---------- Results ----------
-
-function ScoreRing({ score }) {
-  const radius = 52;
-  const circumference = 2 * Math.PI * radius;
-  const tone =
-    score >= 75
-      ? { label: "Strong match", stroke: "stroke-emerald-500", text: "text-emerald-600 dark:text-emerald-400" }
-      : score >= 50
-        ? { label: "Fair match", stroke: "stroke-amber-500", text: "text-amber-600 dark:text-amber-400" }
-        : { label: "Low match", stroke: "stroke-rose-500", text: "text-rose-600 dark:text-rose-400" };
-
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative size-44" role="img" aria-label={`Match score ${score} out of 100: ${tone.label}`}>
-        <svg viewBox="0 0 120 120" className="size-full -rotate-90" aria-hidden="true">
-          <circle cx="60" cy="60" r={radius} fill="none" strokeWidth="10" className="stroke-slate-200 dark:stroke-slate-800" />
-          <circle
-            cx="60"
-            cy="60"
-            r={radius}
-            fill="none"
-            strokeWidth="10"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={circumference * (1 - score / 100)}
-            className={`${tone.stroke} transition-[stroke-dashoffset] duration-700`}
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
-          <span className="font-display text-5xl font-extrabold text-slate-900 dark:text-white">{score}</span>
-          <span className="text-xs text-slate-500 dark:text-slate-400">out of 100</span>
-        </div>
-      </div>
-      <p className={`mt-3 font-semibold ${tone.text}`}>{tone.label}</p>
-    </div>
-  );
-}
-
-function KeywordTags({ title, keywords, tone, emptyText }) {
-  const styles =
-    tone === "matched"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-300"
-      : "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-900 dark:bg-rose-950/50 dark:text-rose-300";
-  const Icon = tone === "matched" ? CheckCircle2 : XCircle;
-
-  return (
-    <section className="card p-6">
-      <h2 className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
-        <Icon className={`size-5 ${tone === "matched" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`} aria-hidden="true" />
-        {title}
-        <span className="text-sm font-normal text-slate-500 dark:text-slate-400">({keywords.length})</span>
-      </h2>
-      {keywords.length ? (
-        <ul className="mt-4 flex flex-wrap gap-2">
-          {keywords.map((keyword) => (
-            <li
-              key={keyword.term}
-              className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm font-medium ${styles}`}
-              title={keyword.required ? "Listed in the job's requirements" : undefined}
-            >
-              {keyword.term}
-              {keyword.required && (
-                <>
-                  <span aria-hidden="true">*</span>
-                  <span className="sr-only">(required)</span>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">{emptyText}</p>
-      )}
-    </section>
-  );
-}
-
-function Suggestions({ result }) {
-  const { ai, suggestions } = result;
-
-  return (
-    <section className="card p-6">
-      <h2 className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
-        <Lightbulb className="size-5 text-amber-500" aria-hidden="true" />
-        Suggestions
-      </h2>
-
-      {ai?.summary && (
-        <p className="mt-4 rounded-xl bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-100">
-          {ai.summary}
-        </p>
-      )}
-
-      {ai?.missingSkills.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Top missing skills</h3>
-          <ul className="mt-2 space-y-2">
-            {ai.missingSkills.map((item) => (
-              <li key={item.skill} className="text-sm text-slate-600 dark:text-slate-300">
-                <span className="font-medium text-slate-900 dark:text-white">{item.skill}</span>: {item.reason}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {ai?.weakBullets.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Bullet points to strengthen</h3>
-          <ul className="mt-3 space-y-4">
-            {ai.weakBullets.map((bullet) => (
-              <li key={bullet.original} className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
-                <p className="text-xs font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">Before</p>
-                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">{bullet.original}</p>
-                <p className="mt-3 text-xs font-medium uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                  Suggested
-                </p>
-                <p className="mt-1 text-sm font-medium text-slate-900 dark:text-white">{bullet.rewrite}</p>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{bullet.reason}</p>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-            Replace anything in [brackets] with your real numbers, or leave it out.
-          </p>
-        </div>
-      )}
-
-      {ai?.formattingIssues.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Formatting issues</h3>
-          <ul className="mt-2 space-y-3">
-            {ai.formattingIssues.map((item) => (
-              <li key={item.issue} className="flex gap-2 text-sm">
-                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden="true" />
-                <span className="text-slate-600 dark:text-slate-300">
-                  <span className="font-medium text-slate-900 dark:text-white">{item.issue}</span> {item.fix}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {suggestions.length > 0 && (
-        <div className="mt-6">
-          {ai && <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Quick checks</h3>}
-          <ul className="mt-2 divide-y divide-slate-100 dark:divide-slate-800">
-            {suggestions.map((item) => (
-              <li key={item.title} className="flex flex-col gap-1 py-3 sm:flex-row sm:gap-3">
-                <span className={`h-fit w-fit rounded-full px-2 py-0.5 text-xs font-medium capitalize ${PRIORITY_STYLES[item.priority]}`}>
-                  {item.priority}
-                </span>
-                <div>
-                  <p className="text-sm font-medium text-slate-900 dark:text-white">{item.title}</p>
-                  <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{item.detail}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {!ai && !suggestions.length && (
-        <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">Nothing obvious to fix. Nice work!</p>
-      )}
-    </section>
-  );
-}
-
-// Shown to guests who click "Fix it in the editor"
+// Shown to guests who click "Generate an ATS-friendly version"
 function SignUpPrompt({ onClose, onContinue }) {
   return (
     <Modal onClose={onClose} labelledBy="signup-prompt-title" className="max-w-md p-6">
       <h2 id="signup-prompt-title" className="text-lg font-semibold text-slate-900 dark:text-white">
-        Create a free account to edit your resume
+        Create a free account to continue
       </h2>
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-        Sign up or log in and we'll import the resume you just checked straight into the editor, so you can fix
-        it with your results in mind.
+        Sign up or log in and we'll import the resume you just checked into the editor. Pick one of the single-column
+        Basic templates there for the most ATS-friendly result.
       </p>
       <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <button type="button" onClick={() => onContinue("/login")} className="btn-secondary">
@@ -366,6 +182,7 @@ export default function AtsChecker() {
   usePageTitle("ATS Resume Checker");
   const { user } = useAuth();
   const navigate = useNavigate();
+  const reducedMotion = usePrefersReducedMotion();
 
   const [sourceTab, setSourceTab] = useState("upload"); // "upload" | "saved"
   const [file, setFile] = useState(null);
@@ -374,11 +191,16 @@ export default function AtsChecker() {
   const [resumeId, setResumeId] = useState(null);
   const [jobDescription, setJobDescription] = useState("");
 
-  const [checking, setChecking] = useState(false);
+  const [step, setStep] = useState(-1); // Progress step while analyzing; -1 = not analyzing
+  const stepRef = useRef(-1); // The same step, readable inside handleAnalyze while it awaits
+  const goToStep = (value) => {
+    stepRef.current = Math.max(stepRef.current, value); // Steps only move forward
+    setStep(stepRef.current);
+  };
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+  const [generating, setGenerating] = useState(false);
   const [showSignUpPrompt, setShowSignUpPrompt] = useState(false);
-  const [importFile, setImportFile] = useState(null); // Logged-in user importing the checked file
 
   // Logged-in users can pick one of their saved resumes
   useEffect(() => {
@@ -393,40 +215,77 @@ export default function AtsChecker() {
     };
   }, [user]);
 
+  const analyzing = step >= 0;
   const usingSaved = Boolean(user) && sourceTab === "saved";
   const hasResume = usingSaved ? Boolean(resumeId) : Boolean(file) && !fileError;
   const jobWords = countWords(jobDescription);
-  const canCheck = hasResume && jobWords >= MIN_JOB_WORDS && !checking;
+  const jobTooShort = jobWords > 0 && jobWords < MIN_JOB_WORDS; // Empty is fine: it's optional
+  const canAnalyze = hasResume && !jobTooShort && !analyzing;
 
-  const handleCheck = async (event) => {
+  const handleAnalyze = async (event) => {
     event.preventDefault();
-    if (!canCheck) return;
+    if (!canAnalyze) return;
 
-    setChecking(true);
     setError("");
+    stepRef.current = -1;
+    goToStep(0);
+    window.scrollTo({ top: 0, behavior: reducedMotion ? "auto" : "smooth" });
+    const timers = STEP_TIMES.map((ms, index) => setTimeout(() => goToStep(index + 1), ms));
+
     const formData = new FormData();
-    formData.append("jobDescription", jobDescription);
+    if (jobWords) formData.append("jobDescription", jobDescription);
     if (usingSaved) formData.append("resumeId", resumeId);
     else formData.append("file", toUploadFile(file));
 
     try {
-      const { data } = await api.post("/ats/check", formData);
+      const { data } = await api.post("/ats/analyze", formData);
+      timers.forEach(clearTimeout);
+      // A fast answer: tick off the remaining steps one by one, then show the results
+      while (stepRef.current < ANALYZE_STEPS.length) {
+        goToStep(stepRef.current + 1);
+        if (!reducedMotion) await wait(STEP_TICK_MS);
+      }
       setResult(data);
-      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
+      timers.forEach(clearTimeout);
       setError(getErrorMessage(err));
     } finally {
-      setChecking(false);
+      stepRef.current = -1;
+      setStep(-1);
     }
   };
 
-  const handleFix = () => {
-    if (result.source.type === "saved") {
-      navigate(`/editor/${result.source.resumeId}`);
-    } else if (user) {
-      setImportFile(file);
-    } else {
+  // Creates a new resume with the same content in the default single-column template
+  // (design reset, so standard headings and one column), then opens it in the editor
+  const handleGenerate = async () => {
+    if (!user) {
       setShowSignUpPrompt(true);
+      return;
+    }
+    setGenerating(true);
+    try {
+      let content;
+      let title;
+      if (result.source.type === "saved") {
+        const { data: original } = await api.get(`/resumes/${result.source.resumeId}`);
+        content = pickContent(original);
+        title = original.title;
+      } else {
+        content = pickContent(result.parsedResume);
+        title = titleFromFileName(result.file.name);
+      }
+      const { data: created } = await api.post("/resumes", {
+        ...content,
+        title: `${title} (ATS-friendly)`.slice(0, 100),
+        template: DEFAULT_TEMPLATE_ID,
+        design: {},
+      });
+      toast.success("ATS-friendly version created");
+      // Content read from a file may need checking, so the editor shows its "please review" banner
+      navigate(`/editor/${created._id}`, { state: { imported: result.source.type === "file" } });
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+      setGenerating(false);
     }
   };
 
@@ -436,79 +295,23 @@ export default function AtsChecker() {
     navigate(path);
   };
 
-  // ---------- Results view ----------
+  if (analyzing) {
+    return (
+      <div className="px-4 py-16 sm:px-6">
+        <AnalyzeProgress
+          step={step}
+          fileName={usingSaved ? savedResumes?.find((r) => r._id === resumeId)?.title : file?.name}
+        />
+      </div>
+    );
+  }
+
   if (result) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <button
-          type="button"
-          onClick={() => setResult(null)}
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
-        >
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Check another job
-        </button>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-[320px_1fr]">
-          <div className="space-y-6">
-            <section className="card flex flex-col items-center p-6 text-center">
-              <h1 className="sr-only">Your ATS results</h1>
-              <ScoreRing score={result.score} />
-              <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">
-                {result.matchedKeywords.length} of {result.matchedKeywords.length + result.missingKeywords.length}{" "}
-                keywords from the job found in{" "}
-                <span className="font-medium text-slate-900 dark:text-white">
-                  {result.source.type === "saved" ? result.source.title : result.source.fileName}
-                </span>
-              </p>
-              <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                {result.analyzedWith === "ai" ? (
-                  <>
-                    <Sparkles className="size-3.5" aria-hidden="true" /> Keyword match + AI feedback
-                  </>
-                ) : (
-                  "Keyword match"
-                )}
-              </span>
-              <button type="button" onClick={handleFix} className="btn-primary mt-6 w-full py-2.5">
-                <PenLine className="size-4" aria-hidden="true" />
-                Fix it in the editor
-              </button>
-            </section>
-            <Disclaimer />
-          </div>
-
-          <div className="min-w-0 space-y-6">
-            <KeywordTags
-              title="Missing keywords"
-              keywords={result.missingKeywords}
-              tone="missing"
-              emptyText="Your resume covers every keyword we found in this job description."
-            />
-            <KeywordTags
-              title="Matched keywords"
-              keywords={result.matchedKeywords}
-              tone="matched"
-              emptyText="None of the job's keywords appear in your resume yet."
-            />
-            {[...result.missingKeywords, ...result.matchedKeywords].some((k) => k.required) && (
-              <p className="-mt-3 text-xs text-slate-500 dark:text-slate-400">* Listed in the job's requirements</p>
-            )}
-            <Suggestions result={result} />
-          </div>
-        </div>
-
-        {showSignUpPrompt && (
-          <SignUpPrompt onClose={() => setShowSignUpPrompt(false)} onContinue={continueToAuth} />
-        )}
-        {importFile && (
-          <ImportResumeModal
-            initialFile={importFile}
-            onClose={() => setImportFile(null)}
-            onStartFromScratch={() => navigate("/dashboard")}
-          />
-        )}
-      </div>
+      <>
+        <AtsResults result={result} onReset={() => setResult(null)} onGenerate={handleGenerate} generating={generating} />
+        {showSignUpPrompt && <SignUpPrompt onClose={() => setShowSignUpPrompt(false)} onContinue={continueToAuth} />}
+      </>
     );
   }
 
@@ -521,15 +324,15 @@ export default function AtsChecker() {
           Free ATS check
         </p>
         <h1 className="mt-4 font-display text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl dark:text-white">
-          How well does your resume match the job?
+          Can an ATS read your resume?
         </h1>
         <p className="mt-3 text-slate-600 dark:text-slate-400">
-          Add your resume and paste a job description. We'll show which keywords you're missing and what to improve.
-          We don't save your file; it's only read for this check.
+          Get a score out of 100 with every check explained: layout, structure, content, keywords and polish. Add a job
+          description to see which keywords you're missing. We don't save your file; it's only read for this check.
         </p>
       </div>
 
-      <form onSubmit={handleCheck} className="mt-8">
+      <form onSubmit={handleAnalyze} className="mt-8">
         <div className="grid gap-6 lg:grid-cols-2">
           {/* Left: resume */}
           <section className="card p-6">
@@ -586,23 +389,33 @@ export default function AtsChecker() {
             )}
           </section>
 
-          {/* Right: job description */}
+          {/* Right: job description (optional) */}
           <section className="card flex flex-col p-6">
             <label htmlFor="job-description" className="font-semibold text-slate-900 dark:text-white">
-              2. Job description
+              2. Paste job description{" "}
+              <span className="font-normal text-slate-500 dark:text-slate-400">(optional)</span>
             </label>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Adds a keyword match against the job. Without it, we check for a clear, specific skills section instead.
+            </p>
             <textarea
               id="job-description"
               value={jobDescription}
               onChange={(event) => setJobDescription(event.target.value)}
               placeholder="Paste the full job posting here, including the responsibilities and requirements..."
-              className="input mt-4 min-h-72 flex-1 resize-y leading-relaxed"
+              className="input mt-4 min-h-60 flex-1 resize-y leading-relaxed"
               maxLength={20000}
+              aria-describedby="job-description-count"
             />
-            <p className="mt-2 text-right text-xs text-slate-500 dark:text-slate-400">
-              {jobWords < MIN_JOB_WORDS && jobWords > 0
-                ? `${MIN_JOB_WORDS - jobWords} more words needed`
-                : `${jobWords} words`}
+            <p
+              id="job-description-count"
+              className={`mt-2 text-right text-xs ${jobTooShort ? "text-amber-600 dark:text-amber-400" : "text-slate-500 dark:text-slate-400"}`}
+            >
+              {jobTooShort
+                ? `${MIN_JOB_WORDS - jobWords} more words needed, or leave it empty`
+                : jobWords
+                  ? `${jobWords} words`
+                  : "Optional"}
             </p>
           </section>
         </div>
@@ -617,25 +430,11 @@ export default function AtsChecker() {
           <div className="w-full sm:max-w-xl">
             <Disclaimer />
           </div>
-          <button type="submit" disabled={!canCheck} className="btn-primary w-full px-7 py-3 text-base sm:w-auto">
-            {checking ? (
-              <>
-                <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />
-                Checking...
-              </>
-            ) : (
-              <>
-                Check My Resume
-                <ArrowRight className="size-4.5" aria-hidden="true" />
-              </>
-            )}
+          <button type="submit" disabled={!canAnalyze} className="btn-primary w-full px-7 py-3 text-base sm:w-auto">
+            Analyze my resume
+            <ArrowRight className="size-4.5" aria-hidden="true" />
           </button>
         </div>
-        {checking && (
-          <p className="mt-3 text-center text-sm text-slate-500 sm:text-right dark:text-slate-400" aria-live="polite">
-            Reading your resume and comparing it with the job. This can take up to a minute.
-          </p>
-        )}
       </form>
     </div>
   );
