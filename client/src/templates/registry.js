@@ -27,6 +27,8 @@ export const TIERS = [
 //   sectionTitles - the layout's own section headings (users can rename them)
 //   columns / sideSections / sideRatio - one or two columns, what goes in the side column, its width in %
 //   headerAlign  - "left" | "center" | "right"
+//   photoSize / photoPosition - profile photo size in mm, and "left" | "right" of the name
+//                  (or "sidebar" for the Sidebar layout's coloured column)
 const STANDARD_ORDER = ["summary", "experience", "education", "skills", "projects", "additional"];
 const STANDARD_TITLES = { summary: "Summary", experience: "Experience", education: "Education", skills: "Skills", projects: "Projects" };
 const layoutDefaults = ({ sectionTitles, ...overrides } = {}) => ({
@@ -41,6 +43,8 @@ const layoutDefaults = ({ sectionTitles, ...overrides } = {}) => ({
   sideSections: ["skills", "education"], // Used when the user switches to two columns
   sideRatio: 35,
   headerAlign: "left",
+  photoSize: 28,
+  photoPosition: "left",
   ...overrides,
 });
 // Sidebar and Split Modern list side-column sections first, as they always appeared
@@ -58,7 +62,11 @@ const TIER_CONFIG = [
     layouts: [
       { id: "classic", name: "Classic", defaults: layoutDefaults({ dividerStyle: "line", headerAlign: "center" }) },
       { id: "minimal", name: "Minimal", defaults: layoutDefaults({ lineHeight: 1.45 }) },
-      { id: "compact", name: "Compact", defaults: layoutDefaults({ baseFontSize: 9.5, lineHeight: 1.35, dividerStyle: "line" }) },
+      {
+        id: "compact",
+        name: "Compact",
+        defaults: layoutDefaults({ baseFontSize: 9.5, lineHeight: 1.35, dividerStyle: "line", photoSize: 22 }),
+      },
     ],
     themes: THEMES,
   },
@@ -81,6 +89,8 @@ const TIER_CONFIG = [
           sectionTitles: { summary: "Profile" },
           columns: 2,
           sideRatio: 30,
+          photoSize: 34,
+          photoPosition: "sidebar", // At the top of the coloured column
         }),
       },
       { id: "timeline", name: "Timeline", atsFriendly: false, defaults: layoutDefaults() }, // Graphic timeline
@@ -112,6 +122,8 @@ const TIER_CONFIG = [
           headingTone: "deep",
           sectionOrder: ["summary", "experience", "projects", "skills", "education", "additional"],
           sectionTitles: { summary: "About Me" },
+          photoSize: 30,
+          photoPosition: "right", // Next to the decorative circles
         }),
       },
       // Two columns

@@ -33,3 +33,14 @@ export const atsLimiter = rateLimit({
   keyGenerator: (req) => (req.user ? `user:${req.user._id}` : ipKeyGenerator(req.ip)),
   message: { message: "You've reached the limit of 15 checks per hour. Please try again later." },
 });
+
+// Limits photo uploads per logged-in user (each one is stored on Cloudinary's free tier).
+// Must run after the protect middleware, which sets req.user.
+export const photoLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 20, // Max 20 uploads per user per hour
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user._id.toString(),
+  message: { message: "You've uploaded a lot of photos in the last hour. Please try again later." },
+});

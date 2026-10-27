@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills } from "./shared";
+import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Timeline: experience and education are drawn on a vertical line with a dot per entry,
@@ -136,9 +136,11 @@ export default function TimelineLayout({ data, theme }) {
   return (
     <div className="fs-10 leading-(--lh)">
       <header className="border-b-[2pt] border-(--accent) pb-[8pt]" style={HEADER_ALIGN} data-block>
-        <h1 className="font-heading hfs-25 leading-tight font-bold tracking-tight">{data.name}</h1>
-        {data.headline && <p className="mt-[2pt] fs-12 font-semibold text-(--accent)">{data.headline}</p>}
-        <ContactLine contacts={data.contacts} separator="|" className="mt-[6pt] fs-9 text-(--muted)" />
+        <WithPhoto photo={data.photo} align={data.headerAlign}>
+          <h1 className="font-heading hfs-25 leading-tight font-bold tracking-tight">{data.name}</h1>
+          {data.headline && <p className="mt-[2pt] fs-12 font-semibold text-(--accent)">{data.headline}</p>}
+          <ContactLine contacts={data.contacts} separator="|" className="mt-[6pt] fs-9 text-(--muted)" />
+        </WithPhoto>
       </header>
 
       <SectionColumns data={data} render={(section) => <Fragment key={section.key}>{SECTIONS[section.id](section.title)}</Fragment>} />

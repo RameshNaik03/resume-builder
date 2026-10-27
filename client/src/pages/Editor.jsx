@@ -45,7 +45,7 @@ const withCount = (text, list) => (list.length > 0 ? `${text} · ${list.length} 
 export default function Editor() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { resume, loading, loadError, status, updateResume, save } = useResume(id);
+  const { resume, loading, loadError, status, updateResume, setPhotoUrl, save } = useResume(id);
   const [activeTab, setActiveTab] = useState("edit"); // Mobile only: "edit" or "preview"
   const [formPanel, setFormPanel] = useState("content"); // Left column: "content" or "design"
   const [isPickerOpen, setIsPickerOpen] = useState(false);
@@ -302,6 +302,8 @@ export default function Editor() {
                 <PersonalInfoForm
                   data={resume.personalInfo}
                   onChange={(personalInfo) => updateResume({ personalInfo })}
+                  resumeId={resume._id}
+                  onPhotoChange={setPhotoUrl}
                 />
               </CollapsibleSection>
 

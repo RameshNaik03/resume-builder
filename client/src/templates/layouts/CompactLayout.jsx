@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills } from "./shared";
+import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Compact: smaller text and tighter spacing to fit more on one page.
@@ -108,11 +108,13 @@ export default function CompactLayout({ data, theme }) {
   return (
     <div className="fs-9.5 leading-(--lh)">
       <header className="border-b-[1.5pt] border-(--accent) pb-[6pt]" style={HEADER_ALIGN} data-block>
-        <h1 className="font-heading hfs-20 leading-tight font-bold tracking-tight">
-          {data.name}
-          {data.headline && <span className="ml-[8pt] font-(family-name:--font-body) fs-11 font-normal text-(--accent)">{data.headline}</span>}
-        </h1>
-        <ContactLine contacts={data.contacts} separator="|" className="mt-[3pt] fs-9 text-(--muted)" />
+        <WithPhoto photo={data.photo} align={data.headerAlign}>
+          <h1 className="font-heading hfs-20 leading-tight font-bold tracking-tight">
+            {data.name}
+            {data.headline && <span className="ml-[8pt] font-(family-name:--font-body) fs-11 font-normal text-(--accent)">{data.headline}</span>}
+          </h1>
+          <ContactLine contacts={data.contacts} separator="|" className="mt-[3pt] fs-9 text-(--muted)" />
+        </WithPhoto>
       </header>
 
       <SectionColumns data={data} render={(section) => <Fragment key={section.key}>{SECTIONS[section.id](section.title)}</Fragment>} />

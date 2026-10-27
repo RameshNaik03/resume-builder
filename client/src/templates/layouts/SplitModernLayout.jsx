@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, MaybeLink, Skills } from "./shared";
+import { BulletList, MaybeLink, Skills, WithPhoto } from "./shared";
 import { splitSections } from "./sectionLayout";
 
 // Split Modern: a gradient strip across the top, name on the left with contacts
@@ -151,20 +151,24 @@ export default function SplitModernLayout({ data, theme }) {
       {/* Page margins come from the design (--m-top etc.) */}
       <div className="pt-(--m-top) pr-(--m-right) pb-(--m-bottom) pl-(--m-left)">
         {/* Header: name on one side, contacts stacked on the other (or both centred) */}
-        <header className={headerStyle.header} data-block data-flow="all">
-          <div className={`min-w-0 ${headerStyle.name}`}>
-            <h1 className="font-heading hfs-28 leading-[1.05] font-extrabold tracking-tight text-(--deep)">{data.name}</h1>
-            {data.headline && <p className="mt-[4pt] fs-12 font-semibold text-(--accent)">{data.headline}</p>}
-          </div>
-          {data.contacts.length > 0 && (
-            <ul className={`shrink-0 space-y-[calc(1.5pt*var(--bullet-space,1))] ${headerStyle.contacts} fs-8.5 text-(--muted)`}>
-              {data.contacts.map((item) => (
-                <li key={item.text}>
-                  <MaybeLink href={item.href}>{item.text}</MaybeLink>
-                </li>
-              ))}
-            </ul>
-          )}
+        <header data-block data-flow="all">
+          <WithPhoto photo={data.photo} align={data.headerAlign}>
+            <div className={headerStyle.header}>
+              <div className={`min-w-0 ${headerStyle.name}`}>
+                <h1 className="font-heading hfs-28 leading-[1.05] font-extrabold tracking-tight text-(--deep)">{data.name}</h1>
+                {data.headline && <p className="mt-[4pt] fs-12 font-semibold text-(--accent)">{data.headline}</p>}
+              </div>
+              {data.contacts.length > 0 && (
+                <ul className={`shrink-0 space-y-[calc(1.5pt*var(--bullet-space,1))] ${headerStyle.contacts} fs-8.5 text-(--muted)`}>
+                  {data.contacts.map((item) => (
+                    <li key={item.text}>
+                      <MaybeLink href={item.href}>{item.text}</MaybeLink>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </WithPhoto>
         </header>
 
         {/* Highlighted summary (the plain wrapper is the page-break block) */}

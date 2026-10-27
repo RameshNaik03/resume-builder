@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, MaybeLink, SectionTitle, Skills } from "./shared";
+import { BulletList, MaybeLink, Photo, SectionTitle, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Sidebar: two columns. A coloured left sidebar holds name, contact details and the
@@ -187,8 +187,14 @@ export default function SidebarLayout({ data, theme }) {
       >
         <div style={SIDEBAR_COLORS}>
           <div style={HEADER_ALIGN} data-block data-flow="side">
-            <h1 className="font-heading hfs-20 leading-[1.15] font-bold tracking-tight wrap-break-word">{data.name}</h1>
-            {data.headline && <p className="mt-[5pt] fs-10.5 leading-snug opacity-85">{data.headline}</p>}
+            {/* Photo: on its own at the top of the sidebar (the default), or beside the name */}
+            {data.photo?.position === "sidebar" && (
+              <Photo photo={data.photo} className="mr-(--header-mr) mb-[10pt] ml-(--header-ml)" />
+            )}
+            <WithPhoto photo={data.photo?.position === "sidebar" ? null : data.photo} align={data.headerAlign}>
+              <h1 className="font-heading hfs-20 leading-[1.15] font-bold tracking-tight wrap-break-word">{data.name}</h1>
+              {data.headline && <p className="mt-[5pt] fs-10.5 leading-snug opacity-85">{data.headline}</p>}
+            </WithPhoto>
           </div>
 
           {data.contacts.length > 0 && (

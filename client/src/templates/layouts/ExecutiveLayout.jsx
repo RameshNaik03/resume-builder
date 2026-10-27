@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { FONTS, itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, SectionColumns, Skills } from "./shared";
+import { BulletList, ContactLine, MaybeLink, SectionColumns, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Executive: elegant and understated. Centred serif name, a fine double rule,
@@ -130,12 +130,14 @@ export default function ExecutiveLayout({ data }) {
   return (
     <div className="fs-10 leading-(--lh)">
       <header style={HEADER_ALIGN} data-block>
-        <h1 className="hfs-28 leading-tight tracking-[0.04em]" style={SERIF}>
-          {data.name}
-        </h1>
-        {data.headline && <p className="mt-[4pt] fs-9.5 tracking-[0.28em] text-(--accent) uppercase">{data.headline}</p>}
-        <ContactLine contacts={data.contacts} className="mt-[8pt] fs-9 text-(--muted)" />
-        {/* Fine double rule */}
+        <WithPhoto photo={data.photo} align={data.headerAlign}>
+          <h1 className="hfs-28 leading-tight tracking-[0.04em]" style={SERIF}>
+            {data.name}
+          </h1>
+          {data.headline && <p className="mt-[4pt] fs-9.5 tracking-[0.28em] text-(--accent) uppercase">{data.headline}</p>}
+          <ContactLine contacts={data.contacts} className="mt-[8pt] fs-9 text-(--muted)" />
+        </WithPhoto>
+        {/* Fine double rule (full width, below the photo too) */}
         <div className="mt-[10pt] h-[3pt] border-y border-(--accent)" aria-hidden="true" />
       </header>
 

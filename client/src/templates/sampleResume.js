@@ -72,6 +72,7 @@ export default function withSampleContent(resume) {
       // Use the user's contact details if they've entered any, otherwise all sample ones
       ...(hasContactInfo ? info : SAMPLE.personalInfo),
       fullName: info.fullName?.trim() || SAMPLE.personalInfo.fullName,
+      photoUrl: info.photoUrl ?? "", // The user's own photo (thumbnails never use a sample photo)
       headline: info.headline?.trim() || SAMPLE.personalInfo.headline,
     },
     summary: resume.summary?.trim() ? resume.summary : SAMPLE.summary,

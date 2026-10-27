@@ -1,4 +1,5 @@
 import formatDate, { joinRange } from "./formatDate";
+import { PHOTO_SHAPES } from "./design";
 
 // Cleans up resume data once, so every layout can simply render it:
 // empty entries are removed, dates are joined and links are made clickable.
@@ -8,6 +9,7 @@ import formatDate, { joinRange } from "./formatDate";
 //   columns       - 1 or 2; sideRatio / sideRatioChanged - side column width in %
 //   skillsDisplay - null (the layout's own style) | "comma" | "tags" | "bullets"
 //   dates         - reformatted when a date format is chosen
+//   photo         - null, or { url, alt, sizeMm, radius, border, borderColor, position }
 
 // True if at least one of the entry's text fields has something in it
 const hasContent = (entry, fields) => fields.some((field) => entry[field]?.trim());
@@ -98,6 +100,20 @@ export default function prepareResume(resume, withLinks = true, design, changed 
   data.sideRatioChanged = "sideRatio" in changed; // Sidebar / Split Modern keep their own widths otherwise
   data.skillsDisplay = design.skillsDisplay;
   data.headerAlign = design.headerAlign; // Most layouts use the --header-align CSS variable instead
+
+  // Profile photo: only when one was uploaded and "Show photo" is on
+  data.photo =
+    info.photoUrl && design.showPhoto
+      ? {
+          url: info.photoUrl,
+          alt: `Photo of ${data.name}`,
+          sizeMm: design.photoSize,
+          radius: PHOTO_SHAPES[design.photoShape].radius,
+          border: design.photoBorder,
+          borderColor: design.photoBorderColor, // null = the layout's own colour
+          position: design.photoPosition,
+        }
+      : null;
 
   return data;
 }

@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills } from "./shared";
+import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Minimal: left-aligned, lots of white space, no divider lines.
@@ -111,11 +111,13 @@ export default function MinimalLayout({ data, theme }) {
   return (
     <div className="fs-10 leading-(--lh)">
       <header style={HEADER_ALIGN} data-block>
-        <h1 className="font-heading hfs-26 leading-tight font-semibold tracking-tight text-(--accent)">{data.name}</h1>
-        {data.headline && <p className="mt-[2pt] fs-12 text-(--muted)">{data.headline}</p>}
-        {/* Short decorative rule under the name (follows the header alignment) */}
-        <div className="mt-[6pt] mr-(--header-mr) ml-(--header-ml) h-[2pt] w-[32pt] bg-(--accent)" aria-hidden="true" />
-        <ContactLine contacts={data.contacts} separator="|" className="mt-[7pt] fs-9.5 text-(--muted)" />
+        <WithPhoto photo={data.photo} align={data.headerAlign}>
+          <h1 className="font-heading hfs-26 leading-tight font-semibold tracking-tight text-(--accent)">{data.name}</h1>
+          {data.headline && <p className="mt-[2pt] fs-12 text-(--muted)">{data.headline}</p>}
+          {/* Short decorative rule under the name (follows the header alignment) */}
+          <div className="mt-[6pt] mr-(--header-mr) ml-(--header-ml) h-[2pt] w-[32pt] bg-(--accent)" aria-hidden="true" />
+          <ContactLine contacts={data.contacts} separator="|" className="mt-[7pt] fs-9.5 text-(--muted)" />
+        </WithPhoto>
       </header>
 
       <SectionColumns data={data} render={(section) => <Fragment key={section.key}>{SECTIONS[section.id](section.title)}</Fragment>} />

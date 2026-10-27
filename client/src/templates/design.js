@@ -57,6 +57,7 @@ export const LIMITS = {
   paragraphSpacing: { min: 0.5, max: 2, step: 0.05 }, // multiplier
   sectionSpacing: { min: 0.5, max: 2, step: 0.05 },
   margin: { min: 5, max: 40, step: 1 }, // mm
+  photoSize: { min: 15, max: 45, step: 1 }, // mm
 };
 
 // "Normal" margins are the template's own, so they aren't listed here
@@ -104,6 +105,15 @@ export const BULLET_STYLES = {
   none: { label: "None", name: "No bullets", css: "none" },
 };
 
+// Profile photo. radius = the CSS border-radius for each shape.
+export const PHOTO_SHAPES = {
+  circle: { label: "Circle", radius: "50%" },
+  rounded: { label: "Rounded", radius: "16%" },
+  square: { label: "Square", radius: "0" },
+};
+// "sidebar" only applies to the Sidebar layout; other layouts treat it as "left"
+export const PHOTO_POSITIONS = { left: "Left of name", right: "Right of name", sidebar: "In the sidebar" };
+
 // Which design keys each group of controls owns (used by the "Reset" buttons)
 export const DESIGN_GROUPS = {
   typography: ["fontFamily", "headingFontFamily", "baseFontSize", "headingSize", "lineHeight"],
@@ -112,6 +122,7 @@ export const DESIGN_GROUPS = {
   colors: ["accentColor", "textColor", "headingColor", "backgroundColor", "dividerColor", "dividerStyle"],
   sections: ["sectionOrder", "hiddenSections", "sectionHeadings"],
   layout: ["columns", "sideSections", "sideRatio", "headerAlign", "skillsDisplay", "dateFormat", "bulletStyle"],
+  photo: ["showPhoto", "photoShape", "photoSize", "photoBorder", "photoBorderColor", "photoPosition"],
 };
 
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -173,6 +184,13 @@ export function getDesignDefaults(template) {
     skillsDisplay: null, // null = the layout's own style (a list or tags)
     dateFormat: null, // null = dates exactly as the user typed them
     bulletStyle: "disc",
+
+    showPhoto: true, // Only matters once a photo has been uploaded
+    photoShape: "circle",
+    photoSize: layout.photoSize,
+    photoBorder: false,
+    photoBorderColor: null, // null = the layout's own choice (accent, or white on coloured areas)
+    photoPosition: layout.photoPosition,
   };
 }
 
@@ -220,6 +238,13 @@ export function cleanDesign(design = {}) {
   if (design.skillsDisplay in SKILLS_DISPLAYS) clean.skillsDisplay = design.skillsDisplay;
   if (design.dateFormat in DATE_FORMATS) clean.dateFormat = design.dateFormat;
   if (design.bulletStyle in BULLET_STYLES) clean.bulletStyle = design.bulletStyle;
+
+  if (typeof design.showPhoto === "boolean") clean.showPhoto = design.showPhoto;
+  if (design.photoShape in PHOTO_SHAPES) clean.photoShape = design.photoShape;
+  number("photoSize", LIMITS.photoSize);
+  if (typeof design.photoBorder === "boolean") clean.photoBorder = design.photoBorder;
+  if (HEX.test(design.photoBorderColor ?? "")) clean.photoBorderColor = design.photoBorderColor.toLowerCase();
+  if (design.photoPosition in PHOTO_POSITIONS) clean.photoPosition = design.photoPosition;
   return clean;
 }
 

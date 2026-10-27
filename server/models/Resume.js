@@ -95,6 +95,14 @@ const designSchema = new mongoose.Schema(
     skillsDisplay: { type: String, enum: ["comma", "tags", "bullets"] },
     dateFormat: { type: String, enum: ["short", "numeric", "year"] }, // "Jan 2024" | "01/2024" | "2024"
     bulletStyle: { type: String, enum: ["disc", "dash", "arrow", "none"] },
+
+    // Profile photo
+    showPhoto: { type: Boolean },
+    photoShape: { type: String, enum: ["circle", "rounded", "square"] },
+    photoSize: { type: Number, min: 15, max: 45 }, // Millimetres
+    photoBorder: { type: Boolean },
+    photoBorderColor: color,
+    photoPosition: { type: String, enum: ["left", "right", "sidebar"] }, // "sidebar" = in the Sidebar layout's coloured column
   },
   { _id: false }
 );
@@ -117,7 +125,11 @@ const resumeSchema = new mongoose.Schema(
       location: { type: String, trim: true, default: "" },
       linkedin: { type: String, trim: true, default: "" },
       github: { type: String, trim: true, default: "" },
+      // Set only by the photo routes (POST/DELETE /api/resumes/:id/photo), never by a normal update
+      photoUrl: { type: String, trim: true, default: "" },
     },
+    // Cloudinary id of the photo, used to replace or delete it (kept out of API responses)
+    photoPublicId: { type: String, default: "" },
     summary: { type: String, trim: true, default: "" },
     experience: { type: [experienceSchema], default: [] },
     education: { type: [educationSchema], default: [] },
@@ -131,6 +143,14 @@ const resumeSchema = new mongoose.Schema(
   // (Mongoose drops empty objects by default)
   { timestamps: true, versionKey: false, minimize: false }
 );
+
+// photoPublicId is an internal storage detail, so it's left out when a resume is sent as JSON
+resumeSchema.set("toJSON", {
+  transform: (doc, ret) => {
+    delete ret.photoPublicId;
+    return ret;
+  },
+});
 
 const Resume = mongoose.model("Resume", resumeSchema);
 

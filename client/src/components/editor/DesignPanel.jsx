@@ -11,6 +11,8 @@ import {
   LIMITS,
   MARGIN_PRESETS,
   PAGE_SIZES,
+  PHOTO_POSITIONS,
+  PHOTO_SHAPES,
   SECTIONS,
   SIDE_RATIOS,
   SKILLS_DISPLAYS,
@@ -177,6 +179,17 @@ export default function DesignPanel({ resume, onChange }) {
         />
       </Group>
 
+      {/* ---------- Photo ---------- */}
+      <Group title="Photo" {...groupProps("photo")}>
+        {resume.personalInfo?.photoUrl ? (
+          <PhotoControls template={template} resolved={resolved} defaults={defaults} set={set} />
+        ) : (
+          <p className="-mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Add a photo under Personal info (Content tab) to use these settings.
+          </p>
+        )}
+      </Group>
+
       {/* ---------- Typography ---------- */}
       <Group title="Typography" {...groupProps("typography")}>
         <FontPicker
@@ -307,6 +320,83 @@ export default function DesignPanel({ resume, onChange }) {
           onChange={(dividerStyle) => update({ dividerStyle: dividerStyle === defaults.dividerStyle ? null : dividerStyle })}
         />
       </Group>
+    </div>
+  );
+}
+
+// Photo settings: show/hide, shape, size, border and position
+function PhotoControls({ template, resolved, defaults, set }) {
+  const isSidebarLayout = template.layout === "sidebar";
+  // "In the sidebar" only exists in the Sidebar layout; elsewhere it behaves like "left"
+  const position = resolved.photoPosition === "sidebar" && !isSidebarLayout ? "left" : resolved.photoPosition;
+  const positions = Object.entries(PHOTO_POSITIONS).filter(([id]) => id !== "sidebar" || isSidebarLayout);
+
+  return (
+    <>
+      <Toggle label="Show photo" checked={resolved.showPhoto} onChange={(showPhoto) => set("showPhoto", showPhoto)} />
+
+      {resolved.showPhoto && (
+        <>
+          <Segmented
+            label="Shape"
+            value={resolved.photoShape}
+            options={Object.entries(PHOTO_SHAPES).map(([id, shape]) => ({ id, label: shape.label }))}
+            onChange={(photoShape) => set("photoShape", photoShape)}
+          />
+          <Slider
+            label="Size"
+            value={resolved.photoSize}
+            limits={LIMITS.photoSize}
+            format={(v) => `${v} mm`}
+            isDefault={resolved.photoSize === defaults.photoSize}
+            onChange={(photoSize) => set("photoSize", photoSize)}
+          />
+          <div>
+            <Segmented
+              label="Position"
+              value={position}
+              options={positions.map(([id, label]) => ({ id, label }))}
+              onChange={(photoPosition) => set("photoPosition", photoPosition)}
+            />
+            {resolved.headerAlign === "center" && position !== "sidebar" && (
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                With a centred header, the photo sits above your name. Change the header alignment under Layout to put it
+                beside your name.
+              </p>
+            )}
+          </div>
+          <Toggle label="Border" checked={resolved.photoBorder} onChange={(photoBorder) => set("photoBorder", photoBorder)} />
+          {resolved.photoBorder && (
+            <ColorField
+              label="Border color"
+              // No colour picked yet: show the accent colour, which the border uses on white pages
+              value={resolved.photoBorderColor ?? resolved.accentColor}
+              onChange={(photoBorderColor) => set("photoBorderColor", photoBorderColor)}
+            />
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+// On/off switch
+function Toggle({ label, checked, onChange }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={() => onChange(!checked)}
+        className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked ? "bg-indigo-600" : "bg-slate-300 dark:bg-slate-700"}`}
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : ""}`}
+        />
+      </button>
     </div>
   );
 }

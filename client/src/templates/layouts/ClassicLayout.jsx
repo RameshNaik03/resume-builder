@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills } from "./shared";
+import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Classic: centred header, headings with a thin line underneath,
@@ -113,9 +113,11 @@ export default function ClassicLayout({ data, theme }) {
   return (
     <div className="fs-10 leading-(--lh)">
       <header style={HEADER_ALIGN} data-block>
-        <h1 className="font-heading hfs-24 leading-tight font-bold tracking-tight">{data.name}</h1>
-        {data.headline && <p className="mt-[2pt] fs-11 text-(--accent)">{data.headline}</p>}
-        <ContactLine contacts={data.contacts} className="mt-[4pt] fs-9.5 text-(--muted)" />
+        <WithPhoto photo={data.photo} align={data.headerAlign}>
+          <h1 className="font-heading hfs-24 leading-tight font-bold tracking-tight">{data.name}</h1>
+          {data.headline && <p className="mt-[2pt] fs-11 text-(--accent)">{data.headline}</p>}
+          <ContactLine contacts={data.contacts} className="mt-[4pt] fs-9.5 text-(--muted)" />
+        </WithPhoto>
       </header>
 
       <SectionColumns data={data} render={(section) => <Fragment key={section.key}>{SECTIONS[section.id](section.title)}</Fragment>} />

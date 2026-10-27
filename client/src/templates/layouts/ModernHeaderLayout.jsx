@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills } from "./shared";
+import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Modern Header: a bold coloured band across the top with name, title and contacts,
@@ -119,9 +119,12 @@ export default function ModernHeaderLayout({ data, theme }) {
     <div className="fs-10 leading-(--lh)">
       {/* Page margins come from the design (--m-top etc.) */}
       <header className="bg-(--accent) pt-(--m-top) pr-(--m-right) pb-[9mm] pl-(--m-left) text-(--on-accent)" style={HEADER_ALIGN}>
-        <h1 className="font-heading hfs-26 leading-tight font-bold tracking-tight">{data.name}</h1>
-        {data.headline && <p className="mt-[3pt] fs-12.5 opacity-90">{data.headline}</p>}
-        <ContactLine contacts={data.contacts} className="mt-[9pt] fs-9 opacity-90" />
+        {/* On the coloured band the photo's border defaults to the band's text colour */}
+        <WithPhoto photo={data.photo} align={data.headerAlign} defaultBorderColor="var(--on-accent)">
+          <h1 className="font-heading hfs-26 leading-tight font-bold tracking-tight">{data.name}</h1>
+          {data.headline && <p className="mt-[3pt] fs-12.5 opacity-90">{data.headline}</p>}
+          <ContactLine contacts={data.contacts} className="mt-[9pt] fs-9 opacity-90" />
+        </WithPhoto>
       </header>
 
       <div className="pt-[6mm] pr-(--m-right) pb-(--m-bottom) pl-(--m-left)">
