@@ -28,7 +28,7 @@ const STOPWORDS = new Set(
   understanding work working works world year years
   build builds building built create creating deliver delivering design designing develop developing drive
   end ensure familiarity familiar feature features help helping improve improving knowledge maintain
-  maintaining own owning part take taking write writing`.split(/\s+/)
+  maintaining own owning part take taking write writing nice`.split(/\s+/)
 );
 
 // Lines that usually list what the employer actually requires
@@ -43,8 +43,12 @@ const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const termPattern = (term) =>
   `(?<![\\p{L}\\p{N}+#.])${escapeRegex(term).replace(/ /g, "[\\s-]+")}(?![\\p{L}\\p{N}+#])`;
 
-const containsAnyTerm = (text, terms, caseSensitive) =>
+export const containsAnyTerm = (text, terms, caseSensitive) =>
   new RegExp(terms.map(termPattern).join("|"), caseSensitive ? "u" : "iu").test(text);
+
+// Known skills (from skills.js) that appear in a text, e.g. ["React", "Node.js"]
+export const findKnownSkills = (text) =>
+  SKILLS.filter((skill) => containsAnyTerm(text, skill.terms, skill.caseSensitive)).map((skill) => skill.name);
 
 // Very light stemming so "developing", "developed" and "develops" all match "develop"
 const stem = (word) => {
@@ -106,16 +110,16 @@ function findOtherKeywords(jobDescription, skillWords) {
     // Phrases first (they're more specific), then the highest scores
     .sort((a, b) => Number(b.isPhrase) - Number(a.isPhrase) || b.score - a.score);
 
-  // Keep the best ones, skipping any that share a word with one already chosen
-  // ("full stack" + "stack developer", or "customer onboarding" + "customer")
+  // Keep the best ones, skipping any that share a word (or its stem) with one already chosen
+  // ("full stack" + "stack developer", "customer onboarding" + "customer", "engineer" + "engineers")
   const chosen = [];
   const usedWords = new Set();
   for (const candidate of candidates) {
     if (chosen.length >= MAX_KEYWORDS) break;
     const words = candidate.term.split(" ");
-    if (words.some((word) => usedWords.has(word) || skillWords.has(word))) continue;
+    if (words.some((word) => usedWords.has(stem(word)) || skillWords.has(word))) continue;
     chosen.push(candidate);
-    words.forEach((word) => usedWords.add(word));
+    words.forEach((word) => usedWords.add(stem(word)));
   }
   return chosen;
 }
@@ -125,7 +129,10 @@ function findOtherKeywords(jobDescription, skillWords) {
 // [{ term, type: "skill" | "keyword", required }], most important first.
 export default function analyzeKeywords(jobDescription, resumeText) {
   const skills = findSkills(jobDescription);
-  const skillWords = new Set(skills.flatMap(({ skill }) => skill.terms.map((term) => term.toLowerCase())));
+  // Skill terms and their parts ("next.js" and "next"), so they aren't counted again as general keywords
+  const skillWords = new Set(
+    skills.flatMap(({ skill }) => skill.terms.flatMap((term) => [term.toLowerCase(), ...tokenize(term)]))
+  );
   const others = findOtherKeywords(jobDescription, skillWords);
 
   const resumeStems = tokenize(resumeText).map(stem);

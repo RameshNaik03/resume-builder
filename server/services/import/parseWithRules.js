@@ -47,7 +47,8 @@ const HEADINGS = {
 };
 
 // "WORK EXPERIENCE:" -> "experience"; returns null if the line isn't a heading
-function headingOf(line) {
+// Also used by the ATS checker to find which standard sections a resume has
+export function headingOf(line) {
   if (line.length > 40) return null;
   const normalized = line
     .toLowerCase()
