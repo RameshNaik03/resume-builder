@@ -1,6 +1,10 @@
+import RichTextEditor from "./RichTextEditor";
+
 // An editable list of short text lines: add, edit and remove.
 // Used for a job's bullet points and for the items of an additional section.
-export default function ItemsEditor({ label, items, onChange, placeholder, addLabel = "+ Add item", itemName = "item" }) {
+//   rich - each line gets bold / italic / underline / link formatting (bullet points);
+//          its toolbar only shows while that line is being edited
+export default function ItemsEditor({ label, items, onChange, placeholder, addLabel = "+ Add item", itemName = "item", rich = false }) {
   const updateItem = (index, text) => onChange(items.map((item, i) => (i === index ? text : item)));
   const removeItem = (index) => onChange(items.filter((_, i) => i !== index));
   const addItem = () => onChange([...items, ""]);
@@ -10,16 +14,31 @@ export default function ItemsEditor({ label, items, onChange, placeholder, addLa
       <p className="label">{label}</p>
       <ul className="space-y-2">
         {items.map((item, index) => (
-          <li key={index} className="flex items-center gap-2">
-            <span className="text-slate-400 dark:text-slate-500" aria-hidden="true">•</span>
-            <input
-              type="text"
-              value={item}
-              onChange={(event) => updateItem(index, event.target.value)}
-              placeholder={placeholder}
-              aria-label={`${itemName} ${index + 1}`}
-              className="input"
-            />
+          <li key={index} className={`flex gap-2 ${rich ? "items-start" : "items-center"}`}>
+            <span className={`text-slate-400 dark:text-slate-500 ${rich ? "mt-2" : ""}`} aria-hidden="true">
+              •
+            </span>
+            {rich ? (
+              <div className="min-w-0 flex-1">
+                <RichTextEditor
+                  inline
+                  toolbar="focus"
+                  value={item}
+                  onChange={(html) => updateItem(index, html)}
+                  placeholder={placeholder}
+                  ariaLabel={`${itemName} ${index + 1}`}
+                />
+              </div>
+            ) : (
+              <input
+                type="text"
+                value={item}
+                onChange={(event) => updateItem(index, event.target.value)}
+                placeholder={placeholder}
+                aria-label={`${itemName} ${index + 1}`}
+                className="input"
+              />
+            )}
             <button
               type="button"
               onClick={() => removeItem(index)}

@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { FONTS, itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, SectionColumns, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Executive: elegant and understated. Centred serif name, a fine double rule,
@@ -31,9 +31,7 @@ export default function ExecutiveLayout({ data }) {
   const SECTIONS = {
     summary: (title) => (
       <Section title={title}>
-        <p className="text-center whitespace-pre-line italic" style={SERIF} data-block>
-          {data.summary}
-        </p>
+        <RichText html={data.summary} className="text-center italic" style={SERIF} data-block />
       </Section>
     ),
     experience: (title) => (
@@ -51,7 +49,7 @@ export default function ExecutiveLayout({ data }) {
                 {job.role && job.company && <p className="text-(--accent) italic">{job.company}</p>}
               </div>
               <BulletList
-                items={job.bullets}
+                items={job.bullets} rich
                 className="mt-[4pt] space-y-[calc(2.5pt*var(--bullet-space,1))] pl-[14pt] marker:text-(--accent)"
                 itemClassName="pl-[2pt]"
               />
@@ -106,9 +104,7 @@ export default function ExecutiveLayout({ data }) {
                 )}
               </div>
               {project.description && (
-                <p className="mt-[2pt] whitespace-pre-line" data-block>
-                  {project.description}
-                </p>
+                <RichText html={project.description} className="mt-[2pt]" data-block />
               )}
             </div>
           ))}

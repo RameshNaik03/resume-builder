@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Classic: centred header, headings with a thin line underneath,
@@ -22,9 +22,7 @@ export default function ClassicLayout({ data, theme }) {
   const SECTIONS = {
     summary: (title) => (
       <Section title={title} theme={theme}>
-        <p className="whitespace-pre-line" data-block>
-          {data.summary}
-        </p>
+        <RichText html={data.summary} data-block />
       </Section>
     ),
     experience: (title) => (
@@ -41,7 +39,7 @@ export default function ClassicLayout({ data, theme }) {
                 {job.dates && <p className="shrink-0 fs-9.5 text-(--muted)">{job.dates}</p>}
               </div>
               <BulletList
-                items={job.bullets}
+                items={job.bullets} rich
                 className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[14pt] marker:text-(--muted)"
                 itemClassName="pl-[2pt]"
               />
@@ -89,9 +87,7 @@ export default function ClassicLayout({ data, theme }) {
                 )}
               </div>
               {project.description && (
-                <p className="mt-[2pt] whitespace-pre-line" data-block>
-                  {project.description}
-                </p>
+                <RichText html={project.description} className="mt-[2pt]" data-block />
               )}
             </div>
           ))}

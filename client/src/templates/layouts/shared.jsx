@@ -71,18 +71,35 @@ export function MaybeLink({ href, className = "", children }) {
   );
 }
 
+// Rich text (summary, project descriptions): HTML that prepareResume already sanitized.
+// A <div>, because the HTML can contain paragraphs.
+export function RichText({ html, className = "", ...rest }) {
+  return <div className={`rich-text ${className}`} dangerouslySetInnerHTML={{ __html: html }} {...rest} />;
+}
+
 // Bullet points: each one is its own block, so long lists can continue on the next page.
 // The marker (•, –, ▸ or none) comes from the design's --bullet variable.
-export function BulletList({ items, className = "", itemClassName = "", flow }) {
+//   rich - the items are sanitized HTML (job bullet points) rather than plain text
+export function BulletList({ items, className = "", itemClassName = "", flow, rich = false }) {
   if (items.length === 0) return null;
 
   return (
     <ul className={`list-(--bullet) ${className}`}>
-      {items.map((item, index) => (
-        <li key={index} data-block data-flow={flow} className={itemClassName}>
-          {item}
-        </li>
-      ))}
+      {items.map((item, index) =>
+        rich ? (
+          <li
+            key={index}
+            data-block
+            data-flow={flow}
+            className={`rich-text ${itemClassName}`}
+            dangerouslySetInnerHTML={{ __html: item }}
+          />
+        ) : (
+          <li key={index} data-block data-flow={flow} className={itemClassName}>
+            {item}
+          </li>
+        )
+      )}
     </ul>
   );
 }

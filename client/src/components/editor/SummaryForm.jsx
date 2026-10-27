@@ -1,22 +1,29 @@
+import { useId } from "react";
+import { toPlainText } from "../../utils/richText";
+import RichTextEditor from "./RichTextEditor";
+
 const RECOMMENDED_LENGTH = 400; // A guideline, not a hard limit
 
+// value is rich text (HTML), or plain text from older resumes
 export default function SummaryForm({ value, onChange }) {
-  const length = value.length;
+  const labelId = useId();
+  const length = toPlainText(value).trim().length; // Count the words you see, not the HTML
 
   return (
     <div>
-      <label htmlFor="summary" className="label">
+      <p id={labelId} className="label">
         Professional summary
-      </label>
-      <textarea
-        id="summary"
-        rows={5}
+      </p>
+      <RichTextEditor
         value={value}
-        onChange={(event) => onChange(event.target.value)}
+        onChange={onChange}
+        ariaLabel="Professional summary"
         placeholder="2–4 sentences about who you are, what you're good at, and what you're looking for."
-        className="input resize-y"
+        minHeight="7rem"
       />
-      <p className={`mt-1.5 text-right text-xs ${length > RECOMMENDED_LENGTH ? "text-amber-600 dark:text-amber-400" : "text-slate-400 dark:text-slate-500"}`}>
+      <p
+        className={`mt-1.5 text-right text-xs ${length > RECOMMENDED_LENGTH ? "text-amber-600 dark:text-amber-400" : "text-slate-400 dark:text-slate-500"}`}
+      >
         {length} / {RECOMMENDED_LENGTH} characters recommended
       </p>
     </div>

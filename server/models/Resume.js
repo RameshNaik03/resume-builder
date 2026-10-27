@@ -1,4 +1,9 @@
 import mongoose from "mongoose";
+import { richBlock, richInline } from "../utils/richText.js";
+
+// Summary, bullet points and project descriptions hold rich text (small, sanitized HTML).
+// The setters sanitize every value that's saved (create, update, import, duplicate),
+// and turn plain text into HTML (see utils/richText.js).
 
 // Sub-schemas for the repeating sections of a resume
 const experienceSchema = new mongoose.Schema({
@@ -6,7 +11,7 @@ const experienceSchema = new mongoose.Schema({
   role: { type: String, trim: true, default: "" },
   startDate: { type: String, trim: true, default: "" }, // Free text, e.g. "Jan 2024"
   endDate: { type: String, trim: true, default: "" }, // e.g. "Present"
-  bullets: { type: [String], default: [] },
+  bullets: { type: [{ type: String, set: richInline }], default: [] }, // Rich text (inline)
 });
 
 const educationSchema = new mongoose.Schema({
@@ -17,7 +22,7 @@ const educationSchema = new mongoose.Schema({
 
 const projectSchema = new mongoose.Schema({
   name: { type: String, trim: true, default: "" },
-  description: { type: String, trim: true, default: "" },
+  description: { type: String, trim: true, default: "", set: richBlock }, // Rich text
   link: { type: String, trim: true, default: "" },
 });
 
@@ -130,7 +135,7 @@ const resumeSchema = new mongoose.Schema(
     },
     // Cloudinary id of the photo, used to replace or delete it (kept out of API responses)
     photoPublicId: { type: String, default: "" },
-    summary: { type: String, trim: true, default: "" },
+    summary: { type: String, trim: true, default: "", set: richBlock }, // Rich text
     experience: { type: [experienceSchema], default: [] },
     education: { type: [educationSchema], default: [] },
     skills: { type: [String], default: [] },

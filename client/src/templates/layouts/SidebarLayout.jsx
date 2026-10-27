@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, MaybeLink, Photo, SectionTitle, Skills, WithPhoto } from "./shared";
+import { BulletList, MaybeLink, Photo, RichText, SectionTitle, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Sidebar: two columns. A coloured left sidebar holds name, contact details and the
@@ -57,9 +57,7 @@ export default function SidebarLayout({ data, theme }) {
   // Section contents; skills and education have a compact version for the sidebar
   const CONTENT = {
     summary: () => (
-      <p className="whitespace-pre-line" data-block>
-        {data.summary}
-      </p>
+      <RichText html={data.summary} data-block />
     ),
     experience: () => (
       <div className="flex flex-col" style={{ gap: itemGap(10) }}>
@@ -73,7 +71,7 @@ export default function SidebarLayout({ data, theme }) {
                 {job.dates}
               </p>
             </div>
-            <BulletList items={job.bullets} className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--accent)" />
+            <BulletList items={job.bullets} rich className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--accent)" />
           </div>
         ))}
       </div>
@@ -135,9 +133,7 @@ export default function SidebarLayout({ data, theme }) {
               )}
             </div>
             {project.description && (
-              <p className="mt-[2pt] whitespace-pre-line" data-block>
-                {project.description}
-              </p>
+              <RichText html={project.description} className="mt-[2pt]" data-block />
             )}
           </div>
         ))}

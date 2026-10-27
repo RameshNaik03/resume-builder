@@ -1,5 +1,6 @@
 import formatDate, { joinRange } from "./formatDate";
 import { PHOTO_SHAPES } from "./design";
+import { toPlainText, toSafeHtml } from "../utils/richText";
 
 // Cleans up resume data once, so every layout can simply render it:
 // empty entries are removed, dates are joined and links are made clickable.
@@ -10,6 +11,8 @@ import { PHOTO_SHAPES } from "./design";
 //   skillsDisplay - null (the layout's own style) | "comma" | "tags" | "bullets"
 //   dates         - reformatted when a date format is chosen
 //   photo         - null, or { url, alt, sizeMm, radius, border, borderColor, position }
+// summary, job bullets and project descriptions become sanitized HTML (rich text; plain text
+// from older resumes is converted), rendered with <RichText> / <BulletList rich>.
 
 // True if at least one of the entry's text fields has something in it
 const hasContent = (entry, fields) => fields.some((field) => entry[field]?.trim());
@@ -26,6 +29,8 @@ export default function prepareResume(resume, withLinks = true, design, changed 
   const info = resume.personalInfo ?? {};
   const link = (href) => (withLinks ? href : undefined);
   const date = (text) => formatDate(text, design.dateFormat);
+  // Rich text -> safe HTML (thumbnails get no links: they're inside a button)
+  const richHtml = (value, inline = false) => toSafeHtml(value, { inline, links: withLinks });
 
   const contacts = [
     info.email && { text: info.email, href: link(`mailto:${info.email}`) },
@@ -39,7 +44,7 @@ export default function prepareResume(resume, withLinks = true, design, changed 
     name: info.fullName?.trim() || "Your Name",
     headline: info.headline?.trim() ?? "", // e.g. "Full Stack Developer"
     contacts,
-    summary: (resume.summary ?? "").trim(),
+    summary: richHtml(resume.summary), // "" when empty
     skills: (resume.skills ?? []).filter((skill) => skill.trim()),
 
     experience: (resume.experience ?? [])
@@ -51,7 +56,7 @@ export default function prepareResume(resume, withLinks = true, design, changed 
         dates: design.dateFormat
           ? joinRange([date(job.startDate), date(job.endDate)])
           : [job.startDate, job.endDate].filter(Boolean).join(" – "),
-        bullets: (job.bullets ?? []).filter((bullet) => bullet.trim()),
+        bullets: (job.bullets ?? []).filter((bullet) => toPlainText(bullet).trim()).map((bullet) => richHtml(bullet, true)),
       })),
 
     education: (resume.education ?? [])
@@ -63,6 +68,7 @@ export default function prepareResume(resume, withLinks = true, design, changed 
       .map((project, index) => ({
         ...project,
         key: project._id ?? index,
+        description: richHtml(project.description),
         href: project.link ? link(toUrl(project.link)) : undefined,
         linkText: project.link ? toDisplayText(project.link) : "",
       })),

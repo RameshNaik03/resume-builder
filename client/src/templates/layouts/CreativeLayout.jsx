@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, SectionColumns, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Creative: bold and colourful. Gradient shapes in the top corner, a big name,
@@ -35,9 +35,7 @@ export default function CreativeLayout({ data, theme }) {
   const SECTIONS = {
     summary: (title) => (
       <Section title={title} theme={theme}>
-        <p className="whitespace-pre-line" data-block>
-          {data.summary}
-        </p>
+        <RichText html={data.summary} data-block />
       </Section>
     ),
     experience: (title) => (
@@ -57,7 +55,7 @@ export default function CreativeLayout({ data, theme }) {
                   </p>
                 )}
               </div>
-              <BulletList items={job.bullets} className="mt-[4pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[13pt] marker:text-(--accent)" />
+              <BulletList items={job.bullets} rich className="mt-[4pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[13pt] marker:text-(--accent)" />
             </div>
           ))}
         </div>
@@ -78,9 +76,7 @@ export default function CreativeLayout({ data, theme }) {
                 )}
               </p>
               {project.description && (
-                <p className="mt-[2pt] whitespace-pre-line" data-block>
-                  {project.description}
-                </p>
+                <RichText html={project.description} className="mt-[2pt]" data-block />
               )}
             </div>
           ))}
