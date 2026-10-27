@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Compact: smaller text and tighter spacing to fit more on one page.
@@ -25,9 +25,7 @@ export default function CompactLayout({ data, theme }) {
   const SECTIONS = {
     summary: (title) => (
       <Section title={title} theme={theme}>
-        <p className="whitespace-pre-line" data-block>
-          {data.summary}
-        </p>
+        <RichText html={data.summary} data-block />
       </Section>
     ),
     experience: (title) => (
@@ -43,7 +41,7 @@ export default function CompactLayout({ data, theme }) {
                 </p>
                 {job.dates && <p className="shrink-0 fs-9 text-(--muted)">{job.dates}</p>}
               </div>
-              <BulletList items={job.bullets} className="mt-[2pt] space-y-[calc(1pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--muted)" />
+              <BulletList items={job.bullets} rich className="mt-[2pt] space-y-[calc(1pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--muted)" />
             </div>
           ))}
         </div>
@@ -88,9 +86,7 @@ export default function CompactLayout({ data, theme }) {
                 )}
               </div>
               {project.description && (
-                <p className="whitespace-pre-line" data-block>
-                  {project.description}
-                </p>
+                <RichText html={project.description} data-block />
               )}
             </div>
           ))}

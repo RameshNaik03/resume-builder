@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Timeline: experience and education are drawn on a vertical line with a dot per entry,
@@ -46,9 +46,7 @@ export default function TimelineLayout({ data, theme }) {
   const SECTIONS = {
     summary: (title) => (
       <Section title={title} theme={theme}>
-        <p className="whitespace-pre-line" data-block>
-          {data.summary}
-        </p>
+        <RichText html={data.summary} data-block />
       </Section>
     ),
     experience: (title) => (
@@ -66,7 +64,7 @@ export default function TimelineLayout({ data, theme }) {
                   <span className={job.role ? "text-(--muted)" : "font-bold"}>{job.company}</span>
                 </p>
               </div>
-              <BulletList items={job.bullets} className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--muted)" />
+              <BulletList items={job.bullets} rich className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--muted)" />
             </>
           )}
         />
@@ -116,9 +114,7 @@ export default function TimelineLayout({ data, theme }) {
                 )}
               </div>
               {project.description && (
-                <p className="mt-[2pt] whitespace-pre-line" data-block>
-                  {project.description}
-                </p>
+                <RichText html={project.description} className="mt-[2pt]" data-block />
               )}
             </div>
           ))}

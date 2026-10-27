@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, MaybeLink, Skills, WithPhoto } from "./shared";
+import { BulletList, MaybeLink, RichText, Skills, WithPhoto } from "./shared";
 import { splitSections } from "./sectionLayout";
 
 // Split Modern: a gradient strip across the top, name on the left with contacts
@@ -46,7 +46,7 @@ export default function SplitModernLayout({ data, theme }) {
   const summaryBox = (title) => (
     <div className="rounded-[6pt] border-l-[3pt] border-(--accent) bg-(--soft) px-[11pt] py-[8pt]">
       <p className="font-heading hfs-8 font-bold tracking-[0.14em] text-(--accent) uppercase">{title}</p>
-      <p className="mt-[3pt] fs-10 whitespace-pre-line">{data.summary}</p>
+      <RichText html={data.summary} className="mt-[3pt] fs-10" />
     </div>
   );
 
@@ -70,7 +70,7 @@ export default function SplitModernLayout({ data, theme }) {
                   {job.dates && <p className="shrink-0 text-(--muted)">{job.dates}</p>}
                 </div>
               </div>
-              <BulletList items={job.bullets} className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--accent)" />
+              <BulletList items={job.bullets} rich className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--accent)" />
             </div>
           ))}
         </div>
@@ -90,9 +90,7 @@ export default function SplitModernLayout({ data, theme }) {
                 )}
               </div>
               {project.description && (
-                <p className="mt-[2pt] whitespace-pre-line" data-block>
-                  {project.description}
-                </p>
+                <RichText html={project.description} className="mt-[2pt]" data-block />
               )}
             </div>
           ))}

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import Navbar from "./components/Navbar";
@@ -10,8 +11,12 @@ import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
-import Editor from "./pages/Editor";
 import NotFound from "./pages/NotFound";
+import Loader from "./components/Loader";
+
+// The editor (with the rich text editor, crop tool, etc.) is loaded only when it's opened,
+// so the landing page, login and dashboard download much less JavaScript
+const Editor = lazy(() => import("./pages/Editor"));
 
 export default function App() {
   // The landing page has its own top bar, so hide the shared Navbar there
@@ -39,7 +44,14 @@ export default function App() {
           {/* Only for logged-in users */}
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/editor/:id" element={<Editor />} />
+            <Route
+              path="/editor/:id"
+              element={
+                <Suspense fallback={<Loader text="Opening the editor..." />}>
+                  <Editor />
+                </Suspense>
+              }
+            />
           </Route>
 
           {/* Any other URL */}

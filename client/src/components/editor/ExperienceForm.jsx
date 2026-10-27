@@ -59,6 +59,7 @@ export default function ExperienceForm({ items, onChange }) {
               placeholder="e.g. Built a dashboard used by 500+ customers"
               addLabel="+ Add bullet point"
               itemName="Bullet point"
+              rich
             />
           </>
         );

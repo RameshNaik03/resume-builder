@@ -1,4 +1,5 @@
 import ListEditor from "./ListEditor";
+import RichTextEditor from "./RichTextEditor";
 import TextField from "./TextField";
 
 export default function ProjectsForm({ items, onChange }) {
@@ -26,14 +27,16 @@ export default function ProjectsForm({ items, onChange }) {
               placeholder="github.com/you/project"
             />
           </div>
-          <TextField
-            label="Description"
-            multiline
-            rows={3}
-            value={project.description}
-            onChange={(description) => update({ description })}
-            placeholder="What it does, the tech you used, and what you learned."
-          />
+          <div>
+            <p className="label">Description</p>
+            <RichTextEditor
+              value={project.description}
+              onChange={(description) => update({ description })}
+              ariaLabel="Project description"
+              placeholder="What it does, the tech you used, and what you learned."
+              minHeight="4.5rem"
+            />
+          </div>
         </>
       )}
     />

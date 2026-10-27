@@ -45,8 +45,10 @@ const normalize = (text) =>
     .replace(/\n{3,}/g, "\n\n")
     .trim();
 
-// Returns the plain text of an uploaded PDF or DOCX file, or throws an error with a status
-export default async function extractText(file) {
+// Returns the plain text of an uploaded PDF or DOCX file, or throws an error with a status.
+//   allowNoText - return the (nearly empty) text of a scanned file instead of rejecting it
+//                 (the ATS analyzer reports it as a failed check)
+export default async function extractText(file, { allowNoText = false } = {}) {
   const isPdf = file.mimetype === "application/pdf";
 
   if (isPdf ? !looksLikePdf(file.buffer) : !looksLikeDocx(file.buffer)) {
@@ -66,7 +68,7 @@ export default async function extractText(file) {
   const text = normalize(rawText ?? "");
   const letterCount = (text.match(/\p{L}/gu) ?? []).length;
 
-  if (letterCount < MIN_LETTERS) {
+  if (letterCount < MIN_LETTERS && !allowNoText) {
     throw httpError(
       422,
       "We couldn't find any text in this file. It looks like a scanned image. Please upload a PDF exported from Word or Google Docs, or a DOCX file."
