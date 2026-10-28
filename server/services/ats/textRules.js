@@ -20,7 +20,7 @@ const ACTION_VERBS = new Set(
   repair replace report research reshape resolve restore restructure revamp review revise revitalize run save scale schedule
   screen secure select sell ship simplify slash solve source spearhead standardize steer streamline strengthen structure
   supervise surpass survey sustain teach test train transform translate triple troubleshoot unify upgrade validate verify
-  visualize win write clean prepare`.split(/\s+/)
+  visualize win write clean prepare apply contribute`.split(/\s+/)
 );
 const IRREGULAR = {
   built: "build", led: "lead", drove: "drive", grew: "grow", ran: "run", wrote: "write", won: "win", taught: "teach",

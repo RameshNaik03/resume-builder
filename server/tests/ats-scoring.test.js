@@ -7,7 +7,7 @@ import { matchJobTitle } from "../services/ats/jobTitle.js";
 import resumeToText from "../services/ats/resumeToText.js";
 import savedResumeLayout from "../services/ats/savedResumeLayout.js";
 import scoreResume from "../services/ats/scoreResume.js";
-import { isJobSubtitle } from "../services/ats/textRules.js";
+import { isJobSubtitle, startsWithActionVerb } from "../services/ats/textRules.js";
 import parseWithRules from "../services/import/parseWithRules.js";
 import sanitizeResume from "../services/import/sanitizeResume.js";
 import { checker, readFixture } from "./helpers/api.js";
@@ -227,6 +227,13 @@ test("job subtitles (product or project lines)", async (t) => {
   const saved = { personalInfo: { fullName: "Priya Sharma", email: "priya@example.com" }, experience: [{ role: "Software Engineer", company: "Acme", startDate: "Jan 2021", endDate: "Present", subtitle: SUBTITLE, bullets: NORMAL_BULLETS }] };
   const reread = sanitizeResume(parseWithRules(resumeToText(saved)));
   await check("saved resume -> ATS text -> parser keeps the subtitle", reread.experience[0].subtitle === SUBTITLE && reread.experience[0].bullets.length === 3, reread.experience[0]);
+});
+
+test("action verbs include apply and contribute", async (t) => {
+  const check = checker(t);
+  for (const bullet of ["Applied SEO best practices to improve visibility", "Apply caching to cut load time", "Contributed to back-end development with Node.js", "Contributes code reviews every week"]) {
+    await check(`"${bullet.split(" ")[0]}" starts with an action verb`, Boolean(startsWithActionVerb(bullet)));
+  }
 });
 
 test("the anonymised CV fixtures", async (t) => {
