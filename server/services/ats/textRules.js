@@ -30,18 +30,21 @@ const IRREGULAR = {
 // Common ways bullets start that describe duties instead of results
 const WEAK_OPENERS = /^(responsible for|worked on|working on|helped|helping|assisted|assisting|duties included|involved in|tasked with|in charge of|participated in|handled|was |were |did |doing )/i;
 
-// "Developed" / "Develops" / "Develop" -> "develop"
-function baseVerb(word) {
+// The possible base forms of a word: "planned" -> ["planned", "plann", "planne", "plan"]
+function verbForms(word) {
   const w = word.toLowerCase();
-  if (IRREGULAR[w]) return IRREGULAR[w];
-  const candidates = [w];
-  if (w.endsWith("ied")) candidates.push(`${w.slice(0, -3)}y`);
-  if (w.endsWith("ed")) candidates.push(w.slice(0, -2), w.slice(0, -1), w.slice(0, -3)); // grouped, migrated, planned
-  if (w.endsWith("es")) candidates.push(w.slice(0, -2), w.slice(0, -1));
-  if (w.endsWith("s")) candidates.push(w.slice(0, -1));
-  if (w.endsWith("ing")) candidates.push(w.slice(0, -3), `${w.slice(0, -3)}e`);
-  return candidates.find((c) => ACTION_VERBS.has(c)) ?? null;
+  if (IRREGULAR[w]) return [IRREGULAR[w]];
+  const forms = [w];
+  if (w.endsWith("ied")) forms.push(`${w.slice(0, -3)}y`);
+  if (w.endsWith("ed")) forms.push(w.slice(0, -2), w.slice(0, -1), w.slice(0, -3)); // grouped, migrated, planned
+  if (w.endsWith("es")) forms.push(w.slice(0, -2), w.slice(0, -1));
+  if (w.endsWith("s")) forms.push(w.slice(0, -1));
+  if (w.endsWith("ing")) forms.push(w.slice(0, -3), `${w.slice(0, -3)}e`);
+  return forms;
 }
+
+// "Developed" / "Develops" / "Develop" -> "develop" (null if it isn't an action verb)
+const baseVerb = (word) => verbForms(word).find((form) => ACTION_VERBS.has(form)) ?? null;
 
 // The bullet's first word if it's an action verb, otherwise null
 export function startsWithActionVerb(bullet) {
@@ -155,10 +158,56 @@ const COMMON_WORDS = new Set(
   which while will with within would year years month months team teams work worked working company role using used`.split(/\s+/)
 );
 
-// Words (4+ letters) used so often they stand out, e.g. "managed" six times.
-//   ignore - words to skip (the person's name, known skills, section headings)
+// Alternatives for words resumes tend to repeat: common action verbs (by base form, so
+// "managed" and "managing" find "manage") and filler words. Only these get suggestions;
+// for any other word the advice is simply to vary it.
+const VERB_SYNONYMS = {
+  lead: ["directed", "headed", "guided", "oversaw"],
+  manage: ["led", "oversaw", "coordinated", "ran"],
+  develop: ["built", "created", "engineered", "designed"],
+  build: ["developed", "created", "engineered", "assembled"],
+  create: ["built", "designed", "produced", "launched"],
+  design: ["created", "planned", "architected", "shaped"],
+  implement: ["delivered", "introduced", "rolled out", "set up"],
+  improve: ["increased", "enhanced", "boosted", "strengthened"],
+  increase: ["raised", "grew", "boosted", "expanded"],
+  reduce: ["cut", "lowered", "decreased", "trimmed"],
+  support: ["assisted", "enabled", "backed", "helped"],
+  coordinate: ["organized", "arranged", "aligned", "managed"],
+  deliver: ["shipped", "launched", "completed", "provided"],
+  work: ["collaborated", "partnered", "contributed", "operated"],
+  help: ["supported", "enabled", "assisted", "contributed to"],
+  handle: ["managed", "resolved", "processed", "ran"],
+  use: ["applied", "employed", "relied on", "worked with"],
+  ensure: ["guaranteed", "secured", "made sure", "verified"],
+  provide: ["delivered", "supplied", "offered", "gave"],
+};
+const WORD_SYNONYMS = {
+  various: ["multiple", "several", "a range of", "diverse"],
+  responsible: ["owned", "led", "in charge of", "accountable for"],
+  responsibilities: ["duties", "scope", "ownership", "remit"],
+  tasks: ["work", "duties", "assignments", "projects"],
+  different: ["distinct", "separate", "varied", "diverse"],
+  successfully: ["(often unnecessary: show the result instead)"],
+  effectively: ["(often unnecessary: show the result instead)"],
+  strong: ["solid", "deep", "proven", "extensive"],
+};
+
+// Alternatives for a repeated word, or [] when there are none to suggest
+export function synonymsFor(word) {
+  const lower = word.toLowerCase();
+  if (WORD_SYNONYMS[lower]) return WORD_SYNONYMS[lower];
+  const base = verbForms(lower).find((form) => VERB_SYNONYMS[form]);
+  return base ? VERB_SYNONYMS[base] : [];
+}
+
+// Words used so often they stand out, e.g. "managed" six times. Counts words of 4+ letters,
+// and shorter action verbs like "led" or "ran" (other short words are mostly "the", "and"...).
+//   ignore - words to skip (the person's name, skills and tech names, section headings)
 export function overusedWords(text, ignore = new Set()) {
-  const words = (text.toLowerCase().match(/\b[a-z][a-z-]{3,}\b/g) ?? []).filter((w) => !COMMON_WORDS.has(w) && !ignore.has(w));
+  const words = (text.toLowerCase().match(/\b[a-z][a-z-]{2,}\b/g) ?? []).filter(
+    (w) => (w.length >= 4 || baseVerb(w)) && !COMMON_WORDS.has(w) && !ignore.has(w)
+  );
   const counts = new Map();
   for (const word of words) counts.set(word, (counts.get(word) ?? 0) + 1);
   const limit = Math.max(5, Math.round(words.length * 0.012)); // ~1.2% of the words, at least 5 times
