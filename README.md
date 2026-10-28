@@ -28,16 +28,33 @@ A full stack resume builder: create professional, ATS-friendly resumes with a li
 
 ## Features
 
-- **Authentication**: sign up and log in with JWT; passwords hashed with bcrypt; sessions restored on page reload
-- **Dashboard**: all your resumes as cards with "last updated" times; create, duplicate and delete (with a confirmation modal)
-- **Editor with live preview**: every keystroke updates an A4 preview of the resume
-- **Autosave**: saves 2 seconds after you stop typing, with a "Saving… / Saved / Unsaved changes" indicator, Ctrl+S, and a warning before leaving with unsaved changes
-- **All resume sections**: personal info, summary, skills (tag input), experience (with bullet points and "currently working here"), education and projects, with add, remove, reorder and collapse
-- **PDF download**: an ATS-friendly one-page template with clickable links, A4 page size, and entries that don't split across pages
-- **ATS checker** (`/ats-checker`, no login needed): upload a resume or pick a saved one, optionally paste a job description, and get an explainable score out of 100 (parseability, structure, content, keywords, polish) with a fix for every failed check, the top fixes, matched/missing keywords and a view of the text an ATS actually reads. A Claude API key adds AI content judgments and tailored suggestions
-- **Private by design**: every API route checks the resume belongs to the logged-in user
-- **Polished UX**: loading skeletons, empty states, toast messages, friendly error messages, 404 page, responsive layout with Edit/Preview tabs on mobile, and `prefers-reduced-motion` support
-- **Security basics**: rate-limited login/register, no stack traces or internal errors in production, server-side input validation
+**Building resumes**
+
+- **Editor with live preview**: every keystroke updates a paged preview; Edit/Preview tabs on phones
+- **All resume sections**: personal info, summary, skills, experience (bullets, "currently working here"), education, projects and additional sections (certifications, languages, awards...), with add, remove, reorder and collapse
+- **Rich text**: bold, italic, underline and links in the summary, bullets and project descriptions (sanitized on the server)
+- **45 templates** in 10 layouts (classic, modern, sidebar, timeline, two-column...), with a template picker
+- **Design panel**: fonts (Google Fonts), sizes, spacing and margins, colors and dividers, columns and header layout, bullet style, date format, section order (drag and drop), hidden sections and renamed headings, A4 or US Letter
+- **Profile photo** (optional): upload, crop, and choose its shape, size and border; stored on Cloudinary
+- **Autosave**: 2 seconds after you stop typing, with a "Saving… / Saved / Unsaved changes" indicator, Ctrl+S, and a warning before leaving with unsaved changes
+- **PDF download**: selectable, ATS-readable text with clickable links and the template's fonts; entries don't split across pages
+- **Import an existing resume** (PDF or DOCX): read with the Claude API when a key is set, otherwise with a rule-based parser, into an editable resume
+
+**ATS tools**
+
+- **ATS checker** (`/ats-checker`, no login needed): upload a resume or pick a saved one, optionally paste a job description, and get an explainable score out of 100 (parseability, structure, content, keywords, polish) with a fix for every failed check, matched/missing keywords and the text an ATS actually reads. A Claude API key adds AI content judgments and tailored suggestions
+- **ATS optimizer**: creates an improved copy (standard headings, one date format, newest job first, stronger bullets) without changing the original. AI rewrites are checked so they never invent numbers, skills or employers; where a number would help, a `[X%]` placeholder is added and highlighted until you fill it in
+- **Review screen**: the score before and after, the original and optimized resume side by side with every change highlighted, accept or reject each change (rejecting undoes it exactly), skills from the job to add if you have them, and Re-score. Once you edit the copy in the editor, the decisions become read-only
+- **ATS badge** on each dashboard card, with a one-click Re-check
+
+**Accounts and app**
+
+- **Authentication**: sign up and log in with JWT, passwords hashed with bcrypt, sessions restored on reload, and password reset by email (Resend)
+- **Dashboard**: your resumes as cards with "last updated" times and ATS badges; create, upload, duplicate and delete (with a confirmation)
+- **Private by design**: every API route checks the resume belongs to the logged-in user, and other users' resumes return 404
+- **Polished UX**: dark mode, loading skeletons, empty states, toasts, friendly error messages (including when a page fails to load), 404 page, layouts that work at phone width, and `prefers-reduced-motion` support
+- **Production basics**: rate limits on logins, imports, ATS checks and uploads; no stack traces or internal errors in production; the server refuses to start without its required settings; health check; pages loaded on demand
+- **Tested**: API, parser and scoring suites plus browser tests (Puppeteer), run on GitHub Actions
 
 ---
 
@@ -45,9 +62,11 @@ A full stack resume builder: create professional, ATS-friendly resumes with a li
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | React 19, Vite, Tailwind CSS v4, React Router, React Hook Form, Axios, react-to-print, react-hot-toast |
-| Backend | Node.js, Express 5, JWT (jsonwebtoken), bcryptjs, express-rate-limit |
-| Database | MongoDB Atlas with Mongoose |
+| Frontend | React 19, Vite, Tailwind CSS v4, React Router, React Hook Form, Axios, Tiptap (rich text), dnd kit (drag and drop), react-easy-crop, react-to-print, react-hot-toast |
+| Backend | Node.js, Express 5, JWT (jsonwebtoken), bcryptjs, express-rate-limit, Multer, pdf-parse + pdf.js and Mammoth (reading PDF/DOCX), sanitize-html, Zod |
+| Database | MongoDB Atlas with Mongoose (MongoDB in Docker for local development) |
+| Services | Claude API (AI import and ATS feedback, optional), Cloudinary (photos), Resend (password reset emails) |
+| Testing and CI | Node's test runner, Puppeteer (browser tests), GitHub Actions |
 
 ---
 
@@ -55,29 +74,37 @@ A full stack resume builder: create professional, ATS-friendly resumes with a li
 
 ```
 resume-builder/
+├── .github/workflows/           # CI: fast checks on push, browser tests on pull requests
 ├── client/                      # React frontend (Vite)
 │   ├── public/                  # favicon
+│   ├── vercel.json              # Sends every path to index.html (deep links)
 │   └── src/
 │       ├── api/axios.js         # Axios instance (adds JWT, handles 401)
 │       ├── components/
-│       │   ├── editor/          # Form sections + reusable ListEditor
-│       │   ├── templates/       # ClassicTemplate (the resume design)
-│       │   └── ...              # Navbar, ResumeCard, ConfirmModal, routes, etc.
+│       │   ├── editor/          # Form sections, rich text, design panel, template picker, photo
+│       │   ├── ats/             # Score ring, results, resume snapshots for the review
+│       │   ├── landing/         # Landing page parts
+│       │   └── ...              # Navbar, ResumeCard, modals, ErrorBoundary, routes, etc.
 │       ├── context/AuthContext.jsx
-│       ├── hooks/               # useResume (load + autosave), usePageTitle
-│       ├── pages/               # Landing, Login, Register, Dashboard, Editor, NotFound
-│       └── utils/               # timeAgo, getErrorMessage, createId
+│       ├── hooks/               # useResume (load + autosave), usePageTitle, ...
+│       ├── pages/               # Landing, auth pages, Dashboard, Editor, AtsChecker, AtsReview, NotFound
+│       ├── templates/           # Template registry, layouts, design settings, fonts, pagination
+│       └── utils/               # Rich text, placeholders, image cropping, errors, ...
 │
 └── server/                      # Express backend
-    ├── config/db.js             # MongoDB connection
-    ├── controllers/             # authController, resumeController
-    ├── middleware/              # auth (JWT), errorHandler, rateLimiter
+    ├── config/                  # MongoDB connection, required settings check
+    ├── controllers/             # auth, resumes, import, photos, ATS
+    ├── middleware/              # auth (JWT), errorHandler, rateLimiter, upload
     ├── models/                  # User, Resume
-    ├── routes/                  # authRoutes, resumeRoutes
+    ├── routes/                  # authRoutes, resumeRoutes, atsRoutes
+    ├── services/
+    │   ├── import/              # Text extraction from PDF/DOCX, AI and rule-based parsers
+    │   ├── ats/                 # Scoring, keywords, optimizer, AI review and rewrites
+    │   └── photoStorage.js      # Cloudinary
     ├── tests/                   # API and parser test suites + fixtures (npm test, see Testing)
-    ├── e2e/                     # Browser tests: ATS checker page, PDF round trip
+    ├── e2e/                     # Browser tests: ATS checker and review, PDF round trip
     ├── app.js                   # The Express app (middleware + routes)
-    └── server.js                # Entry point: loads .env, connects to MongoDB, starts the app
+    └── server.js                # Entry point: checks settings, connects to MongoDB, starts the app
 ```
 
 ---
@@ -91,15 +118,21 @@ All routes are prefixed with `/api`. 🔒 = requires `Authorization: Bearer <tok
 | GET | `/health` | Health check: `200` when the server and database are up, `503` while the database is unreachable | |
 | POST | `/auth/register` | Create an account, returns `{ token, user }` (rate limited) | |
 | POST | `/auth/login` | Log in, returns `{ token, user }` (rate limited) | |
+| POST | `/auth/forgot-password` | Email a password reset link (same answer whether or not the email exists; rate limited) | |
+| POST | `/auth/reset-password/:token` | Set a new password with the emailed link's token (rate limited) | |
 | GET | `/auth/me` | Get the logged-in user | 🔒 |
-| GET | `/resumes` | List your resumes (title + updatedAt, newest first) | 🔒 |
+| GET | `/resumes` | List your resumes (title, updatedAt and ATS badge, newest first) | 🔒 |
 | POST | `/resumes` | Create a resume | 🔒 |
+| POST | `/resumes/import` | Create a resume from a PDF or DOCX (multipart `file`; rate limited) | 🔒 |
 | GET | `/resumes/:id` | Get one resume | 🔒 |
 | PUT | `/resumes/:id` | Update a resume | 🔒 |
 | DELETE | `/resumes/:id` | Delete a resume | 🔒 |
 | POST | `/resumes/:id/duplicate` | Copy a resume (title gets " (Copy)") | 🔒 |
+| POST / DELETE | `/resumes/:id/photo` | Upload (multipart `photo`, rate limited) or remove the resume's photo | 🔒 |
 | POST | `/ats/analyze` | Score a resume for ATS out of 100 (multipart: `file` or, when logged in, `resumeId`; optional `jobDescription` and `jobTitle`). Returns the grade, five scored categories with every check's reason and fix, matched/missing keywords, the text an ATS sees (`atsView`) and the parsed resume. With `ANTHROPIC_API_KEY` set, AI judges content quality and writes tailored fixes. Rate limited; nothing is saved | Optional |
 | POST | `/ats/optimize` | Create an improved copy of a resume (JSON: `resumeId`, or `parsedResume` from `/analyze`; optional `failedChecks`, `jobDescription`). Fixes structure (standard headings, one date format, newest job first, contact details in the body), rewrites weak bullets with AI when available (never inventing numbers, skills or employers), and adds job skills to Skills only when the resume already shows them. Saves a new resume in an ATS-friendly Basic template and returns every change (`{ id, section, before, after, reason }`), skills to consider adding, and the score before and after. Rate limited; the original is never changed | 🔒 |
+| PATCH | `/ats/review/:resumeId` | The review step (JSON: `decisions` `[{ id, status }]` and/or `selectedSkills`). Accepting or rejecting rebuilds the copy from the original plus every change that isn't rejected; `409` once the copy has been edited in the editor. Ticked skills are added to (or removed from) the resume as it is | 🔒 |
+| POST | `/ats/rescore/:resumeId` | Score a resume as it is now against the job it was last checked for, and save it as its ATS badge (rate limited) | 🔒 |
 
 Errors always return JSON in the form `{ "message": "..." }`. Resumes that belong to another user return `404`.
 
@@ -222,6 +255,26 @@ CI installs packages with `npm ci` from `package-lock.json`, so commit that file
 
 ---
 
+## Challenges and Solutions
+
+**PDFs that looked right but read wrong.** Some templates exported PDFs that an ATS read as `S U M M A R Y`, with stray `· · ·` separators, or with job titles separated from their bullets. They looked fine on screen, so the bug was invisible. *Solution:* a round-trip test that prints every template to PDF the way the app does, extracts the text with the ATS checker's own extractor, and checks the headings, the order and the separators. The templates were then fixed until all 45 passed.
+
+**Importing real-world resumes.** PDFs store text in drawing order, not reading order. Real CVs also wrap long lines, put dates in odd places and use brackets that split across lines. The parser worked on tidy test files and broke on real ones. *Solution:* fixes for each failure, plus a regression test on an anonymised real CV's text, in both the PDF's own order and in reading order.
+
+**Letting AI help without letting it lie.** Asked to "strengthen" a bullet, a language model happily adds a percentage or a skill the person never mentioned. *Solution:* every AI rewrite is checked against the original, and rewrites that add numbers, skills or employers are rejected. Where a number would help, the optimizer adds a visible `[X%]` placeholder instead. It's highlighted in the review and the editor but never printed in the PDF.
+
+**Undoing one change out of many.** Accepting and rejecting optimizer changes in any order had to give exactly the original when everything was rejected. *Solution:* each change is stored as a small operation (e.g. "replace this bullet", "move this line to the subtitle"). The resume is rebuilt from the original plus every change that isn't rejected, so each change reverts exactly. Edits made later in the editor can't be expressed as these operations, so the decisions lock once the resume is edited there, rather than silently overwriting those edits.
+
+**Saving without losing keystrokes.** With autosave, a save can finish while the user is still typing, or a photo upload can finish during a save. *Solution:* the editor tracks a version number and only marks the resume "Saved" when nothing changed during the save. The server sets personal info field by field, so a save never overwrites a photo uploaded at the same moment.
+
+**Fonts missing from the PDF.** The browser could print before the Google Fonts arrived in the print frame, which silently fell back to a default font. *Solution:* the font files themselves are passed to `react-to-print`, which waits for them to load.
+
+**A big first download.** The production build put the editor, the rich text editor and every template into large bundles. *Solution:* every page except the landing page loads on demand, and the rich text editor has its own chunk. The bundler's default also pulled React into that chunk, which would have made every page load it, so that default is turned off. An error boundary shows a "Reload" message if a page's code fails to download.
+
+**Configuration mistakes that fail quietly.** Without `JWT_SECRET`, the server started fine and then failed every login with a 500. Without `CLIENT_URL`, the browser blocked every request with a CORS error. *Solution:* the server checks its required settings at startup and refuses to start, listing what to fix.
+
+---
+
 ## What I Learned
 
 <!-- TODO: edit these in your own words -->
@@ -237,11 +290,8 @@ CI installs packages with `npm ci` from `package-lock.json`, so commit that file
 
 ## Future Improvements
 
-- More templates (modern, two-column, minimal) with a template picker
-- Custom accent colours and fonts
-- Drag-and-drop reordering
 - Public share link for a resume
-- AI suggestions for summaries and bullet points
-- Import from an existing PDF or LinkedIn
-- Password reset by email
-- Automated tests (Jest / Vitest + Supertest) and CI with GitHub Actions
+- Import from LinkedIn
+- Cover letters that reuse the resume's details and design
+- Version history for a resume (go back to an earlier save)
+- Client-side component tests (Vitest + Testing Library) next to the browser tests
