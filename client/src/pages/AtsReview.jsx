@@ -246,12 +246,12 @@ export default function AtsReview() {
           <div className="flex items-center justify-center gap-2 sm:gap-6">
             <div className="text-center">
               <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">Original</p>
-              <ScoreRing score={scores.before} grade={gradeFor(scores.before)} />
+              <ScoreRing score={scores.before} grade={gradeFor(scores.before)} compact />
             </div>
             <ArrowRight className="size-6 text-slate-400" aria-hidden="true" />
             <div className="text-center">
               <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">Optimized</p>
-              <ScoreRing score={scores.after} grade={gradeFor(scores.after)} />
+              <ScoreRing score={scores.after} grade={gradeFor(scores.after)} compact />
             </div>
           </div>
         </div>

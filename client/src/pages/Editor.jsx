@@ -178,7 +178,7 @@ export default function Editor() {
             onBlur={() => !resume.title.trim() && updateResume({ title: "Untitled Resume" })}
             maxLength={100}
             aria-label="Resume title"
-            className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 text-lg font-semibold text-slate-900 dark:text-white outline-none hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/30"
+            className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 text-lg font-semibold text-ellipsis text-slate-900 dark:text-white outline-none hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/30"
           />
 
           <span className="hidden items-center gap-2 text-sm text-slate-500 dark:text-slate-400 sm:flex" aria-live="polite">

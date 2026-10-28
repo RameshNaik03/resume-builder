@@ -48,12 +48,13 @@ export default function ResumeCard({ resume, onDuplicate, onDelete, onRecheck, i
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Last updated {timeAgo(resume.updatedAt)}</p>
 
         {/* relative z-10 puts the buttons above the stretched link */}
-        <div className="relative z-10 mt-4 flex gap-2">
+        {/* Tighter on phones so each label stays on one line */}
+        <div className="relative z-10 mt-4 flex gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => onDuplicate(resume)}
             disabled={isDuplicating}
-            className="btn-secondary flex-1 px-3 py-1.5"
+            className="btn-secondary flex-1 gap-1.5 px-2.5 py-1.5 whitespace-nowrap sm:px-3"
           >
             <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <rect x="9" y="9" width="13" height="13" rx="2" />
@@ -65,7 +66,7 @@ export default function ResumeCard({ resume, onDuplicate, onDelete, onRecheck, i
             type="button"
             onClick={() => onRecheck(resume)}
             disabled={isRechecking}
-            className="btn-secondary px-3 py-1.5"
+            className="btn-secondary gap-1.5 px-2.5 py-1.5 whitespace-nowrap sm:px-3"
             aria-label={`${ats ? "Re-check" : "Check"} the ATS score of ${resume.title}`}
           >
             <svg className={`size-4 ${isRechecking ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -76,13 +77,14 @@ export default function ResumeCard({ resume, onDuplicate, onDelete, onRecheck, i
           <button
             type="button"
             onClick={() => onDelete(resume)}
-            className="btn-secondary px-3 py-1.5 text-red-600 hover:border-red-200 hover:bg-red-50 dark:text-red-400 dark:hover:border-red-900 dark:hover:bg-red-950/50"
+            className="btn-secondary gap-1.5 px-2.5 py-1.5 whitespace-nowrap sm:px-3 text-red-600 hover:border-red-200 hover:bg-red-50 dark:text-red-400 dark:hover:border-red-900 dark:hover:bg-red-950/50"
             aria-label={`Delete ${resume.title}`}
           >
             <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
             </svg>
-            Delete
+            {/* Icon only on the narrowest phones (the button has an aria-label) */}
+            <span className="hidden min-[400px]:inline">Delete</span>
           </button>
         </div>
       </div>

@@ -4,8 +4,9 @@ import { scoreTone } from "./atsHelpers";
 
 const ANIMATION_MS = 1200;
 
-// Large ring that fills up to the score while the number counts up
-export default function ScoreRing({ score, grade }) {
+// Large ring that fills up to the score while the number counts up.
+// compact: smaller on phones (for two rings side by side)
+export default function ScoreRing({ score, grade, compact = false }) {
   const reducedMotion = usePrefersReducedMotion();
   const [animated, setAnimated] = useState(0);
   const shown = reducedMotion ? score : animated;
@@ -29,7 +30,7 @@ export default function ScoreRing({ score, grade }) {
 
   return (
     <div className="flex flex-col items-center">
-      <div className="relative size-48" role="img" aria-label={`ATS score ${score} out of 100: ${grade}`}>
+      <div className={`relative ${compact ? "size-28 sm:size-48" : "size-48"}`} role="img" aria-label={`ATS score ${score} out of 100: ${grade}`}>
         <svg viewBox="0 0 120 120" className="size-full -rotate-90" aria-hidden="true">
           <circle cx="60" cy="60" r={radius} fill="none" strokeWidth="10" className="stroke-slate-200 dark:stroke-slate-800" />
           <circle
@@ -45,7 +46,7 @@ export default function ScoreRing({ score, grade }) {
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center" aria-hidden="true">
-          <span className="font-display text-6xl font-extrabold tabular-nums text-slate-900 dark:text-white">{shown}</span>
+          <span className={`font-display ${compact ? "text-4xl sm:text-6xl" : "text-6xl"} font-extrabold tabular-nums text-slate-900 dark:text-white`}>{shown}</span>
           <span className="text-xs text-slate-500 dark:text-slate-400">out of 100</span>
         </div>
       </div>

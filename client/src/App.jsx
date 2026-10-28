@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import Landing from "./pages/Landing";
 import Loader from "./components/Loader";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 // Every page except the landing page is loaded only when it's opened, so the first visit
 // downloads much less JavaScript (the editor alone brings the rich text editor, crop tool
@@ -33,29 +34,31 @@ export default function App() {
       {showNavbar && <Navbar />}
 
       <main className="flex-1">
-        <Routes>
-          {/* Everyone (its buttons point logged-in users to the dashboard) */}
-          <Route path="/" element={<Landing />} />
-          <Route path="/ats-checker" element={page(<AtsChecker />)} />
+        <ErrorBoundary key={pathname}>
+          <Routes>
+            {/* Everyone (its buttons point logged-in users to the dashboard) */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/ats-checker" element={page(<AtsChecker />)} />
 
-          {/* Only for logged-out users (logged-in users go to the dashboard) */}
-          <Route element={<PublicRoute />}>
-            <Route path="/login" element={page(<Login />)} />
-            <Route path="/register" element={page(<Register />)} />
-            <Route path="/forgot-password" element={page(<ForgotPassword />)} />
-            <Route path="/reset-password/:token" element={page(<ResetPassword />)} />
-          </Route>
+            {/* Only for logged-out users (logged-in users go to the dashboard) */}
+            <Route element={<PublicRoute />}>
+              <Route path="/login" element={page(<Login />)} />
+              <Route path="/register" element={page(<Register />)} />
+              <Route path="/forgot-password" element={page(<ForgotPassword />)} />
+              <Route path="/reset-password/:token" element={page(<ResetPassword />)} />
+            </Route>
 
-          {/* Only for logged-in users */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={page(<Dashboard />)} />
-            <Route path="/editor/:id" element={page(<Editor />, "Opening the editor...")} />
-            <Route path="/ats/review/:id" element={page(<AtsReview />, "Opening your review...")} />
-          </Route>
+            {/* Only for logged-in users */}
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={page(<Dashboard />)} />
+              <Route path="/editor/:id" element={page(<Editor />, "Opening the editor...")} />
+              <Route path="/ats/review/:id" element={page(<AtsReview />, "Opening your review...")} />
+            </Route>
 
-          {/* Any other URL */}
-          <Route path="*" element={page(<NotFound />)} />
-        </Routes>
+            {/* Any other URL */}
+            <Route path="*" element={page(<NotFound />)} />
+          </Routes>
+        </ErrorBoundary>
       </main>
 
       <Toaster
