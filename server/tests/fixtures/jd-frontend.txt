@@ -1,0 +1,14 @@
+Sr. Front-End Engineer - Remote
+
+We're looking for a senior frontend engineer to help build our customer-facing SaaS dashboard.
+
+Requirements:
+- 5+ years of experience with JS, React and TypeScript
+- Experience with Next.js and GraphQL
+- Strong knowledge of accessibility and web performance
+- Experience writing automated tests with Jest or Cypress
+- Familiar with AWS and CI/CD pipelines
+
+Nice to have: design systems experience, mentoring junior engineers.
+
+You will own the design system, improve web performance across the dashboard, and mentor engineers on accessibility best practices.

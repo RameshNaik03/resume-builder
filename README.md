@@ -74,7 +74,10 @@ resume-builder/
     ├── middleware/              # auth (JWT), errorHandler, rateLimiter
     ├── models/                  # User, Resume
     ├── routes/                  # authRoutes, resumeRoutes
-    └── server.js                # App entry point
+    ├── tests/                   # API and parser test suites + fixtures (npm test, see Testing)
+    ├── e2e/                     # Browser tests: ATS checker page, PDF round trip
+    ├── app.js                   # The Express app (middleware + routes)
+    └── server.js                # Entry point: loads .env, connects to MongoDB, starts the app
 ```
 
 ---
@@ -158,6 +161,47 @@ npm run dev     # http://localhost:5173
 ```
 
 Open http://localhost:5173 and create an account.
+
+---
+
+## Testing
+
+All server tests use Node's built-in test runner. Run them in `server/`:
+
+```bash
+npm test                  # all fast suites (~15 s)
+npm run test:e2e          # browser test of the ATS checker (~40 s)
+npm run test:roundtrip    # PDF round trip for all 45 templates (~2 min)
+```
+
+**Fast suites** (`npm test`, files in `server/tests/`). Each one starts the real app on a free port with its own throwaway database:
+
+| Suite | File | What it checks |
+| --- | --- | --- |
+| Resumes | `resume.test.js` | Register, create, list, update, duplicate, delete; users can only see and change their own resumes |
+| Design | `design.test.js` | Design settings save and reload exactly, invalid values are rejected, duplicates copy them |
+| Rich text | `richtext.test.js` | Summary, bullet and project HTML is sanitized (scripts, unsafe links removed); plain text converts safely; the ATS text has no HTML |
+| Photos | `photo.test.js` | Upload checks (type, size, field), one photo per resume, duplicates get their own copy, deleting cleans up. Cloudinary is replaced by a stand-in |
+| Import | `import.test.js` | PDF and DOCX import, scanned/fake/oversized files rejected, fallback to the rules when the AI fails, rate limit |
+| Import regression | `import-regression.test.js` | The parser on an anonymised real CV's text, in the PDF's own text order and in reading order: all jobs, projects and degrees with titles, companies and dates; bullets stay with their job; brackets and wrapped lines stay whole (also `npm run test:import-regression`) |
+| ATS analyze | `ats-analyze.test.js` | The score: validation, categories and checks, job description keywords, risky layouts (columns, tables, headers, scans), saved resumes, the AI review, rate limit |
+| ATS optimize | `ats-optimize.test.js` | The improved copy: structure fixes, every change listed, keywords, AI rewrite safety checks; never adds a skill that isn't in the original |
+
+**Browser tests** (files in `server/e2e/`). They start the API (port 5055), Vite (port 5174) and a headless browser themselves, and stop them afterwards:
+
+| Suite | Command | What it checks |
+| --- | --- | --- |
+| ATS checker | `npm run test:e2e` | The ATS checker page as a guest and logged in: upload, progress steps, results, "What the ATS sees", generating the optimized version and the editor's score banner, the import banner note, phone width and dark mode |
+| PDF round trip | `npm run test:roundtrip` | Every template: renders a sample resume, prints it to PDF the way the app does, extracts the text with the ATS checker's extractor, and checks that the headings are recognised, the name comes first, each job title is right above its bullets, and there are no stray separators or spaced-out letters. `ROUNDTRIP_ONLY=classic` checks only the templates whose id starts with "classic" |
+
+**Client** (in `client/`): `npm run lint` (oxlint) and `npm run build` (the production build compiles).
+
+What the tests need:
+
+- **MongoDB** at `mongodb://127.0.0.1:27017`. If nothing answers there, the tests run `docker compose up -d --wait` (the same as `npm run db:up`). To use another server, set `TEST_MONGO_URI`. Every run uses throwaway databases and deletes them at the end.
+- **For the browser tests:** Edge or Chrome installed (found automatically, or set `BROWSER_PATH`) and ports 5055 and 5174 free (your dev servers on 5000 and 5173 can keep running; change the ports with `API_PORT` / `CLIENT_PORT`).
+
+No real keys are used: the fast suites never read `server/.env` (they load `app.js` directly), the browser tests start `server.js` with the AI, photo and email keys blanked out, and where a test needs those services it uses local stand-ins. Test files are fictional (`server/tests/fixtures/`; `ats/make-fixtures.cjs` rebuilds the ATS ones). The browser tests save screenshots, PDFs and extracted text in your temp folder under `resume-builder-e2e/`, for when a check fails.
 
 ---
 

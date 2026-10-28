@@ -9,8 +9,10 @@
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "start": "node server.js",
+    "test": "node --test \"tests/*.test.js\"",
+    "test:import-regression": "node --test tests/import-regression.test.js",
     "test:roundtrip": "node --test e2e/roundtrip.test.js",
-    "test:import-regression": "node --test tests/import-regression.test.js"
+    "test:e2e": "node --test e2e/ats-checker.test.js"
   },
   "author": "Ramesh Naik",
   "license": "MIT",
