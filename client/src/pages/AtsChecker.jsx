@@ -249,8 +249,8 @@ export default function AtsChecker() {
     }
   };
 
-  // The optimizer saves an improved copy (the original is never changed), then the editor
-  // opens it with a banner showing the score before and after
+  // The optimizer saves an improved copy (the original is never changed), then the review
+  // screen shows each change to accept or reject
   const handleGenerate = async () => {
     if (!user) {
       setShowSignUpPrompt(true);
@@ -272,16 +272,8 @@ export default function AtsChecker() {
         failedChecks: result.checks.filter((check) => !check.passed).map((check) => check.id),
         jobDescription: analyzedJobDescription,
       });
-      navigate(`/editor/${data.resume._id}`, {
-        state: {
-          optimized: {
-            before: data.scores.before,
-            after: data.scores.after,
-            changes: data.changes.length,
-            skillsToConsider: data.skillsToConsider.length,
-          },
-        },
-      });
+      // Next: the review screen (changes to accept or reject); the same data is saved on the resume
+      navigate(`/ats/review/${data.resume._id}`, { state: { optimization: data } });
     } catch (err) {
       toast.error(getErrorMessage(err));
       setGenerating(false);

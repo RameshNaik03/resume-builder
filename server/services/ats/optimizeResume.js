@@ -1,21 +1,26 @@
+import mongoose from "mongoose";
 import { findContactDetails, headingOf } from "../import/parseWithRules.js";
 import parseWithRules from "../import/parseWithRules.js";
 import sanitizeResume from "../import/sanitizeResume.js";
 import { htmlToText } from "../../utils/richText.js";
 import SKILLS from "./skills.js";
 import analyzeKeywords, { containsAnyTerm } from "./keywords.js";
+import { applyOp } from "./optimizationOps.js";
 import resumeToText from "./resumeToText.js";
 import rewriteBullets from "./rewriteBullets.js";
-import { dateRanges, dateStyles, dateValue, findCliches, findPronouns, hasNumber, startsWithActionVerb } from "./textRules.js";
+import { dateRanges, dateStyles, dateValue, findCliches, findPronouns, hasNumber, isJobSubtitle, startsWithActionVerb } from "./textRules.js";
 
 // Builds an ATS-friendly version of a resume and lists every change it made.
 //   1. Structure (rules, always): contact details in the main body, standard section
-//      headings, one date format, newest job first
+//      headings, project lines as job subtitles, one date format, newest job first
 //   2. Bullets: AI rewrites when available (checked so nothing is invented), otherwise
 //      only safe rule fixes ("I led..." -> "Led...")
 //   3. Keywords: a job skill is added to Skills only if the resume already mentions it;
 //      the rest are returned as "skills to consider adding if you have them"
-// Every change: { id, section, before, after, reason }
+// Every change: { id, section, before, after, reason, op, marks, revertible }
+//   op         - the operation that makes it (see optimizationOps.js), so it can be rejected
+//   marks      - text to highlight in the previews: { original: [...], optimized: [...] }
+//   revertible - false when rejecting is impossible (an uploaded file's own layout)
 
 export const OPTIMIZED_TEMPLATE = "classic-navy"; // Basic tier: one column, standard system fonts
 const STANDARD_HEADINGS = { summary: "Summary", experience: "Experience", education: "Education", skills: "Skills", projects: "Projects" };
@@ -47,16 +52,37 @@ const formatRange = (text) => {
 const prettyTemplate = (id = "") => id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 const jobLabel = (job) => [job.role, job.company].filter(Boolean).join(" at ") || "Untitled job";
 const datesOf = (job) => [job.startDate, job.endDate].filter(Boolean).join(" – ");
+const newId = () => new mongoose.Types.ObjectId().toString();
 
 // original: resume content (a saved resume or parsed file data)
 // options:  { jobDescription, failedChecks, headerFooterText, template, design, fileName, useAI }
+// Returns { original, resume, changes, skillsToConsider, optimizedWith, rejectedRewrites }:
+//   original - the starting point the changes apply to (content + template + design, with job ids)
+//   resume   - the result (original + every change)
 export default async function optimizeResume(original, options = {}) {
-  const { jobDescription = "", failedChecks = [], headerFooterText = [], template, design = {}, fileName, useAI } = options;
-  const resume = sanitizeResume(original); // A clean copy (no ids, photo or unknown fields)
-  const originalText = resumeToText(resume);
+  const { jobDescription = "", failedChecks = [], headerFooterText = [], template = null, design = {}, fileName, useAI } = options;
+
+  // A clean copy (no photo or unknown fields); every job gets the id it will be saved with
+  const start = { ...sanitizeResume(original), template, design: structuredClone(design ?? {}) };
+  for (const job of start.experience) job._id = newId();
+  const resume = structuredClone(start);
+  const originalText = resumeToText(start);
+
   const changes = [];
-  const addChange = (section, before, after, reason) =>
-    changes.push({ id: `change-${changes.length + 1}`, section, before, after, reason });
+  // Applies the operation to the result and records it as a reviewable change
+  const change = (section, before, after, reason, op, marks = {}, revertible = true) => {
+    applyOp(resume, op);
+    changes.push({
+      id: `change-${changes.length + 1}`,
+      section,
+      before,
+      after,
+      reason,
+      op,
+      marks: { original: (marks.original ?? []).filter(Boolean), optimized: (marks.optimized ?? []).filter(Boolean) },
+      revertible,
+    });
+  };
 
   // ---------- 1. Contact details that were only in the page header/footer ----------
   const headerText = headerFooterText.join("\n");
@@ -64,65 +90,89 @@ export default async function optimizeResume(original, options = {}) {
     const found = findContactDetails(headerText);
     for (const [field, value] of Object.entries(found)) {
       if (value && !resume.personalInfo[field]) {
-        resume.personalInfo[field] = value;
-        addChange("personalInfo", `${field} only in the page header/footer`, value, "Many ATS skip headers and footers, so this is now in the main body at the top.");
+        change("personalInfo", `${field} only in the page header/footer`, value, "Many ATS skip headers and footers, so this is now in the main body at the top.", { kind: "personalInfo", field, value }, { optimized: [value] });
       }
     }
   }
 
   // ---------- 2. Standard section headings ----------
   // Unknown sections that list jobs with dates ("My Journey") become Experience entries
-  resume.additional = resume.additional.filter((section) => {
-    if (headingOf(section.heading) || !section.items.some((item) => dateRanges(item).length)) return true;
+  for (const section of [...resume.additional]) {
+    if (headingOf(section.heading) || !section.items.some((item) => dateRanges(item).length)) continue;
     const jobs = sanitizeResume(parseWithRules(`EXPERIENCE\n${section.items.join("\n")}`)).experience;
-    if (!jobs.length) return true;
-    resume.experience.push(...jobs);
-    addChange(
+    if (!jobs.length) continue;
+    for (const job of jobs) job._id = newId();
+    change(
       "experience",
       `Section "${section.heading}"`,
       `Experience (${jobs.length} job${jobs.length > 1 ? "s" : ""})`,
-      `ATS look for standard headings like "Experience"; "${section.heading}" may not be recognised.`
+      `ATS look for standard headings like "Experience"; "${section.heading}" may not be recognised.`,
+      { kind: "convertSection", heading: section.heading, jobs },
+      { original: [section.heading], optimized: jobs.map((job) => job.role) }
     );
-    return false;
-  });
+  }
   // Renamed headings in the saved design go back to the standard names
-  for (const [id, heading] of Object.entries(design.sectionHeadings ?? {})) {
+  for (const [id, heading] of Object.entries(resume.design.sectionHeadings ?? {})) {
     if (heading && STANDARD_HEADINGS[id] && heading.trim().toLowerCase() !== STANDARD_HEADINGS[id].toLowerCase()) {
-      addChange(id, `Heading "${heading}"`, `Heading "${STANDARD_HEADINGS[id]}"`, "ATS look for standard section headings.");
+      change(id, `Heading "${heading}"`, `Heading "${STANDARD_HEADINGS[id]}"`, "ATS look for standard section headings.", { kind: "heading", section: id }, { original: [heading], optimized: [STANDARD_HEADINGS[id]] });
     }
   }
 
-  // ---------- 3. One date format ----------
+  // ---------- 3. Project lines under a job become its subtitle ----------
+  // e.g. a first bullet "Acme Pay, a payments app (React, Node.js)" (resumes from before subtitles existed)
+  for (const job of resume.experience) {
+    const first = job.bullets[0];
+    if (job.subtitle || !first || !isJobSubtitle(htmlToText(first))) continue;
+    const text = htmlToText(first).trim();
+    change(
+      "experience",
+      `${jobLabel(job)}: bullet "${text}"`,
+      `${jobLabel(job)}: subtitle "${text}"`,
+      "It names a project rather than an achievement, so it's now the job's subtitle and doesn't count as a weak bullet.",
+      { kind: "subtitle", jobId: job._id, bullet: first, value: text },
+      { original: [text], optimized: [text] }
+    );
+  }
+
+  // ---------- 4. One date format ----------
   const allDates = [...resume.experience.flatMap((job) => [job.startDate, job.endDate]), ...resume.education.map((e) => e.year)].join("\n");
   if (dateStyles(allDates).length > 1) {
     for (const job of resume.experience) {
       const before = datesOf(job);
-      job.startDate = formatDate(job.startDate);
-      job.endDate = formatDate(job.endDate);
-      if (datesOf(job) !== before) addChange("experience", `${jobLabel(job)}: ${before}`, `${jobLabel(job)}: ${datesOf(job)}`, 'Dates now use one format ("Jan 2024") everywhere.');
+      const startDate = formatDate(job.startDate);
+      const endDate = formatDate(job.endDate);
+      const after = [startDate, endDate].filter(Boolean).join(" – ");
+      if (after === before) continue;
+      const label = jobLabel(job);
+      if (startDate !== job.startDate) {
+        change("experience", `${label}: ${job.startDate}`, `${label}: ${startDate}`, 'Dates now use one format ("Jan 2024") everywhere.', { kind: "jobField", jobId: job._id, field: "startDate", value: startDate }, { original: [job.startDate], optimized: [startDate] });
+      }
+      if (endDate !== job.endDate) {
+        change("experience", `${label}: ${job.endDate}`, `${label}: ${endDate}`, 'Dates now use one format ("Jan 2024") everywhere.', { kind: "jobField", jobId: job._id, field: "endDate", value: endDate }, { original: [job.endDate], optimized: [endDate] });
+      }
     }
-    for (const entry of resume.education) {
-      const before = entry.year;
-      entry.year = formatRange(entry.year);
-      if (entry.year !== before) addChange("education", `${entry.degree || entry.school}: ${before}`, `${entry.degree || entry.school}: ${entry.year}`, 'Dates now use one format ("Jan 2024") everywhere.');
-    }
+    resume.education.forEach((entry, index) => {
+      const year = formatRange(entry.year);
+      if (year === entry.year) return;
+      const label = entry.degree || entry.school;
+      change("education", `${label}: ${entry.year}`, `${label}: ${year}`, 'Dates now use one format ("Jan 2024") everywhere.', { kind: "educationField", index, field: "year", value: year }, { original: [entry.year], optimized: [year] });
+    });
   }
 
-  // ---------- 4. Newest job first ----------
+  // ---------- 5. Newest job first ----------
   // Only when every job has a date we can read, so nothing is moved on a guess
   const sortKey = (job) => [dateValue(job.endDate || job.startDate || ""), dateValue(job.startDate || job.endDate || "")];
   if (resume.experience.length > 1 && resume.experience.every((job) => sortKey(job).every((v) => v !== null))) {
     const sorted = [...resume.experience].sort((a, b) => sortKey(b)[0] - sortKey(a)[0] || sortKey(b)[1] - sortKey(a)[1]);
     if (sorted.some((job, i) => job !== resume.experience[i])) {
       const describe = (jobs) => jobs.map((job) => `${jobLabel(job)} (${datesOf(job)})`).join("; ");
-      addChange("experience", describe(resume.experience), describe(sorted), "Jobs are now newest first (reverse-chronological), the order ATS and recruiters expect.");
-      resume.experience = sorted;
+      change("experience", describe(resume.experience), describe(sorted), "Jobs are now newest first (reverse-chronological), the order ATS and recruiters expect.", { kind: "order", jobIds: sorted.map((job) => job._id) });
     }
   }
 
-  // ---------- 5. Weak bullet points ----------
+  // ---------- 6. Weak bullet points ----------
   const weakBullets = [];
-  resume.experience.forEach((job, jobIndex) => {
+  resume.experience.forEach((job) => {
     job.bullets.forEach((bullet, bulletIndex) => {
       const text = htmlToText(bullet);
       const words = text.split(/\s+/).filter(Boolean).length;
@@ -134,9 +184,11 @@ export default async function optimizeResume(original, options = {}) {
         findPronouns(text).length && "uses first-person pronouns",
         findCliches(text).length && "uses a cliché",
       ].filter(Boolean);
-      if (issues.length) weakBullets.push({ id: `exp${jobIndex}-b${bulletIndex}`, jobIndex, bulletIndex, text, issues });
+      if (issues.length) weakBullets.push({ id: `${job._id}-b${bulletIndex}`, jobId: job._id, bullet, text, issues });
     });
   });
+  const bulletChange = (weak, after, reason) =>
+    change("experience", weak.text, after, reason, { kind: "bullet", jobId: weak.jobId, from: weak.bullet, value: after }, { original: [weak.text], optimized: [after] });
 
   let aiUsed = false;
   const rejected = [];
@@ -152,57 +204,57 @@ export default async function optimizeResume(original, options = {}) {
     if (rewrites) {
       aiUsed = true;
       for (const rewrite of rewrites) {
-        const bullet = weakBullets.find((b) => b.id === rewrite.id);
-        resume.experience[bullet.jobIndex].bullets[bullet.bulletIndex] = rewrite.after.trim();
-        rewritten.add(bullet.id);
-        addChange("experience", bullet.text, rewrite.after.trim(), rewrite.reason);
+        const weak = weakBullets.find((b) => b.id === rewrite.id);
+        rewritten.add(weak.id);
+        bulletChange(weak, rewrite.after.trim(), rewrite.reason);
       }
     }
   }
   // Safe rule fix for the rest: "I led a team" -> "Led a team"
-  for (const bullet of weakBullets) {
-    if (rewritten.has(bullet.id)) continue;
-    const match = bullet.text.match(/^I\s+([\p{L}-]+)(.*)$/su);
+  for (const weak of weakBullets) {
+    if (rewritten.has(weak.id)) continue;
+    const match = weak.text.match(/^I\s+([\p{L}-]+)(.*)$/su);
     if (match && startsWithActionVerb(match[1])) {
-      const after = `${match[1][0].toUpperCase()}${match[1].slice(1)}${match[2]}`;
-      resume.experience[bullet.jobIndex].bullets[bullet.bulletIndex] = after;
-      addChange("experience", bullet.text, after, 'Resumes leave out "I": start with the action verb.');
+      bulletChange(weak, `${match[1][0].toUpperCase()}${match[1].slice(1)}${match[2]}`, 'Resumes leave out "I": start with the action verb.');
     }
   }
 
-  // ---------- 6. Keywords from the job ----------
+  // ---------- 7. Keywords from the job ----------
   const skillsToConsider = [];
   if (jobDescription) {
     const keywords = analyzeKeywords(jobDescription, originalText);
-    const skillsText = resume.skills.join(", ");
     for (const keyword of keywords.matched) {
       if (keyword.type !== "skill") continue;
       const skill = SKILLS.find((s) => s.name === keyword.term);
-      if (!skill || containsAnyTerm(skillsText, skill.terms, skill.caseSensitive)) continue;
+      if (!skill || containsAnyTerm(resume.skills.join(", "), skill.terms, skill.caseSensitive)) continue;
       // Mentioned in the resume, but not in the Skills list: show where, then add it
       const evidence = originalText.split("\n").find((line) => containsAnyTerm(line, skill.terms, skill.caseSensitive)) ?? "";
-      resume.skills.push(skill.name);
-      addChange(
+      change(
         "skills",
         "(not in your Skills list)",
         skill.name,
-        `The job asks for ${skill.name} and your resume already shows it ("${evidence.replace(/^[•\s]+/, "").slice(0, 80)}"), so it's now in Skills too.`
+        `The job asks for ${skill.name} and your resume already shows it ("${evidence.replace(/^[•\s]+/, "").slice(0, 80)}"), so it's now in Skills too.`,
+        { kind: "addSkill", value: skill.name },
+        { optimized: [skill.name] }
       );
     }
     // Not in the resume at all: never added, only suggested
     for (const keyword of keywords.missing) skillsToConsider.push({ term: keyword.term, type: keyword.type, required: keyword.required });
   }
 
-  // ---------- 7. Layout ----------
+  // ---------- 8. Layout ----------
   const wasBasicSingleColumn = template === OPTIMIZED_TEMPLATE && !design.columns && !design.fontFamily && !design.headingFontFamily;
   if (!wasBasicSingleColumn) {
-    addChange(
+    change(
       "layout",
       fileName ? `Original file (${fileName})` : `${prettyTemplate(template)} template${design.columns === 2 ? ", two columns" : ""}`,
       "Classic Navy template: one column, standard fonts",
-      "A simple single-column layout with standard fonts and headings is the easiest for an ATS to read."
+      "A simple single-column layout with standard fonts and headings is the easiest for an ATS to read.",
+      { kind: "layout", template: OPTIMIZED_TEMPLATE },
+      {},
+      !fileName // An uploaded file's own layout can't be recreated, so this one can't be rejected
     );
   }
 
-  return { resume, changes, skillsToConsider, optimizedWith: aiUsed ? "rules+ai" : "rules", rejectedRewrites: rejected };
+  return { original: start, resume, changes, skillsToConsider, optimizedWith: aiUsed ? "rules+ai" : "rules", rejectedRewrites: rejected };
 }

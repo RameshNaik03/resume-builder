@@ -62,7 +62,7 @@ export const findOwnedResume = async (req, res) => {
 // GET /api/resumes
 export const getResumes = async (req, res) => {
   const resumes = await Resume.find({ userId: req.user._id })
-    .select("title updatedAt")
+    .select("title updatedAt atsScore.score atsScore.grade atsScore.checkedAt") // The ATS badge, without the job description
     .sort({ updatedAt: -1 }); // Most recently edited first
 
   res.json(resumes);
@@ -118,7 +118,8 @@ export const duplicateResume = async (req, res) => {
   const original = await findOwnedResume(req, res);
 
   // Turn the document into a plain object and drop the fields MongoDB should regenerate
-  const { _id, createdAt, updatedAt, photoPublicId, ...data } = original.toObject();
+  // The copy is a new resume: no ATS score or optimizer review of its own yet
+  const { _id, createdAt, updatedAt, photoPublicId, atsScore, atsOptimization, ...data } = original.toObject();
 
   // The copy starts without a photo; it gets its own copy of the photo below
   const copy = await Resume.create({

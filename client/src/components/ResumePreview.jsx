@@ -11,7 +11,9 @@ const PAGE_GAP_PX = 24; // Space between pages in the preview
 // Shows the resume as separate pages (A4 or US Letter, from its design), shrunk to fit the panel.
 //   printRef - points at a hidden full-length copy of the resume. It's used to work out
 //              the page breaks, and it's what gets printed to PDF.
-export default function ResumePreview({ resume, printRef }) {
+//   highlightPlaceholders - mark "[X%]"-style placeholders in yellow on the visible pages
+//              (never on the printed copy)
+export default function ResumePreview({ resume, printRef, highlightPlaceholders = false }) {
   const containerRef = useRef(null);
   const pagesRef = useRef(null);
   const [scale, setScale] = useState(1);
@@ -82,7 +84,7 @@ export default function ResumePreview({ resume, printRef }) {
             >
               <div style={{ transform: `translateY(${-index * heightPx}px)` }}>
                 <ResumeSheet {...sheetProps}>
-                  <TemplateRenderer resume={resume} design={resume.design} />
+                  <TemplateRenderer resume={resume} design={resume.design} highlightPlaceholders={highlightPlaceholders} />
                 </ResumeSheet>
               </div>
               {pageCount > 1 && (

@@ -17,6 +17,7 @@ import Loader from "./components/Loader";
 // The editor (with the rich text editor, crop tool, etc.) is loaded only when it's opened,
 // so the landing page, login and dashboard download much less JavaScript
 const Editor = lazy(() => import("./pages/Editor"));
+const AtsReview = lazy(() => import("./pages/AtsReview"));
 
 export default function App() {
   // The landing page has its own top bar, so hide the shared Navbar there
@@ -49,6 +50,14 @@ export default function App() {
               element={
                 <Suspense fallback={<Loader text="Opening the editor..." />}>
                   <Editor />
+                </Suspense>
+              }
+            />
+            <Route
+              path="/ats/review/:id"
+              element={
+                <Suspense fallback={<Loader text="Opening your review..." />}>
+                  <AtsReview />
                 </Suspense>
               }
             />

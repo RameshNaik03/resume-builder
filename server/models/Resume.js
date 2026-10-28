@@ -145,6 +145,27 @@ const resumeSchema = new mongoose.Schema(
     additional: { type: [additionalSectionSchema], default: [] },
     // Every resume (created, imported or duplicated) has one; {} = template defaults
     design: { type: designSchema, default: () => ({}) },
+
+    // The latest ATS score (shown on the dashboard). Set by the ATS checker, the optimizer
+    // and "Re-check". jobDescription: the one it was scored against ("" = none), reused by Re-check.
+    // Set only by the ATS routes, never by a normal update.
+    atsScore: {
+      type: new mongoose.Schema(
+        {
+          score: Number,
+          grade: String,
+          checkedAt: Date,
+          jobDescription: { type: String, default: "" },
+        },
+        { _id: false }
+      ),
+      default: undefined,
+    },
+    // For a resume made by the ATS optimizer: what it changed, for the review screen.
+    // { source, original, changes: [{ id, section, before, after, reason, op, marks, revertible,
+    //   status }], skillsToConsider, selectedSkills, scores, currentScore, jobDescription,
+    //   jobTitle, optimizedWith, appliedAt }. Set only by the ATS routes.
+    atsOptimization: { type: mongoose.Schema.Types.Mixed, default: undefined },
   },
   // minimize: false keeps empty objects, so `design: {}` is stored and returned
   // (Mongoose drops empty objects by default)

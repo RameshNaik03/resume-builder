@@ -1,6 +1,7 @@
 import formatDate, { joinRange } from "./formatDate";
 import { PHOTO_SHAPES } from "./design";
 import { toPlainText, toSafeHtml } from "../utils/richText";
+import { markPlaceholders } from "../utils/placeholders";
 
 // Cleans up resume data once, so every layout can simply render it:
 // empty entries are removed, dates are joined and links are made clickable.
@@ -25,12 +26,16 @@ const toDisplayText = (value) => value.replace(/^https?:\/\/(www\.)?/i, "").repl
 // withLinks = false is used for thumbnails (links aren't allowed inside a button)
 //   design   - the resolved design (template defaults + the resume's overrides)
 //   changed  - the design settings the resume overrides (to tell a chosen value from a default)
-export default function prepareResume(resume, withLinks = true, design, changed = {}) {
+//   options.highlightPlaceholders - mark "[X%]"-style placeholders in yellow (editor preview only)
+export default function prepareResume(resume, withLinks = true, design, changed = {}, { highlightPlaceholders = false } = {}) {
   const info = resume.personalInfo ?? {};
   const link = (href) => (withLinks ? href : undefined);
   const date = (text) => formatDate(text, design.dateFormat);
   // Rich text -> safe HTML (thumbnails get no links: they're inside a button)
-  const richHtml = (value, inline = false) => toSafeHtml(value, { inline, links: withLinks });
+  const richHtml = (value, inline = false) => {
+    const html = toSafeHtml(value, { inline, links: withLinks });
+    return highlightPlaceholders ? markPlaceholders(html) : html;
+  };
 
   const contacts = [
     info.email && { text: info.email, href: link(`mailto:${info.email}`) },

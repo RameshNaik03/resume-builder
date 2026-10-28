@@ -45,6 +45,18 @@ export const optimizeLimiter = rateLimit({
   message: { message: "You've reached the limit of 10 optimized versions per hour. Please try again later." },
 });
 
+// Limits re-scoring (review screen and dashboard "Re-check") per logged-in user. Rules only and
+// quick, so the limit is generous; it only stops scripts hammering the server.
+// Must run after the protect middleware, which sets req.user.
+export const rescoreLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 120,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user._id.toString(),
+  message: { message: "You've re-checked a lot in the last hour. Please try again later." },
+});
+
 // Limits photo uploads per logged-in user (each one is stored on Cloudinary's free tier).
 // Must run after the protect middleware, which sets req.user.
 export const photoLimiter = rateLimit({

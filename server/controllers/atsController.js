@@ -6,7 +6,8 @@ import inspectFile from "../services/ats/inspectFile.js";
 import savedResumeLayout from "../services/ats/savedResumeLayout.js";
 import scoreResume, { totals } from "../services/ats/scoreResume.js";
 import aiReview, { isAIEnabled } from "../services/ats/aiReview.js";
-import buildOptimizedResume, { OPTIMIZED_TEMPLATE } from "../services/ats/optimizeResume.js";
+import buildOptimizedResume from "../services/ats/optimizeResume.js";
+import { buildContent } from "../services/ats/optimizationOps.js";
 import parseWithRules from "../services/import/parseWithRules.js";
 import sanitizeResume from "../services/import/sanitizeResume.js";
 
@@ -117,6 +118,8 @@ export const analyzeResume = async (req, res) => {
     });
   }
   const { score, grade, categories } = totals(checks);
+  // A saved resume's score also becomes its ATS badge on the dashboard
+  if (source.type === "saved") await saveAtsScore(source.resumeId, { score, grade }, jobDescription);
 
   res.json({
     score,
@@ -148,13 +151,22 @@ export const analyzeResume = async (req, res) => {
   });
 };
 
-// Rule-based score of resume content as it would look in a template (the same way
-// saved resumes are scored by /analyze)
+// Rule-based { score, grade } of resume content as it would look in a template (the same
+// way saved resumes are scored by /analyze)
 function scoreContent(content, { template, design }, { jobDescription, jobTitle }) {
   const text = resumeToText(content);
   const inspection = savedResumeLayout({ template, design }, text);
-  return scoreResume({ text, inspection, parsed: sanitizeResume(parseWithRules(text)), jobDescription, jobTitle }).score;
+  const { score, grade } = scoreResume({ text, inspection, parsed: sanitizeResume(parseWithRules(text)), jobDescription, jobTitle });
+  return { score, grade };
 }
+
+// Saves the dashboard's ATS badge without counting as an edit (updatedAt stays the same)
+const saveAtsScore = (resumeId, { score, grade }, jobDescription = "", extra = {}) =>
+  Resume.updateOne(
+    { _id: resumeId },
+    { $set: { atsScore: { score, grade, checkedAt: new Date(), jobDescription }, ...extra } },
+    { timestamps: false }
+  );
 
 // "priya_sharma-resume.pdf" -> "priya sharma resume"
 const titleFromFileName = (name) =>
@@ -190,7 +202,7 @@ export const optimizeResume = async (req, res) => {
     original = saved.toObject();
     layout = { template: saved.template, design: original.design ?? {} };
     baseTitle = saved.title;
-    before = scoreContent(original, layout, { jobDescription, jobTitle });
+    before = scoreContent(original, layout, { jobDescription, jobTitle }).score;
     beforeFrom = "saved-resume";
   } else if (parsedResume && typeof parsedResume === "object" && !Array.isArray(parsedResume)) {
     original = sanitizeResume(parsedResume);
@@ -200,7 +212,7 @@ export const optimizeResume = async (req, res) => {
     // alone can't show; without it, the content is scored as a single-column resume
     const fileScore = Number(originalScore);
     const hasFileScore = originalScore !== undefined && Number.isFinite(fileScore) && fileScore >= 0 && fileScore <= 100;
-    before = hasFileScore ? Math.round(fileScore) : scoreContent(original, layout, { jobDescription, jobTitle });
+    before = hasFileScore ? Math.round(fileScore) : scoreContent(original, layout, { jobDescription, jobTitle }).score;
     beforeFrom = hasFileScore ? "file-analysis" : "content";
   } else {
     res.status(400);
@@ -223,28 +235,113 @@ export const optimizeResume = async (req, res) => {
     useAI: isAIEnabled(),
   });
 
-  // Saved as a new resume: Basic template, default design (one column, standard fonts and
-  // headings, no photo). Kept from the original design: page size, hidden sections and the
-  // accent color (none of them affect ATS parsing).
-  const design = {};
-  if (layout.design.pageSize) design.pageSize = layout.design.pageSize;
-  if (layout.design.hiddenSections?.length) design.hiddenSections = layout.design.hiddenSections;
-  if (layout.design.accentColor) design.accentColor = layout.design.accentColor;
+  // Saved as a new resume (the template and design come from the layout change: the Basic
+  // template, keeping only page size, hidden sections and accent color). The review state is
+  // saved with it, so the review screen works after a refresh.
+  const { template, design } = result.resume;
+  const after = scoreContent(result.resume, { template, design }, { jobDescription, jobTitle });
+  const scores = { before, after: after.score, improvement: after.score - before, beforeFrom };
+  const changes = result.changes.map((change) => ({ ...change, status: "pending" }));
   const created = await Resume.create({
     ...result.resume,
     title: `${baseTitle} (ATS-optimized)`.slice(0, 100),
-    template: OPTIMIZED_TEMPLATE,
-    design,
     userId: req.user._id,
+    atsScore: { score: after.score, grade: after.grade, checkedAt: new Date(), jobDescription },
+    atsOptimization: {
+      source: resumeId ? { type: "saved", resumeId: original._id, title: baseTitle } : { type: "file", fileName: String(fileName ?? "").slice(0, 120) },
+      original: result.original,
+      changes,
+      skillsToConsider: result.skillsToConsider,
+      selectedSkills: [],
+      scores,
+      currentScore: { score: after.score, grade: after.grade, checkedAt: new Date() },
+      jobDescription,
+      jobTitle,
+      optimizedWith: result.optimizedWith,
+      appliedAt: new Date(),
+    },
   });
-  const after = scoreContent(created.toObject(), { template: OPTIMIZED_TEMPLATE, design }, { jobDescription, jobTitle });
 
   res.status(201).json({
     resume: { _id: created._id, title: created.title, template: created.template },
-    changes: result.changes,
+    changes,
     skillsToConsider: result.skillsToConsider,
-    scores: { before, after, improvement: after - before, beforeFrom },
+    scores,
     optimizedWith: result.optimizedWith,
     rewritesRejected: result.rejectedRewrites.length, // AI rewrites dropped by the safety checks
   });
+};
+
+// The resume fields the review rebuilds (the photo and title stay as they are)
+const CONTENT_FIELDS = ["summary", "experience", "education", "skills", "projects", "additional", "template", "design"];
+const PERSONAL_FIELDS = ["fullName", "headline", "email", "phone", "location", "linkedin", "github"];
+const STATUSES = ["pending", "accepted", "rejected"];
+// The resume counts as edited elsewhere (the editor) if it was saved this long after the review
+const EDIT_TOLERANCE_MS = 2000;
+
+// PATCH /api/ats/review/:resumeId (logged-in users; JSON)
+// Fields: decisions [{ id, status: "accepted" | "rejected" | "pending" }] and/or selectedSkills
+// (ticked "skills to consider"), force (apply even though the resume was edited in the editor
+// since the last review step: those edits are replaced).
+// Rebuilds the optimized resume from the original + every change that isn't rejected.
+export const reviewOptimization = async (req, res) => {
+  const resume = await findUsersResume(req, res, req.params.resumeId);
+  const review = resume.atsOptimization;
+  if (!review) {
+    res.status(404);
+    throw new Error("This resume wasn't created by the ATS optimizer, so there's nothing to review.");
+  }
+
+  const decisions = Array.isArray(req.body?.decisions) ? req.body.decisions : [];
+  for (const { id, status } of decisions) {
+    const change = review.changes.find((c) => c.id === id);
+    if (!change || !STATUSES.includes(status)) {
+      res.status(400);
+      throw new Error(`Unknown change or status: ${id} ${status}`);
+    }
+    if (status === "rejected" && change.revertible === false) {
+      res.status(400);
+      throw new Error("This change can't be undone: your original file's layout can't be recreated.");
+    }
+  }
+  if (req.body?.selectedSkills !== undefined && !Array.isArray(req.body.selectedSkills)) {
+    res.status(400);
+    throw new Error("selectedSkills must be a list.");
+  }
+
+  const editedSince = resume.updatedAt - new Date(review.appliedAt) > EDIT_TOLERANCE_MS;
+  if (editedSince && !req.body?.force) {
+    res.status(409);
+    throw new Error("You've edited this resume since the review. Applying review changes now will replace those edits.");
+  }
+
+  for (const { id, status } of decisions) review.changes.find((c) => c.id === id).status = status;
+  if (req.body?.selectedSkills) {
+    // Only skills from the suggestions (never free text)
+    const allowed = new Map(review.skillsToConsider.filter((s) => s.type === "skill").map((s) => [s.term.toLowerCase(), s.term]));
+    review.selectedSkills = [...new Set(req.body.selectedSkills.map((s) => allowed.get(String(s).toLowerCase())).filter(Boolean))];
+  }
+
+  const content = buildContent(review.original, review.changes, review.selectedSkills);
+  for (const field of CONTENT_FIELDS) resume.set(field, content[field]);
+  for (const field of PERSONAL_FIELDS) resume.set(`personalInfo.${field}`, content.personalInfo[field] ?? "");
+  review.appliedAt = new Date();
+  resume.markModified("atsOptimization");
+  await resume.save();
+  res.json(resume);
+};
+
+// POST /api/ats/rescore/:resumeId (logged-in users)
+// Scores the resume as it is now (rules only), against the job description it was last
+// scored or optimized for, and saves it as its ATS badge. Used by the review screen and the
+// dashboard's "Re-check".
+export const rescoreResume = async (req, res) => {
+  const resume = await findUsersResume(req, res, req.params.resumeId);
+  const review = resume.atsOptimization;
+  const jobDescription = review?.jobDescription || resume.atsScore?.jobDescription || "";
+  const content = resume.toObject();
+  const { score, grade } = scoreContent(content, content, { jobDescription, jobTitle: review?.jobTitle ?? "" });
+  const checkedAt = new Date();
+  await saveAtsScore(resume._id, { score, grade }, jobDescription, review ? { "atsOptimization.currentScore": { score, grade, checkedAt } } : {});
+  res.json({ score, grade, checkedAt, withJobDescription: Boolean(jobDescription), before: review?.scores?.before ?? null });
 };

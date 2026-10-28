@@ -3,6 +3,9 @@
 // The steps the server goes through, in order (shown while the analysis runs)
 export const ANALYZE_STEPS = ["Reading file", "Checking ATS compatibility", "Scoring content", "Matching keywords"];
 
+// The grade for a score out of 100 (the same bands as the server)
+export const gradeFor = (score) => (score >= 85 ? "Excellent" : score >= 70 ? "Good" : score >= 50 ? "Needs work" : "Poor");
+
 // Colours for a score in % (the score ring and category bars): green 70+, orange 50-69, red below
 export function scoreTone(percent) {
   if (percent >= 70) return { stroke: "stroke-emerald-500", bar: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400" };

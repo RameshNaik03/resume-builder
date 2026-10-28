@@ -151,7 +151,7 @@ test("ATS checker page and editor banners", async (t) => {
   await page.click("button[type=submit]");
   await waitForText("Generate an ATS-friendly version");
   await clickText("button", "Generate an ATS-friendly version");
-  await page.waitForFunction(() => location.pathname.startsWith("/editor/"), { timeout: 30000 });
+  await page.waitForFunction(() => location.pathname.startsWith("/ats/review/"), { timeout: 30000 });
   const createdId = await page.evaluate(() => location.pathname.split("/").pop());
   const created = (await api("GET", `/resumes/${createdId}`, token)).body;
   await check(
@@ -160,6 +160,10 @@ test("ATS checker page and editor banners", async (t) => {
     `${created.title} ${created.template}`
   );
   await check("optimize: content kept, newest job first", created.experience.length === 2 && created.experience[0].endDate === "Present" && created.skills.length === 3);
+  await waitForText("Review your ATS-optimized resume");
+  await check("generate opens the review screen", true);
+  await clickText("button", "Open in editor");
+  await page.waitForFunction(() => location.pathname.startsWith("/editor/"), { timeout: 15000 });
   await waitForText("ATS-optimized copy created");
   body = await text();
   await check("editor banner shows the score before -> after", /\d+\s*→\s*(to\s*)?\d+/.test(body) && body.includes("your original resume is unchanged"), body.match(/.{0,20}→.{0,20}/)?.[0]);
@@ -183,10 +187,11 @@ test("ATS checker page and editor banners", async (t) => {
   await page.click("button[type=submit]");
   await waitForText("Generate an ATS-friendly version");
   await clickText("button", "Generate an ATS-friendly version");
-  await page.waitForFunction(() => location.pathname.startsWith("/editor/"), { timeout: 30000 });
-  await waitForText("ATS-optimized copy created");
-  await check("optimize from a file opens the editor with the score banner", true);
-  await shot("8-editor-after-file", false);
+  await page.waitForFunction(() => location.pathname.startsWith("/ats/review/"), { timeout: 30000 });
+  await waitForText("Review your ATS-optimized resume");
+  body = await text();
+  await check("optimize from a file opens the review screen", body.includes('Section "My Journey"'), body.slice(0, 200));
+  await shot("8-review-after-file", false);
 
   // ---------- 4. Import banner note ----------
   // Opens the editor with the router state the import modal sends (the real trigger, a PDF

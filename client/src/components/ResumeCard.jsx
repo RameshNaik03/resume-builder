@@ -1,9 +1,27 @@
 import { Link } from "react-router-dom";
 import timeAgo from "../utils/timeAgo";
+import { scoreTone } from "./ats/atsHelpers";
 
-export default function ResumeCard({ resume, onDuplicate, onDelete, isDuplicating }) {
+// ATS score badge colours, matching the score ring (green 70+, orange 50-69, red below)
+const BADGE_STYLES = {
+  "bg-emerald-500": "bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-300 dark:ring-emerald-900",
+  "bg-orange-500": "bg-orange-50 text-orange-700 ring-orange-200 dark:bg-orange-950/70 dark:text-orange-300 dark:ring-orange-900",
+  "bg-rose-500": "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/70 dark:text-rose-300 dark:ring-rose-900",
+};
+
+export default function ResumeCard({ resume, onDuplicate, onDelete, onRecheck, isDuplicating, isRechecking }) {
+  const ats = resume.atsScore;
   return (
     <div className="card group relative flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md dark:hover:border-indigo-800">
+      {ats && (
+        <span
+          className={`absolute top-3 right-3 z-10 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${BADGE_STYLES[scoreTone(ats.score).bar]}`}
+          title={`ATS score ${ats.score} (${ats.grade}), checked ${timeAgo(ats.checkedAt)}`}
+          data-testid="ats-badge"
+        >
+          ATS {ats.score}
+        </span>
+      )}
       {/* Decorative "page" preview */}
       <div className="flex h-36 items-center justify-center bg-linear-to-br from-indigo-50 to-slate-100 dark:from-indigo-950/60 dark:to-slate-800">
         <div className="h-28 w-20 space-y-1.5 rounded bg-white p-2.5 shadow-sm transition group-hover:scale-105">
@@ -42,6 +60,18 @@ export default function ResumeCard({ resume, onDuplicate, onDelete, isDuplicatin
               <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
             </svg>
             {isDuplicating ? "Copying..." : "Duplicate"}
+          </button>
+          <button
+            type="button"
+            onClick={() => onRecheck(resume)}
+            disabled={isRechecking}
+            className="btn-secondary px-3 py-1.5"
+            aria-label={`${ats ? "Re-check" : "Check"} the ATS score of ${resume.title}`}
+          >
+            <svg className={`size-4 ${isRechecking ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-3-6.7L21 8M21 3v5h-5" />
+            </svg>
+            {isRechecking ? "Checking..." : ats ? "Re-check" : "ATS check"}
           </button>
           <button
             type="button"

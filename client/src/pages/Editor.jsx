@@ -7,6 +7,7 @@ import { PAGE_SIZES, resolveDesign, usedFontIds } from "../templates/design";
 import { getPrintFonts } from "../templates/fonts";
 import useResume from "../hooks/useResume";
 import usePageTitle from "../hooks/usePageTitle";
+import { placeholdersIn } from "../utils/placeholders";
 import Loader from "../components/Loader";
 import ResumePreview from "../components/ResumePreview";
 import CollapsibleSection from "../components/editor/CollapsibleSection";
@@ -69,6 +70,9 @@ export default function Editor() {
   };
 
   usePageTitle(resume?.title?.trim() || "Editor");
+
+  // "[X%]"-style placeholders (from the ATS optimizer) that still need real numbers
+  const placeholders = useMemo(() => (resume ? placeholdersIn(resume) : []), [resume]);
 
   // The A4 sheet inside ResumePreview; react-to-print turns it into the PDF.
   // The PDF file name comes from documentTitle.
@@ -320,6 +324,23 @@ export default function Editor() {
         </div>
       )}
 
+      {/* Shown while placeholders like "[X%]" are left (highlighted in the preview, not in the PDF) */}
+      {placeholders.length > 0 && (
+        <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
+          <p
+            className="rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900 dark:border-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-100"
+            role="status"
+          >
+            <span className="font-semibold">
+              {placeholders.length} placeholder{placeholders.length === 1 ? "" : "s"} still need{placeholders.length === 1 ? "s" : ""} real
+              numbers
+            </span>{" "}
+            ({[...new Set(placeholders)].slice(0, 3).join(", ")}). Replace each with your actual figure, or remove it. They're
+            highlighted in yellow in the preview (not in the PDF).
+          </p>
+        </div>
+      )}
+
       {/* Two columns on large screens; tabs decide which one shows on small screens */}
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-2">
         {/* Left: content form or design settings */}
@@ -403,7 +424,7 @@ export default function Editor() {
                 {getTemplate(resume.template).name} · Change
               </button>
             </div>
-            <ResumePreview resume={resume} printRef={printRef} />
+            <ResumePreview resume={resume} printRef={printRef} highlightPlaceholders />
           </div>
         </div>
       </div>
