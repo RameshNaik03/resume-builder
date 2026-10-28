@@ -1,4 +1,4 @@
-# Local MongoDB for development. `pnpm run dev` starts it automatically.
+# Local MongoDB for development. `npm run dev` starts it automatically.
 # Data is kept in the "mongo-data" volume, so it survives restarts.
 services:
   mongo:

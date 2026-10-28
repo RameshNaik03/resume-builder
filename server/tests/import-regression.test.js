@@ -7,7 +7,7 @@
 //                                    projects, degrees) come first, above the name
 //   cv-extracted-reading-order.txt - top-to-bottom page order, what the importer extracts
 //
-// Run: pnpm test:import-regression (in server/)
+// Run: npm run test:import-regression (in server/)
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
