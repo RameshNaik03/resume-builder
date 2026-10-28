@@ -32,11 +32,15 @@ function Timeline({ items, renderItem }) {
   );
 }
 
+// The dot on the timeline line. It floats into the space left of the entry (the negative
+// margin), so the entry's text doesn't need a positioned (relative) wrapper: positioned
+// text is painted late and PDF text extraction would read the dates and titles out of order.
+// Being in the normal flow, it also moves down with its entry when pagination adds space above.
 function TimelineDot() {
   return (
     <span
       aria-hidden="true"
-      className="absolute top-[calc(2.5pt+var(--gap,0px))] -left-[18.5pt] size-[7.5pt] rounded-full border-[1.5pt] border-(--accent) bg-(--bg)"
+      className="float-left mt-[2.5pt] -ml-[18.5pt] size-[7.5pt] rounded-full border-[1.5pt] border-(--accent) bg-(--bg)"
     />
   );
 }
@@ -55,7 +59,7 @@ export default function TimelineLayout({ data, theme }) {
           items={data.experience}
           renderItem={(job) => (
             <>
-              <div className="relative" data-block data-keep={job.bullets.length > 0}>
+              <div className="flow-root" data-block data-keep={job.bullets.length > 0}>
                 <TimelineDot />
                 {job.dates && <p className="fs-8.5 font-semibold tracking-wide text-(--accent) uppercase">{job.dates}</p>}
                 <p>
@@ -75,7 +79,7 @@ export default function TimelineLayout({ data, theme }) {
         <Timeline
           items={data.education}
           renderItem={(entry) => (
-            <div className="relative" data-block>
+            <div className="flow-root" data-block>
               <TimelineDot />
               {entry.year && <p className="fs-8.5 font-semibold tracking-wide text-(--accent) uppercase">{entry.year}</p>}
               <p>

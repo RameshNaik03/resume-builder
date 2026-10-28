@@ -14,7 +14,12 @@
 import { Fragment } from "react";
 import { splitSections } from "./sectionLayout";
 
-// "email · phone · location ..." with clickable links where available
+// "email · phone · location ..." with clickable links where available.
+// ATS-safe text (applies to every layout): no letter-spacing on text an ATS must read
+// (PDF text extraction turns it into "S U M M A R Y"), and no `opacity`, `relative` or
+// `absolute` on text: those make the browser paint it in a later layer, so PDF text
+// extraction reads it out of order (e.g. all separators at the end of the page).
+// Fade text with a semi-transparent colour (text-current/60) instead.
 export function ContactLine({ contacts, separator = "·", className = "" }) {
   if (contacts.length === 0) return null;
 
@@ -34,7 +39,7 @@ export function ContactLine({ contacts, separator = "·", className = "" }) {
             ) : (
               item.text
             )}
-            {index < contacts.length - 1 && <span className="mx-[5pt] opacity-60">{separator}</span>}
+            {index < contacts.length - 1 && <Separator type={separator} />}
           </span>
         </Fragment>
       ))}
@@ -42,12 +47,26 @@ export function ContactLine({ contacts, separator = "·", className = "" }) {
   );
 }
 
-// Section heading that follows the theme's heading style ("caps" or "title")
+// Contact line separators are drawn shapes, not text characters: a "·" or "|" in the text
+// would end up in what an ATS reads (stray at the end of a wrapped line, for example).
+//   type - "·" (dot), "|" (bar) or "/" (slash)
+const SEPARATOR_SHAPES = {
+  "·": "size-[2.5pt] rounded-full",
+  "|": "h-[0.85em] w-[0.75pt]",
+  "/": "h-[0.95em] w-[0.75pt] rotate-[20deg]",
+};
+function Separator({ type }) {
+  const shape = SEPARATOR_SHAPES[type.trim()] ?? SEPARATOR_SHAPES["·"];
+  return <span aria-hidden="true" className={`mx-[5pt] inline-block bg-current align-middle opacity-60 ${shape}`} />;
+}
+
+// Section heading that follows the theme's heading style ("caps" or "title").
+// No letter-spacing, so an ATS reads "SUMMARY" rather than "S U M M A R Y".
 export function SectionTitle({ theme, size = "md", className = "", children, ...rest }) {
   const isCaps = theme.headingStyle === "caps";
   const sizeClass = {
-    md: isCaps ? "hfs-10.5 tracking-[0.12em]" : "hfs-12.5",
-    sm: isCaps ? "hfs-9 tracking-[0.12em]" : "hfs-11",
+    md: isCaps ? "hfs-10.5" : "hfs-12.5",
+    sm: isCaps ? "hfs-9" : "hfs-11",
   }[size];
 
   return (

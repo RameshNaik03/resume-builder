@@ -118,8 +118,8 @@ export default function ModernHeaderLayout({ data, theme }) {
         {/* On the coloured band the photo's border defaults to the band's text colour */}
         <WithPhoto photo={data.photo} align={data.headerAlign} defaultBorderColor="var(--on-accent)">
           <h1 className="font-heading hfs-26 leading-tight font-bold tracking-tight">{data.name}</h1>
-          {data.headline && <p className="mt-[3pt] fs-12.5 opacity-90">{data.headline}</p>}
-          <ContactLine contacts={data.contacts} className="mt-[9pt] fs-9 opacity-90" />
+          {data.headline && <p className="mt-[3pt] fs-12.5 text-current/90">{data.headline}</p>}
+          <ContactLine contacts={data.contacts} className="mt-[9pt] fs-9 text-current/90" />
         </WithPhoto>
       </header>
 

@@ -107,7 +107,9 @@ export default function CompactLayout({ data, theme }) {
         <WithPhoto photo={data.photo} align={data.headerAlign}>
           <h1 className="font-heading hfs-20 leading-tight font-bold tracking-tight">
             {data.name}
-            {data.headline && <span className="ml-[8pt] font-(family-name:--font-body) fs-11 font-normal text-(--accent)">{data.headline}</span>}
+            {/* The "|" keeps the name and title apart when an ATS reads this line as text */}
+            {data.headline && <span className="mx-[6pt] font-(family-name:--font-body) fs-11 font-normal text-(--muted)">|</span>}
+            {data.headline && <span className="font-(family-name:--font-body) fs-11 font-normal text-(--accent)">{data.headline}</span>}
           </h1>
           <ContactLine contacts={data.contacts} separator="|" className="mt-[3pt] fs-9 text-(--muted)" />
         </WithPhoto>

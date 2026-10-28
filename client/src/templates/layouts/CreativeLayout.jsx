@@ -16,7 +16,7 @@ function Section({ title, theme, children }) {
     <section style={{ marginTop: sectionGap(15) }}>
       <h2
         className={`font-heading divider-b flex items-center gap-[7pt] font-extrabold text-(--heading) ${
-          isCaps ? "hfs-11.5 tracking-[0.1em] uppercase" : "hfs-14"
+          isCaps ? "hfs-11.5 uppercase" : "hfs-14"
         }`}
         data-block
         data-keep

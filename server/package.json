@@ -8,7 +8,8 @@
     "dev": "docker compose up -d --wait && nodemon server.js",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
-    "start": "node server.js"
+    "start": "node server.js",
+    "test:roundtrip": "node --test e2e/roundtrip.test.js"
   },
   "author": "Ramesh Naik",
   "license": "MIT",
@@ -32,6 +33,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "puppeteer-core": "^24.43.1"
   }
 }

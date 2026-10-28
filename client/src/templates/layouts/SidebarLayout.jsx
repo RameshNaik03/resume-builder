@@ -28,7 +28,7 @@ function SideSection({ title, children }) {
   return (
     <section style={{ marginTop: sectionGap(16) }}>
       <h2
-        className="font-heading divider-b [--divider-pad:3pt] [--line:color-mix(in_oklab,var(--on-accent)_30%,transparent)] hfs-8.5 font-bold tracking-[0.14em] uppercase opacity-90"
+        className="font-heading divider-b [--divider-pad:3pt] [--line:color-mix(in_oklab,var(--on-accent)_30%,transparent)] hfs-8.5 font-bold text-current/90 uppercase"
         data-block
         data-keep
         data-flow="side"
@@ -82,8 +82,8 @@ export default function SidebarLayout({ data, theme }) {
           {data.education.map((entry) => (
             <div key={entry.key} className="fs-8.5" data-block data-flow="side">
               {entry.degree && <p className="fs-9 font-bold">{entry.degree}</p>}
-              {entry.school && <p className="opacity-90">{entry.school}</p>}
-              {entry.year && <p className="opacity-75">{entry.year}</p>}
+              {entry.school && <p className="text-current/90">{entry.school}</p>}
+              {entry.year && <p className="text-current/75">{entry.year}</p>}
             </div>
           ))}
         </div>
@@ -189,7 +189,7 @@ export default function SidebarLayout({ data, theme }) {
             )}
             <WithPhoto photo={data.photo?.position === "sidebar" ? null : data.photo} align={data.headerAlign}>
               <h1 className="font-heading hfs-20 leading-[1.15] font-bold tracking-tight wrap-break-word">{data.name}</h1>
-              {data.headline && <p className="mt-[5pt] fs-10.5 leading-snug opacity-85">{data.headline}</p>}
+              {data.headline && <p className="mt-[5pt] fs-10.5 leading-snug text-current/85">{data.headline}</p>}
             </WithPhoto>
           </div>
 
