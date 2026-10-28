@@ -1,7 +1,7 @@
 // Browser test of the ATS optimizer's review screen (/ats/review/:id):
 //   scores, side-by-side previews with highlights, accepting / rejecting changes (and that it
 //   survives a refresh), the skills checklist, re-scoring, placeholders, opening the editor,
-//   the dashboard's ATS badge, and the "you edited it in the editor" warning.
+//   the read-only review once the resume was edited in the editor, and the dashboard's ATS badge.
 // Screenshots are saved in <temp>/resume-builder-e2e/ats-review.
 //
 // Run: npm run test:e2e (in server/). See e2e/helpers.js for what it starts.
@@ -71,7 +71,6 @@ test("ATS review screen", async (t) => {
   };
   const pressed = (button) => button.evaluate((b) => b.getAttribute("aria-pressed") === "true");
   const previewText = (index) => page.$$eval("section[aria-label='Original and optimized resume'] .rounded-lg", (boxes, i) => boxes[i]?.innerText ?? "", index);
-  const waitForIdle = () => page.waitForFunction(() => ![...document.querySelectorAll("li[data-change] button")].some((b) => b.disabled && b.getAttribute("aria-pressed") !== "true" && !b.title), { timeout: 15000 });
 
   // ---------- Opened directly (like after a refresh: no navigation state) ----------
   await logIn(page, token);
@@ -127,27 +126,41 @@ test("ATS review screen", async (t) => {
   const rescored = (await api("GET", `/resumes/${id}`, token)).body;
   await check("re-score saves the current score", rescored.atsOptimization.currentScore.score === rescored.atsScore.score);
 
-  // ---------- Edited in the editor since the review ----------
-  await sleep(2100);
-  await api("PUT", `/resumes/${id}`, token, { summary: "Edited in the editor" });
-  await (await changeButton("Docker", "Reject")).click();
-  await waitForText("Replace your editor changes?");
-  await check("warns before replacing editor edits", true);
-  await clickText("button", "Apply anyway");
-  await page.waitForFunction(() => !document.body.innerText.includes("Replace your editor changes?"), { timeout: 15000 });
-  await check("  applies after confirming", !(await api("GET", `/resumes/${id}`, token)).body.skills.includes("Docker"));
-
   // ---------- Open in editor ----------
   await clickText("button", "Open in editor");
   await page.waitForFunction(() => location.pathname.startsWith("/editor/"), { timeout: 15000 });
   await waitForText("ATS-optimized copy created");
   body = await text();
+  await sleep(2500); // Longer than the autosave delay
   await check("editor keeps the fonts/layout reset note", body.includes("Fonts and layout were reset for ATS compatibility."));
   await check("editor: placeholder banner", /1 placeholder still needs real numbers/.test(body), body.match(/.{0,40}placeholder.{0,40}/)?.[0]);
   await check("editor: placeholder highlighted in the preview", (await page.$$("[data-page] mark.ats-placeholder")).length >= 1);
   await check("  but not on the printed copy", (await page.$$("div.invisible mark.ats-placeholder")).length === 0);
   await check("editor: Download PDF and Design work as usual", body.includes("Download PDF") && body.includes("Design"));
   await page.screenshot({ path: path.join(SHOTS, "2-editor.png"), fullPage: false });
+  await check("just opening the editor doesn't lock the review", !(await api("GET", `/resumes/${id}`, token)).body.atsOptimization.lockedAt);
+
+  // ---------- Edited in the editor since the review: read-only decisions ----------
+  await api("PUT", `/resumes/${id}`, token, { summary: "Edited in the editor" });
+  await page.goto(`${APP}/ats/review/${id}`, { waitUntil: "networkidle0" });
+  await waitForText("You've edited this resume since the review, so changes can no longer be accepted or rejected here. Run the ATS check again to get a fresh review.");
+  await check("locked: shows the note", true);
+  const decisionButtons = await page.$$eval("li[data-change] button", (buttons) => buttons.map((b) => b.disabled));
+  await check("  every Accept / Reject is disabled", decisionButtons.length > 0 && decisionButtons.every(Boolean));
+  const bulkButtons = await page.$$eval("button", (buttons) => buttons.filter((b) => /Accept all|Reject all/.test(b.textContent)).map((b) => b.disabled));
+  await check("  and Accept all / Reject all", bulkButtons.length === 2 && bulkButtons.every(Boolean));
+  await check("  the changes and scores are still shown", (await page.$$("li[data-change]")).length === optimized.changes.length && (await page.$$("[role=img][aria-label^='ATS score']")).length === 2);
+  await check("  with a link to the ATS checker", Boolean(await page.$("[data-testid=review-locked] a[href='/ats-checker']")));
+  for (const label of await page.$$("label")) {
+    if ((await label.evaluate((l) => l.textContent)).includes("Kubernetes")) await label.click();
+  }
+  await page.waitForFunction(() => !document.querySelector("section[aria-label='Original and optimized resume']")?.innerText.includes("Kubernetes"), { timeout: 15000 });
+  const afterUntick = (await api("GET", `/resumes/${id}`, token)).body;
+  await check("  the skills checklist still works and keeps the edit", !afterUntick.skills.includes("Kubernetes") && afterUntick.summary.replace(/<[^>]+>/g, "") === "Edited in the editor");
+  await clickText("button", "Re-score");
+  await waitForText("Current score:");
+  await check("  Re-score still works", true);
+  await page.screenshot({ path: path.join(SHOTS, "2b-locked.png"), fullPage: true });
 
   // ---------- Dashboard badge ----------
   await page.goto(`${APP}/dashboard`, { waitUntil: "networkidle0" });

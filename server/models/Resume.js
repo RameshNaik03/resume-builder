@@ -164,7 +164,8 @@ const resumeSchema = new mongoose.Schema(
     // For a resume made by the ATS optimizer: what it changed, for the review screen.
     // { source, original, changes: [{ id, section, before, after, reason, op, marks, revertible,
     //   status }], skillsToConsider, selectedSkills, scores, currentScore, jobDescription,
-    //   jobTitle, optimizedWith, appliedAt }. Set only by the ATS routes.
+    //   jobTitle, optimizedWith, lockedAt }. Set only by the ATS routes, except lockedAt: set
+    //   by updateResume when the content is edited in the editor (review decisions are locked).
     atsOptimization: { type: mongoose.Schema.Types.Mixed, default: undefined },
   },
   // minimize: false keeps empty objects, so `design: {}` is stored and returned

@@ -7,7 +7,6 @@ import usePageTitle from "../hooks/usePageTitle";
 import getErrorMessage from "../utils/getErrorMessage";
 import { findPlaceholders, placeholdersIn } from "../utils/placeholders";
 import Loader from "../components/Loader";
-import ConfirmModal from "../components/ConfirmModal";
 import ScoreRing from "../components/ats/ScoreRing";
 import ResumeSnapshot from "../components/ats/ResumeSnapshot";
 import { gradeFor } from "../components/ats/atsHelpers";
@@ -43,13 +42,14 @@ function WithPlaceholders({ text }) {
   );
 }
 
-function ChangeItem({ change, onDecide, busy }) {
+// locked: the resume was edited in the editor since the review, so decisions are read-only
+function ChangeItem({ change, onDecide, busy, locked }) {
   const { status } = change;
   const button = (target, label, Icon, activeClass) => (
     <button
       type="button"
       onClick={() => onDecide([{ id: change.id, status: target }])}
-      disabled={busy || status === target || (target === "rejected" && change.revertible === false)}
+      disabled={busy || locked || status === target || (target === "rejected" && change.revertible === false)}
       aria-pressed={status === target}
       title={target === "rejected" && change.revertible === false ? "Your original file's layout can't be recreated" : undefined}
       className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition disabled:cursor-not-allowed ${
@@ -94,7 +94,6 @@ export default function AtsReview() {
   const [loadError, setLoadError] = useState("");
   const [busy, setBusy] = useState(false);
   const [rescoring, setRescoring] = useState(false);
-  const [pendingRequest, setPendingRequest] = useState(null); // Waiting for "apply anyway?" after editor edits
 
   useEffect(() => {
     let ignore = false;
@@ -108,6 +107,7 @@ export default function AtsReview() {
   }, [id]);
 
   const review = resume?.atsOptimization ?? null;
+  const locked = Boolean(review?.lockedAt); // Edited in the editor since the review (set by the server)
   const scores = review?.scores ?? fromOptimizer?.scores;
   const current = review?.currentScore ?? null;
   const changes = useMemo(() => review?.changes ?? [], [review]);
@@ -125,15 +125,18 @@ export default function AtsReview() {
   );
   const placeholders = resume ? placeholdersIn(resume) : [];
 
-  // Sends decisions / ticked skills; the server rebuilds the resume and returns it
-  const save = async (body, force = false) => {
+  // Sends decisions / ticked skills; the server updates the resume and returns it
+  const save = async (body) => {
     setBusy(true);
     try {
-      const { data } = await api.patch(`/ats/review/${id}`, { ...body, force });
+      const { data } = await api.patch(`/ats/review/${id}`, body);
       setResume(data);
     } catch (error) {
-      if (error.response?.status === 409) setPendingRequest(body);
-      else toast.error(getErrorMessage(error));
+      toast.error(getErrorMessage(error));
+      // 409: it was edited in the editor (e.g. in another tab) since this page loaded
+      if (error.response?.status === 409) {
+        setResume((previous) => ({ ...previous, atsOptimization: { ...previous.atsOptimization, lockedAt: new Date().toISOString() } }));
+      }
     } finally {
       setBusy(false);
     }
@@ -273,24 +276,34 @@ export default function AtsReview() {
                 Changes ({changes.length})
               </h2>
               <div className="flex gap-2">
-                <button type="button" onClick={() => decideAll("accepted")} disabled={busy} className="btn-secondary px-3 py-1.5 text-xs">
+                <button type="button" onClick={() => decideAll("accepted")} disabled={busy || locked} className="btn-secondary px-3 py-1.5 text-xs">
                   <Check className="size-3.5" aria-hidden="true" />
                   Accept all
                 </button>
-                <button type="button" onClick={() => decideAll("rejected")} disabled={busy} className="btn-secondary px-3 py-1.5 text-xs">
+                <button type="button" onClick={() => decideAll("rejected")} disabled={busy || locked} className="btn-secondary px-3 py-1.5 text-xs">
                   <X className="size-3.5" aria-hidden="true" />
                   Reject all
                 </button>
               </div>
             </div>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Rejecting a change undoes it in your optimized resume. You can change your mind any time.</p>
+            {locked ? (
+              <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100" role="status" data-testid="review-locked">
+                You've edited this resume since the review, so changes can no longer be accepted or rejected here.{" "}
+                <Link to="/ats-checker" className="font-semibold underline">
+                  Run the ATS check again
+                </Link>{" "}
+                to get a fresh review.
+              </p>
+            ) : (
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Rejecting a change undoes it in your optimized resume. You can change your mind any time.</p>
+            )}
 
             {groups.map(({ section, items }) => (
               <div key={section} className="mt-5">
                 <h3 className="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">{SECTION_LABELS[section] ?? section}</h3>
                 <ul className="divide-y divide-slate-100 dark:divide-slate-800">
                   {items.map((change) => (
-                    <ChangeItem key={change.id} change={change} onDecide={decide} busy={busy} />
+                    <ChangeItem key={change.id} change={change} onDecide={decide} busy={busy} locked={locked} />
                   ))}
                 </ul>
               </div>
@@ -355,20 +368,6 @@ export default function AtsReview() {
           </p>
         </section>
       </div>
-
-      <ConfirmModal
-        open={Boolean(pendingRequest)}
-        title="Replace your editor changes?"
-        message="You've edited this resume in the editor since you last reviewed it. Applying review changes rebuilds it from the original plus the changes you keep, so those edits would be lost."
-        confirmText="Apply anyway"
-        loading={busy}
-        onCancel={() => setPendingRequest(null)}
-        onConfirm={async () => {
-          const body = pendingRequest;
-          setPendingRequest(null);
-          await save(body, true);
-        }}
-      />
     </div>
   );
 }

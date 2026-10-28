@@ -1,6 +1,6 @@
 // The ATS optimizer's review step: the review state saved on the new resume, accepting and
-// rejecting changes (each one reverts exactly), the skills checklist, re-scoring, and the
-// dashboard's ATS badge.
+// rejecting changes (each one reverts exactly), the skills checklist, re-scoring, the lock once
+// the resume is edited in the editor, and the dashboard's ATS badge.
 import { test } from "node:test";
 import { checker, PDF, readFixture, register, startApi } from "./helpers/api.js";
 
@@ -128,18 +128,34 @@ test("ATS optimization review", async (t) => {
   await check("  saved as the badge and the review's current score", afterRescore.atsScore.score === r.body.score && afterRescore.atsOptimization.currentScore.score === r.body.score);
   await check("  not counted as an edit (updatedAt unchanged)", afterRescore.updatedAt === beforeRescore.updatedAt);
 
-  // ---------- Edited in the editor since the review ----------
-  await new Promise((resolve) => setTimeout(resolve, 2100));
-  await call("PUT", `/resumes/${id}`, { summary: "Edited in the editor" });
+  // ---------- Edited in the editor since the review: decisions are locked ----------
+  await check("review steps and re-scoring don't lock the review", !afterRescore.atsOptimization.lockedAt);
+  const unchanged = (await call("GET", `/resumes/${id}`)).body;
+  r = await call("PUT", `/resumes/${id}`, { ...unchanged, title: "Renamed copy" });
+  await check("saving without changing the content (or only the title) doesn't lock it", r.status === 200 && !r.body.atsOptimization.lockedAt);
+  r = await call("PUT", `/resumes/${id}`, { summary: "Edited in the editor" });
+  await check("an editor edit locks the review", Boolean(r.body.atsOptimization.lockedAt));
+  const lockedAt = r.body.atsOptimization.lockedAt;
   r = await decide(byKind("addSkill").id, "rejected");
-  await check("review after an editor edit -> 409 (would replace the edits)", r.status === 409, r.body.message);
+  await check("  then accepting / rejecting -> 409", r.status === 409 && r.body.message.includes("Run the ATS check again"), r.body.message);
   r = await decide(byKind("addSkill").id, "rejected", { force: true });
-  await check("  with force -> applied", r.status === 200 && !r.body.skills.includes("Docker"));
+  await check("  even with force", r.status === 409);
+  const afterLock = (await call("GET", `/resumes/${id}`)).body;
+  await check("  and nothing changed", afterLock.summary.replace(/<[^>]+>/g, "") === "Edited in the editor" && afterLock.skills.includes("Docker") && afterLock.atsOptimization.changes.every((c) => c.status === "accepted"));
+  r = await call("PATCH", `/ats/review/${id}`, { selectedSkills: ["Kubernetes"] });
+  await check("ticking a skill still works and keeps the edits", r.status === 200 && r.body.skills.includes("Kubernetes") && r.body.summary.replace(/<[^>]+>/g, "") === "Edited in the editor", r.body.message);
+  await call("PUT", `/resumes/${id}`, { skills: [...r.body.skills, "GraphQL"] });
+  r = await call("PATCH", `/ats/review/${id}`, { selectedSkills: [] });
+  await check("  unticking removes only that skill", r.status === 200 && !r.body.skills.includes("Kubernetes") && r.body.skills.includes("GraphQL") && r.body.summary.replace(/<[^>]+>/g, "") === "Edited in the editor", r.body.skills.join(", "));
+  await check("  and the lock stays as it was", r.body.atsOptimization.lockedAt === lockedAt);
+  r = await call("POST", `/ats/rescore/${id}`);
+  await check("re-score still works after an edit", r.status === 200 && Number.isInteger(r.body.score));
+  const afterRescore2 = (await call("GET", `/resumes/${id}`)).body;
 
   // ---------- Dashboard badge ----------
   const list = (await call("GET", "/resumes")).body;
   const listed = list.find((item) => item._id === id);
-  await check("dashboard list has the badge (no job description in it)", listed.atsScore?.score === afterRescore.atsScore.score && listed.atsScore.jobDescription === undefined, listed);
+  await check("dashboard list has the badge (no job description in it)", listed.atsScore?.score === afterRescore2.atsScore.score && listed.atsScore.jobDescription === undefined, listed);
   r = await call("POST", `/ats/rescore/${saved._id}`);
   await check("re-check works on any resume", r.status === 200 && Number.isInteger(r.body.score) && r.body.before === null);
   const form = new FormData();
@@ -158,12 +174,12 @@ test("ATS optimization review", async (t) => {
   await check("someone else's re-score -> 404", r.status === 404);
   r = await call("PATCH", `/ats/review/${saved._id}`, { decisions: [] });
   await check("a resume without a review -> 404", r.status === 404, r.body.message);
-  r = await call("PATCH", `/ats/review/${id}`, { decisions: [{ id: "change-999", status: "rejected" }], force: true });
+  r = await call("PATCH", `/ats/review/${id}`, { decisions: [{ id: "change-999", status: "rejected" }] });
   await check("unknown change -> 400", r.status === 400);
-  r = await call("PATCH", `/ats/review/${id}`, { decisions: [{ id: review.changes[0].id, status: "maybe" }], force: true });
+  r = await call("PATCH", `/ats/review/${id}`, { decisions: [{ id: review.changes[0].id, status: "maybe" }] });
   await check("unknown status -> 400", r.status === 400);
-  r = await call("PATCH", `/ats/review/${id}`, { decisions: [], atsOptimization: { changes: [] }, force: true });
-  await check("the review can't be overwritten through the request", r.status === 200 && r.body.atsOptimization.changes.length === review.changes.length);
+  r = await call("PATCH", `/ats/review/${id}`, { decisions: [], atsOptimization: { changes: [], lockedAt: null } });
+  await check("the review can't be overwritten through the request", r.status === 200 && r.body.atsOptimization.changes.length === review.changes.length && r.body.atsOptimization.lockedAt);
   r = await call("PUT", `/resumes/${id}`, { atsScore: { score: 100 }, atsOptimization: null });
   await check("nor through a normal resume update", r.body.atsScore.score !== 100 && r.body.atsOptimization);
 });

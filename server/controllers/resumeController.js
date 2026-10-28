@@ -84,9 +84,19 @@ export const getResumeById = async (req, res) => {
   res.json(resume);
 };
 
+// The parts of a resume the ATS optimizer's review covers (not the title or the photo)
+const REVIEWED_FIELDS = EDITABLE_FIELDS.filter((field) => field !== "title");
+const reviewedContent = (resume) => {
+  const plain = resume.toObject();
+  delete plain.personalInfo?.photoUrl;
+  return JSON.stringify(REVIEWED_FIELDS.map((field) => plain[field]));
+};
+
 // PUT /api/resumes/:id
 export const updateResume = async (req, res) => {
   const resume = await findOwnedResume(req, res);
+  // An optimized resume's review is locked once its content is edited here (see the ATS review)
+  const contentBefore = resume.atsOptimization && !resume.atsOptimization.lockedAt ? reviewedContent(resume) : null;
 
   const { personalInfo, ...changes } = pickEditableFields(req.body);
   resume.set(changes);
@@ -94,6 +104,10 @@ export const updateResume = async (req, res) => {
   // touches photoUrl (a photo uploaded while this request was running stays in place)
   for (const [field, value] of Object.entries(personalInfo ?? {})) {
     resume.set(`personalInfo.${field}`, value);
+  }
+  if (contentBefore !== null && reviewedContent(resume) !== contentBefore) {
+    resume.atsOptimization.lockedAt = new Date();
+    resume.markModified("atsOptimization");
   }
   const updatedResume = await resume.save(); // save() runs schema validation
 

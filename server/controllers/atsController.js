@@ -258,7 +258,7 @@ export const optimizeResume = async (req, res) => {
       jobDescription,
       jobTitle,
       optimizedWith: result.optimizedWith,
-      appliedAt: new Date(),
+      lockedAt: null, // Set once the resume is edited in the editor (see reviewOptimization)
     },
   });
 
@@ -276,14 +276,15 @@ export const optimizeResume = async (req, res) => {
 const CONTENT_FIELDS = ["summary", "experience", "education", "skills", "projects", "additional", "template", "design"];
 const PERSONAL_FIELDS = ["fullName", "headline", "email", "phone", "location", "linkedin", "github"];
 const STATUSES = ["pending", "accepted", "rejected"];
-// The resume counts as edited elsewhere (the editor) if it was saved this long after the review
-const EDIT_TOLERANCE_MS = 2000;
+const sameSkill = (a, b) => a.toLowerCase() === b.toLowerCase();
 
 // PATCH /api/ats/review/:resumeId (logged-in users; JSON)
 // Fields: decisions [{ id, status: "accepted" | "rejected" | "pending" }] and/or selectedSkills
-// (ticked "skills to consider"), force (apply even though the resume was edited in the editor
-// since the last review step: those edits are replaced).
-// Rebuilds the optimized resume from the original + every change that isn't rejected.
+// (ticked "skills to consider").
+// Decisions rebuild the optimized resume from the original + every change that isn't rejected,
+// so they're locked (409) once the resume has been edited in the editor (lockedAt, set by
+// updateResume): a rebuild would wipe those edits. Ticked skills are added to / removed from
+// the resume as it is now, so they keep working after an edit.
 export const reviewOptimization = async (req, res) => {
   const resume = await findUsersResume(req, res, req.params.resumeId);
   const review = resume.atsOptimization;
@@ -309,23 +310,28 @@ export const reviewOptimization = async (req, res) => {
     throw new Error("selectedSkills must be a list.");
   }
 
-  const editedSince = resume.updatedAt - new Date(review.appliedAt) > EDIT_TOLERANCE_MS;
-  if (editedSince && !req.body?.force) {
+  if (review.lockedAt && decisions.length) {
     res.status(409);
-    throw new Error("You've edited this resume since the review. Applying review changes now will replace those edits.");
+    throw new Error("You've edited this resume since the review, so changes can no longer be accepted or rejected here. Run the ATS check again to get a fresh review.");
   }
 
-  for (const { id, status } of decisions) review.changes.find((c) => c.id === id).status = status;
   if (req.body?.selectedSkills) {
     // Only skills from the suggestions (never free text)
     const allowed = new Map(review.skillsToConsider.filter((s) => s.type === "skill").map((s) => [s.term.toLowerCase(), s.term]));
-    review.selectedSkills = [...new Set(req.body.selectedSkills.map((s) => allowed.get(String(s).toLowerCase())).filter(Boolean))];
+    const selected = [...new Set(req.body.selectedSkills.map((s) => allowed.get(String(s).toLowerCase())).filter(Boolean))];
+    const unticked = review.selectedSkills.filter((skill) => !selected.includes(skill));
+    const skills = resume.skills.filter((skill) => !unticked.some((u) => sameSkill(u, skill)));
+    for (const skill of selected) if (!skills.some((s) => sameSkill(s, skill))) skills.push(skill);
+    resume.skills = skills;
+    review.selectedSkills = selected;
   }
 
-  const content = buildContent(review.original, review.changes, review.selectedSkills);
-  for (const field of CONTENT_FIELDS) resume.set(field, content[field]);
-  for (const field of PERSONAL_FIELDS) resume.set(`personalInfo.${field}`, content.personalInfo[field] ?? "");
-  review.appliedAt = new Date();
+  if (decisions.length) {
+    for (const { id, status } of decisions) review.changes.find((c) => c.id === id).status = status;
+    const content = buildContent(review.original, review.changes, review.selectedSkills);
+    for (const field of CONTENT_FIELDS) resume.set(field, content[field]);
+    for (const field of PERSONAL_FIELDS) resume.set(`personalInfo.${field}`, content.personalInfo[field] ?? "");
+  }
   resume.markModified("atsOptimization");
   await resume.save();
   res.json(resume);
