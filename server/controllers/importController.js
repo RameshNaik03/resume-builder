@@ -26,8 +26,9 @@ export const importResume = async (req, res) => {
     throw new Error('Please upload a PDF or DOCX file in a form field named "file"');
   }
 
-  // 1. File -> plain text (throws 415/422 with a clear message if it can't)
-  const text = await extractText(req.file);
+  // 1. File -> plain text (throws 415/422 with a clear message if it can't), in the order
+  //    it appears on the page, so titles stay above their bullet points
+  const text = await extractText(req.file, { readingOrder: true });
 
   if (DEBUG_IMPORT) {
     console.log(`[import-debug] file="${req.file.originalname}" text length=${text.length}`);
@@ -44,6 +45,9 @@ export const importResume = async (req, res) => {
     if (parsed) parsedWith = "ai";
   }
   parsed ??= parseWithRules(text);
+  // The rule-based parser couldn't tell which bullet points belong to which job
+  // (they're all under the first job), so the editor asks the user to check them
+  const warnings = parsed.notes?.experienceBulletsUnassigned ? ["experience-bullets-unassigned"] : [];
 
   const data = sanitizeResume(parsed);
 
@@ -64,5 +68,5 @@ export const importResume = async (req, res) => {
     userId: req.user._id,
   });
 
-  res.status(201).json({ resume, parsedWith });
+  res.status(201).json({ resume, parsedWith, warnings });
 };

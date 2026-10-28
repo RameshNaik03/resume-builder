@@ -58,8 +58,8 @@ const DATE_LIKE = /\b((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?
 // ---------- PDF ----------
 
 // Groups text items into lines (same height on the page), then splits each line into
-// segments wherever there's a big horizontal gap
-function toSegments(items, pageWidth) {
+// segments wherever there's a big horizontal gap. Also used by extractText's reading order.
+export function toSegments(items, pageWidth) {
   const lines = [];
   for (const item of [...items].sort((a, b) => a.y - b.y || a.x - b.x)) {
     const line = lines.find((l) => Math.abs(l.y - item.y) < Math.max(2, item.h * 0.4));
@@ -101,7 +101,7 @@ function detectTableGrid(segments, pageWidth) {
 
 // Two or more columns: besides the left margin, many text segments start at the same
 // position further across the page (short right-aligned dates and centred lines don't count)
-function detectColumns(segments, pageWidth) {
+export function detectColumns(segments, pageWidth) {
   const content = segments.filter((s) => {
     const words = s.text.trim().split(/\s+/).length;
     const centred = Math.abs((s.x + s.endX) / 2 - pageWidth / 2) < pageWidth * 0.04 && s.x > pageWidth * 0.15;

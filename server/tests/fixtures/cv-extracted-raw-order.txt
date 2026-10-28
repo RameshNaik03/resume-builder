@@ -1,0 +1,51 @@
+Full Stack Developer Intern — Orbit Labs Mar 2026 – Oct 2026 | Munich, Germany
+Front-End Developer — Contoso Learning Labs Pvt. Ltd. Apr 2023 – Mar 2024 | Bengaluru, India
+Bazaaro — E-Commerce Platform Oct 2023 – Mar 2024
+Employee Management System (EMS) Apr 2023 – Sep 2023
+MSc Information Technology — Munich School of Business and Technology (MSBT) Feb 2025 – Present
+B.Tech Electronics and Communication Engineering — ABC Institute of Technology Jul 2019 – Jul 2023
+ARJUNA DEVA RAGHUNATHA
+Full Stack Developer | React · Node.js · REST APIs · MongoDB
+Munich, Germany | +49 000 0000 0000 | a.deva.resume@example.org | linkedin.com/in/arjuna-deva-123456789 | github.com/ArjunaDev123
+PROFESSIONAL SUMMARY
+Full Stack Developer with 1.5+ years of experience building responsive web applications and RESTful APIs with React,
+Angular, Node.js and MongoDB. Currently developing an AI-powered coding agent at Orbit Labs in Munich, with hands-on
+work in authentication, authorization and API security. Pursuing an MSc in Information Technology with a focus on cloud
+computing and scalable systems.
+TECHNICAL SKILLS
+Languages JavaScript, TypeScript, Python, Java, C++, SQL
+Frontend React.js, Angular, NgRx, RxJS, HTML5, CSS3, Bootstrap, Responsive Design
+Backend Node.js, Express.js, RESTful APIs, Strapi
+Databases MongoDB (schema design, query optimization), SQL
+Security Authentication, Authorization, API Rate Limiting
+Cloud & Tools Git, AWS / Azure / GCP (fundamentals), Tableau
+Core Concepts Data Structures & Algorithms, OOP, Operating Systems, Computer Networks, SEO
+PROFESSIONAL EXPERIENCE
+DevAssist Pro, an AI-powered coding agent (React, Node.js, Express.js, MongoDB)
+Built reusable, responsive React.js components for the agent interface, improving usability and consistency across
+screens.
+Designed and implemented RESTful APIs connecting the React frontend to backend services and AI model responses.
+Implemented authentication, authorization and rate limiting to secure and manage API traffic.
+Reduced redundant frontend-to-backend requests by streamlining API calls, improving page load speed.
+Designed MongoDB schemas and optimized queries for application data.
+Diagnosed and resolved bugs across the full stack, improving the stability and reliability of Node.js/Express.js services.
+Developed responsive front-end templates and web applications with HTML5, CSS3, JavaScript, Angular and TypeScript.
+Delivered two production projects end to end: an employee management system and an e-commerce platform (see
+Projects).
+Applied SEO best practices to improve website visibility and performance.
+Contributed to back-end development and integration of application logic with Node.js.
+Worked closely with backend developers and designers, following clean-code standards, code reviews and performance
+optimization.
+PROJECTS
+Angular, TypeScript, NgRx, RxJS, Node.js, Strapi
+Built core shopping features: product listings, search and filtering, cart, user authentication and order management.
+Managed application state and asynchronous data flows with NgRx and RxJS.
+Integrated Strapi REST APIs for products, users and orders, and supported secure payment integration.
+HTML5, CSS3, Bootstrap, Node.js
+Developed a responsive admin panel covering attendance, tasks, projects and payroll.
+Built dashboards, forms and data tables consuming backend APIs for dynamic data display.
+EDUCATION
+Focus: cloud computing, enterprise IT systems, data platforms, SaaS and scalable cloud infrastructure.
+Bengaluru, India · Coursework: Data Structures, Algorithms, Operating Systems, Computer Networks, Embedded Systems.
+LANGUAGES
+English (Fluent) · German (A2, currently improving) · Hindi (Fluent) · Telugu (Native)

@@ -1,7 +1,8 @@
 // Finds the job title in a job description and checks whether the resume uses it.
 
-// Words that make something a job title ("Engineer", "Manager"...)
-const ROLE_NOUNS =
+// Words that make something a job title ("Engineer", "Manager"...).
+// Also used by the import parser to tell job lines from project lines.
+export const ROLE_NOUNS =
   /\b(engineer|developer|programmer|architect|manager|director|designer|analyst|scientist|specialist|consultant|administrator|coordinator|lead|head|officer|associate|representative|executive|assistant|intern|accountant|nurse|teacher|recruiter|technician|strategist|writer|editor|marketer|planner|researcher|product owner|scrum master|advisor|agent|clerk|supervisor)s?\b/i;
 
 // Same meaning, different spelling: compared after these replacements

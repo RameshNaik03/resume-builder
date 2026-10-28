@@ -87,7 +87,10 @@ export const analyzeResume = async (req, res) => {
     inspection = savedResumeLayout(resume, atsView);
     source = { type: "saved", resumeId: resume._id, title: resume.title, template: resume.template };
   }
-  const parsedResume = sanitizeResume(parseWithRules(atsView));
+  // The ATS view keeps the PDF's own text order (what an ATS reads, scrambled or not); the
+  // resume data is read in page order so the optimizer gets each title with its own bullets
+  const readingOrderText = req.file ? await extractText(req.file, { allowNoText: true, readingOrder: true }) : atsView;
+  const parsedResume = sanitizeResume(parseWithRules(readingOrderText));
 
   // Step 2: rule-based score
   const result = scoreResume({ text: atsView, inspection, parsed: parsedResume, jobDescription, jobTitle });

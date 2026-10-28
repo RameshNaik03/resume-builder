@@ -53,6 +53,8 @@ export default function Editor() {
   // After importing a file, the dashboard sends us here with { imported: true }
   const location = useLocation();
   const [showImportBanner, setShowImportBanner] = useState(Boolean(location.state?.imported));
+  // The import parser put several jobs' bullet points under the first job
+  const bulletsUnassigned = Boolean(location.state?.importWarnings?.includes("experience-bullets-unassigned"));
   const dismissImportBanner = () => {
     setShowImportBanner(false);
     // Clear the flag so the banner doesn't come back when the page is refreshed
@@ -255,6 +257,11 @@ export default function Editor() {
             <p className="flex-1 text-sm text-indigo-900 dark:text-indigo-100">
               <span className="font-semibold">We imported your resume.</span> Please check each section, as imports
               aren't always perfect. You can change the template anytime.
+              {bulletsUnassigned && (
+                <span className="mt-1 block font-semibold text-amber-800 dark:text-amber-300">
+                  We couldn't tell which bullets belong to which job. Please check your Experience section.
+                </span>
+              )}
             </p>
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setIsPickerOpen(true)} className="btn-secondary px-3 py-1.5">

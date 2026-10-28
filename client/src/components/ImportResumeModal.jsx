@@ -21,6 +21,7 @@ export default function ImportResumeModal({ onClose, onStartFromScratch, initial
 
   const [status, setStatus] = useState("idle"); // "idle" | "uploading" | "reading" | "failed" | "choose"
   const [importedResume, setImportedResume] = useState(null); // Set when the upload worked
+  const [importWarnings, setImportWarnings] = useState([]); // e.g. "experience-bullets-unassigned"
   const [savingTemplateId, setSavingTemplateId] = useState(null);
   const [progress, setProgress] = useState(0); // Upload progress, 0-100
   const [fileName, setFileName] = useState("");
@@ -69,6 +70,7 @@ export default function ImportResumeModal({ onClose, onStartFromScratch, initial
 
       // Next step: the user picks a template (the resume was saved without one)
       setImportedResume(data.resume);
+      setImportWarnings(data.warnings ?? []);
       setStatus("choose");
     } catch (error) {
       setServerError(getErrorMessage(error));
@@ -86,7 +88,8 @@ export default function ImportResumeModal({ onClose, onStartFromScratch, initial
   }, []);
 
   // Saves the chosen template, then opens the editor.
-  // The editor shows a "please check your resume" banner when it sees imported: true.
+  // The editor shows a "please check your resume" banner when it sees imported: true
+  // (plus a note for any import warnings).
   const saveTemplateAndOpenEditor = async (template, wasChosen) => {
     setSavingTemplateId(template.id);
     try {
@@ -102,7 +105,7 @@ export default function ImportResumeModal({ onClose, onStartFromScratch, initial
       // The resume itself is already saved, so carry on to the editor anyway
       toast.error(`Couldn't save the template: ${getErrorMessage(error)}`);
     }
-    navigate(`/editor/${importedResume._id}`, { state: { imported: true } });
+    navigate(`/editor/${importedResume._id}`, { state: { imported: true, importWarnings } });
   };
 
   const handleFiles = (files) => {
