@@ -88,7 +88,7 @@ All routes are prefixed with `/api`. 🔒 = requires `Authorization: Bearer <tok
 
 | Method | Route | Description | Auth |
 | --- | --- | --- | --- |
-| GET | `/health` | Health check | |
+| GET | `/health` | Health check: `200` when the server and database are up, `503` while the database is unreachable | |
 | POST | `/auth/register` | Create an account, returns `{ token, user }` (rate limited) | |
 | POST | `/auth/login` | Log in, returns `{ token, user }` (rate limited) | |
 | GET | `/auth/me` | Get the logged-in user | 🔒 |
@@ -162,6 +162,11 @@ npm run dev     # http://localhost:5173
 
 Open http://localhost:5173 and create an account.
 
+### Deploying
+
+- **Server** (e.g. Render or Railway): root directory `server`, build `npm ci`, start `npm start`, health check path `/api/health`. Set `NODE_ENV=production`, `MONGO_URI` (Atlas), `JWT_SECRET` (32+ random characters) and `CLIENT_URL` (the client's URL), plus the optional keys from `.env.example`. The server refuses to start if a required setting is missing or the secret is too weak, and lists what to fix in the log.
+- **Client** (e.g. Vercel): root directory `client`, build `npm run build`, output `dist`, and set `VITE_API_URL` to the server's URL + `/api`. `client/vercel.json` sends every path to `index.html`, so links like `/dashboard` or the password reset link work when opened directly.
+
 ---
 
 ## Testing
@@ -187,6 +192,7 @@ npm run test:roundtrip    # PDF round trip for all 45 templates (~2 min)
 | ATS scoring | `ats-scoring.test.js` | Individual checks on resume text: technology names (Node.js, React Native, job keywords) aren't counted as overused words, suggestions fit the repeated word; contact details at the top, with partial points and a precise message when location or LinkedIn is missing; job titles match exactly, closely (other seniority, Developer = Engineer) or as a related role; seniority and job-ad words aren't keywords; a product/project line under a job is its subtitle, not a bullet |
 | ATS analyze | `ats-analyze.test.js` | The score: validation, categories and checks, job description keywords, risky layouts (columns, tables, headers, scans), saved resumes, the AI review, rate limit |
 | ATS review | `ats-review.test.js` | The optimizer's review step: the review saved on the new resume, rejecting each kind of change reverts it exactly (and accepting re-applies it), accept all / reject all, the skills checklist, re-scoring, the dashboard badge, locking the decisions once the resume is edited in the editor (ticked skills and re-scoring still work and keep the edits) |
+| Production | `production.test.js` | The startup check for required settings (and a strong `JWT_SECRET` in production), the health check, no `X-Powered-By` header |
 | ATS optimize | `ats-optimize.test.js` | The improved copy: structure fixes, every change listed, keywords, AI rewrite safety checks; never adds a skill that isn't in the original |
 
 **Browser tests** (files in `server/e2e/`). They start the API (port 5055), Vite (port 5174) and a headless browser themselves, and stop them afterwards:
