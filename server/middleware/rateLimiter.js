@@ -34,6 +34,17 @@ export const atsLimiter = rateLimit({
   message: { message: "You've reached the limit of 15 checks per hour. Please try again later." },
 });
 
+// Limits ATS optimizations per logged-in user (each one saves a new resume and may call the AI).
+// Must run after the protect middleware, which sets req.user.
+export const optimizeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 10, // Max 10 optimizations per user per hour
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user._id.toString(),
+  message: { message: "You've reached the limit of 10 optimized versions per hour. Please try again later." },
+});
+
 // Limits photo uploads per logged-in user (each one is stored on Cloudinary's free tier).
 // Must run after the protect middleware, which sets req.user.
 export const photoLimiter = rateLimit({

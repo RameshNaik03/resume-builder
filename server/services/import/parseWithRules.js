@@ -79,6 +79,15 @@ function findPhone(text) {
 
 const findLink = (text) => (text.match(GITHUB) ?? text.match(ANY_URL) ?? [""])[0];
 
+// Email, phone, LinkedIn and GitHub found in a piece of text ("" when missing).
+// Also used by the ATS optimizer to recover contact details from a page header.
+export const findContactDetails = (text) => ({
+  email: (text.match(EMAIL) ?? [""])[0],
+  phone: findPhone(text),
+  linkedin: (text.match(LINKEDIN) ?? [""])[0],
+  github: (text.match(GITHUB) ?? [""])[0],
+});
+
 const isContactPart = (part) =>
   EMAIL.test(part) || LINKEDIN.test(part) || GITHUB.test(part) || findPhone(part) !== "" || /https?:\/\//i.test(part);
 
@@ -250,14 +259,23 @@ const toHeading = (line) => {
   return text === text.toUpperCase() ? text.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase()) : text;
 };
 
+// An all-caps line of 1-4 words that isn't a known heading, e.g. "MY JOURNEY"
+const looksLikeHeading = (line) =>
+  line === line.toUpperCase() && /^[A-Z][A-Z &/-]{2,30}$/.test(line) && line.split(" ").length <= 4;
+
 export default function parseWithRules(text) {
   const sections = { header: [], summary: [], experience: [], education: [], skills: [], projects: [] };
   const additional = []; // Sections like Certifications or Languages: [{ heading, items }]
   let currentLines = sections.header; // Where the next line goes
+  let pastContactDetails = false; // An all-caps name at the very top isn't a heading
 
   for (const line of text.split("\n").map((l) => l.trim()).filter(Boolean)) {
     const heading = headingOf(line);
-    if (heading === "other") {
+    // An unknown heading below the contact details starts its own section (kept under its
+    // own name) instead of its content being lost in the header. Only before the first known
+    // heading: inside a section, all-caps lines are usually content (e.g. "ACME CORP").
+    const unknownHeading = !heading && currentLines === sections.header && pastContactDetails && looksLikeHeading(line);
+    if (heading === "other" || unknownHeading) {
       const section = { heading: toHeading(line), items: [] };
       additional.push(section);
       currentLines = section.items;
@@ -266,6 +284,7 @@ export default function parseWithRules(text) {
     } else {
       currentLines.push(line);
     }
+    pastContactDetails ||= Boolean(heading) || EMAIL.test(line) || findPhone(line) !== "";
   }
 
   // Contact details can be anywhere, but the top of the resume is checked first

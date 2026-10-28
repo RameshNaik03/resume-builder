@@ -371,14 +371,15 @@ export default function AtsResults({ result, onReset, onGenerate, generating }) 
             <section className="rounded-2xl border-2 border-indigo-500 bg-indigo-50 p-5 dark:bg-indigo-950/40">
               <h2 className="font-semibold text-slate-900 dark:text-white">Make it easier for an ATS to read</h2>
               <p className="mt-1.5 text-sm text-slate-600 dark:text-slate-300">
-                We'll put your content into a clean, single-column template with standard headings. You can review and
-                edit everything before you use it.
+                We'll create an improved copy in a single-column template: standard headings, one date format, newest
+                job first and contact details in the body, plus stronger bullet points when AI is available. Your
+                original stays as it is.
               </p>
               <button type="button" onClick={onGenerate} disabled={generating} className="btn-primary mt-4 w-full py-2.5">
                 {generating ? (
                   <>
                     <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />
-                    Creating…
+                    Optimizing… this can take a minute
                   </>
                 ) : (
                   <>
@@ -388,7 +389,8 @@ export default function AtsResults({ result, onReset, onGenerate, generating }) 
                 )}
               </button>
               <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                A new layout fixes formatting problems. Content fixes (like stronger bullets) are still up to you.
+                Nothing is invented: skills, numbers and employers only come from your resume. Check each change before
+                you use it.
               </p>
             </section>
           )}

@@ -96,6 +96,7 @@ All routes are prefixed with `/api`. 🔒 = requires `Authorization: Bearer <tok
 | DELETE | `/resumes/:id` | Delete a resume | 🔒 |
 | POST | `/resumes/:id/duplicate` | Copy a resume (title gets " (Copy)") | 🔒 |
 | POST | `/ats/analyze` | Score a resume for ATS out of 100 (multipart: `file` or, when logged in, `resumeId`; optional `jobDescription` and `jobTitle`). Returns the grade, five scored categories with every check's reason and fix, matched/missing keywords, the text an ATS sees (`atsView`) and the parsed resume. With `ANTHROPIC_API_KEY` set, AI judges content quality and writes tailored fixes. Rate limited; nothing is saved | Optional |
+| POST | `/ats/optimize` | Create an improved copy of a resume (JSON: `resumeId`, or `parsedResume` from `/analyze`; optional `failedChecks`, `jobDescription`). Fixes structure (standard headings, one date format, newest job first, contact details in the body), rewrites weak bullets with AI when available (never inventing numbers, skills or employers), and adds job skills to Skills only when the resume already shows them. Saves a new resume in an ATS-friendly Basic template and returns every change (`{ id, section, before, after, reason }`), skills to consider adding, and the score before and after. Rate limited; the original is never changed | 🔒 |
 
 Errors always return JSON in the form `{ "message": "..." }`. Resumes that belong to another user return `404`.
 

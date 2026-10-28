@@ -8,7 +8,6 @@ import usePageTitle from "../hooks/usePageTitle";
 import usePrefersReducedMotion from "../hooks/usePrefersReducedMotion";
 import getErrorMessage from "../utils/getErrorMessage";
 import { ACCEPT_ATTRIBUTE, MAX_SIZE_MB, setPendingImport, toUploadFile, validateFile } from "../utils/resumeFile";
-import { DEFAULT_TEMPLATE_ID } from "../templates/registry";
 import Modal from "../components/Modal";
 import AnalyzeProgress from "../components/ats/AnalyzeProgress";
 import { ANALYZE_STEPS } from "../components/ats/atsHelpers";
@@ -22,13 +21,6 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // in progress until the server answers.
 const STEP_TIMES = [700, 1600, 2500];
 const STEP_TICK_MS = 250; // Pause per step when ticking off the rest after the answer arrives
-
-// The content fields of a resume (copied into the ATS-friendly version)
-const CONTENT_FIELDS = ["personalInfo", "summary", "experience", "education", "skills", "projects", "additional"];
-const pickContent = (resume) => Object.fromEntries(CONTENT_FIELDS.map((field) => [field, resume[field]]));
-
-// "priya_sharma-resume.pdf" -> "priya sharma resume"
-const titleFromFileName = (name) => name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ").trim() || "My resume";
 
 // ---------- Input: resume source ----------
 
@@ -199,6 +191,7 @@ export default function AtsChecker() {
   };
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+  const [analyzedJobDescription, setAnalyzedJobDescription] = useState("");
   const [generating, setGenerating] = useState(false);
   const [showSignUpPrompt, setShowSignUpPrompt] = useState(false);
 
@@ -234,6 +227,7 @@ export default function AtsChecker() {
 
     const formData = new FormData();
     if (jobWords) formData.append("jobDescription", jobDescription);
+    setAnalyzedJobDescription(jobWords ? jobDescription : ""); // The optimizer uses the same one
     if (usingSaved) formData.append("resumeId", resumeId);
     else formData.append("file", toUploadFile(file));
 
@@ -255,34 +249,39 @@ export default function AtsChecker() {
     }
   };
 
-  // Creates a new resume with the same content in the default single-column template
-  // (design reset, so standard headings and one column), then opens it in the editor
+  // The optimizer saves an improved copy (the original is never changed), then the editor
+  // opens it with a banner showing the score before and after
   const handleGenerate = async () => {
     if (!user) {
       setShowSignUpPrompt(true);
       return;
     }
     setGenerating(true);
+    const source =
+      result.source.type === "saved"
+        ? { resumeId: result.source.resumeId }
+        : {
+            parsedResume: result.parsedResume,
+            fileName: result.file.name,
+            headerFooterText: result.headerFooterText,
+            originalScore: result.score,
+          };
     try {
-      let content;
-      let title;
-      if (result.source.type === "saved") {
-        const { data: original } = await api.get(`/resumes/${result.source.resumeId}`);
-        content = pickContent(original);
-        title = original.title;
-      } else {
-        content = pickContent(result.parsedResume);
-        title = titleFromFileName(result.file.name);
-      }
-      const { data: created } = await api.post("/resumes", {
-        ...content,
-        title: `${title} (ATS-friendly)`.slice(0, 100),
-        template: DEFAULT_TEMPLATE_ID,
-        design: {},
+      const { data } = await api.post("/ats/optimize", {
+        ...source,
+        failedChecks: result.checks.filter((check) => !check.passed).map((check) => check.id),
+        jobDescription: analyzedJobDescription,
       });
-      toast.success("ATS-friendly version created");
-      // Content read from a file may need checking, so the editor shows its "please review" banner
-      navigate(`/editor/${created._id}`, { state: { imported: result.source.type === "file" } });
+      navigate(`/editor/${data.resume._id}`, {
+        state: {
+          optimized: {
+            before: data.scores.before,
+            after: data.scores.after,
+            changes: data.changes.length,
+            skillsToConsider: data.skillsToConsider.length,
+          },
+        },
+      });
     } catch (err) {
       toast.error(getErrorMessage(err));
       setGenerating(false);
