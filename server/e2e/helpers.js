@@ -75,7 +75,7 @@ function start(command, args, options) {
   return child;
 }
 
-// Stops a process and everything it started (Vite runs under pnpm/npx and a shell)
+// Stops a process and everything it started (Vite runs under npx and a shell)
 function stop(child) {
   if (!child || child.exitCode !== null) return;
   try {
@@ -127,7 +127,9 @@ export async function startStack(t, name) {
 
   await waitForUrl(`${API}/health`, "The API", apiProcess);
   await waitForUrl(APP, "Vite", vite);
-  browser = await puppeteer.launch({ executablePath: findBrowser(), headless: true, args: ["--no-first-run", "--disable-extensions"] });
+  // CI runners (Linux) don't allow Chrome's sandbox, so it's turned off there (CI is set by GitHub Actions)
+  const args = ["--no-first-run", "--disable-extensions", ...(process.env.CI ? ["--no-sandbox"] : [])];
+  browser = await puppeteer.launch({ executablePath: findBrowser(), headless: true, args });
 
   return {
     browser,

@@ -205,6 +205,15 @@ What the tests need:
 
 No real keys are used: the fast suites never read `server/.env` (they load `app.js` directly), the browser tests start `server.js` with the AI, photo and email keys blanked out, and where a test needs those services it uses local stand-ins. Test files are fictional (`server/tests/fixtures/`; `ats/make-fixtures.cjs` rebuilds the ATS ones). The browser tests save screenshots, PDFs and extracted text in your temp folder under `resume-builder-e2e/`, for when a check fails.
 
+### Continuous integration (GitHub Actions)
+
+| Workflow | Runs on | What it runs |
+| --- | --- | --- |
+| [CI](.github/workflows/ci.yml) | Every push | `npm test` (with a MongoDB service container), and the client's lint and build |
+| [Browser tests](.github/workflows/browser-tests.yml) | Pull requests to `main`, or by hand from the Actions tab ("Run workflow") | `test:roundtrip` and `test:e2e` side by side, with Chrome installed on the runner. If a suite fails, its screenshots and PDFs are uploaded as an artifact |
+
+CI installs packages with `npm ci` from `package-lock.json`, so commit that file when you add or update a package.
+
 ---
 
 ## What I Learned
