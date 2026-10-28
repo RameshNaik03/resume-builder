@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto, JobSubtitle } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Classic: centred header, headings with a thin line underneath,
@@ -38,6 +38,7 @@ export default function ClassicLayout({ data, theme }) {
                 </p>
                 {job.dates && <p className="shrink-0 fs-9.5 text-(--muted)">{job.dates}</p>}
               </div>
+              <JobSubtitle text={job.subtitle} />
               <BulletList
                 items={job.bullets} rich
                 className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[14pt] marker:text-(--muted)"

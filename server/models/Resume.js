@@ -9,6 +9,8 @@ import { richBlock, richInline } from "../utils/richText.js";
 const experienceSchema = new mongoose.Schema({
   company: { type: String, trim: true, default: "" },
   role: { type: String, trim: true, default: "" },
+  // Optional line under the job header naming the product or project, e.g. "Acme Pay, a payments app (React)"
+  subtitle: { type: String, trim: true, default: "" },
   startDate: { type: String, trim: true, default: "" }, // Free text, e.g. "Jan 2024"
   endDate: { type: String, trim: true, default: "" }, // e.g. "Present"
   bullets: { type: [{ type: String, set: richInline }], default: [] }, // Rich text (inline)

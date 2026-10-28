@@ -28,7 +28,11 @@ const STOPWORDS = new Set(
   understanding work working works world year years
   build builds building built create creating deliver delivering design designing develop developing drive
   end ensure familiarity familiar feature features help helping improve improving knowledge maintain
-  maintaining own owning part take taking write writing nice`.split(/\s+/)
+  maintaining own owning part take taking write writing nice
+  junior senior lead leads intern interns internship principal staff mid entry trainee graduate graduates
+  remote hybrid onsite office relocation visa sponsorship fulltime permanent
+  hire hires hired recruiting recruiter interview interviews resume cv cover letter
+  colleague colleagues employer join joining hiring paced passionate motivated`.split(/\s+/)
 );
 
 // Lines that usually list what the employer actually requires

@@ -21,14 +21,58 @@ const SYNONYMS = [
   [/\bui\/ux\b|\bux\/ui\b/g, "ux"],
   [/\bjs\b/g, "javascript"],
 ];
-// Seniority words: nice to match, but not required
-const LEVELS = new Set(["senior", "junior", "lead", "principal", "staff", "chief", "head", "associate", "intern", "trainee", "i", "ii", "iii"]);
+// Seniority words: ignored when comparing roles (a "Senior Frontend Engineer" job and a
+// "Frontend Engineer" resume are the same role)
+const SENIORITY = new Set([
+  "senior", "junior", "lead", "principal", "staff", "chief", "head", "associate", "intern", "internship",
+  "trainee", "graduate", "entry", "mid", "i", "ii", "iii", "iv",
+]);
+// Role words that mean the same job
+const ROLE_FAMILIES = [["developer", "engineer", "programmer"]];
+// Specialties close enough to count as a related role (e.g. Full Stack vs Frontend)
+const RELATED_SPECIALTIES = [
+  ["frontend", "backend", "fullstack", "web", "software", "application", "ui", "mobile", "javascript"],
+  ["data", "analytics", "bi", "reporting"],
+  ["devops", "cloud", "platform", "infrastructure", "sre", "site", "reliability"],
+];
+const FILLER = new Set(["and", "of", "the", "for", "a", "an", "to", "in", "with"]);
 
 const normalize = (text) => {
   let t = ` ${text.toLowerCase()} `;
   for (const [pattern, replacement] of SYNONYMS) t = t.replace(pattern, replacement);
   return t.replace(/[^a-z0-9+#\s]/g, " ").replace(/\s+/g, " ").trim();
 };
+const singular = (word) => (/[^s]s$/.test(word) ? word.slice(0, -1) : word);
+const familyOf = (role) => ROLE_FAMILIES.findIndex((family) => family.includes(role));
+const sameRoleFamily = (a, b) => a === b || (familyOf(a) >= 0 && familyOf(a) === familyOf(b));
+const sameSet = (a, b) => a.length === b.length && a.every((word) => b.includes(word));
+const relatedSpecialty = (a, b) =>
+  a.length === 0 || b.length === 0 || RELATED_SPECIALTIES.some((group) => a.some((w) => group.includes(w)) && b.some((w) => group.includes(w)));
+
+// "Sr. Front-End Engineer" -> { seniority: ["senior"], role: "engineer", specialty: ["frontend"] }
+function describe(title) {
+  const words = normalize(title).split(" ").filter((word) => word && !FILLER.has(word));
+  const seniority = words.filter((word) => SENIORITY.has(word));
+  const rest = words.filter((word) => !SENIORITY.has(word));
+  const roleWord = [...rest].reverse().find((word) => ROLE_NOUNS.test(word)) ?? null; // The last one: "Data Engineer" -> engineer
+  return { seniority, role: roleWord && singular(roleWord), specialty: rest.filter((word) => word !== roleWord) };
+}
+
+// How a resume title compares with the job's: "exact" | "close" | "related" | null, and why
+function compareTitles(job, candidate) {
+  if (!job.role || !candidate.role || !sameRoleFamily(job.role, candidate.role)) return { level: null };
+  const reasons = [];
+  if (job.role !== candidate.role) reasons.push(`${capitalize(candidate.role)} and ${capitalize(job.role)} count as the same role`);
+  if (!sameSet(job.seniority, candidate.seniority)) reasons.push("different seniority");
+  if (sameSet(job.specialty, candidate.specialty) || (job.specialty.length && job.specialty.every((w) => candidate.specialty.includes(w)))) {
+    return { level: reasons.length ? "close" : "exact", reasons };
+  }
+  if (relatedSpecialty(job.specialty, candidate.specialty)) {
+    return { level: "related", reasons: [`${candidate.specialty.join(" ") || "general"} vs ${job.specialty.join(" ") || "general"}`, ...reasons] };
+  }
+  return { level: null };
+}
+const capitalize = (word) => word[0].toUpperCase() + word.slice(1);
 
 // Best guess at the title: an explicit "Job title:" line, the first short line that
 // names a role, or "looking for a <title>" in the text
@@ -48,19 +92,42 @@ export function extractJobTitle(jobDescription) {
   return sentence ? sentence[1].trim() : null;
 }
 
-// Compares the title with the resume.
-// Returns { level: "full" | "partial" | "none", coreWords, missingWords }
-//   full    - every important word of the title appears in the resume (e.g. "frontend" and "engineer")
-//   partial - the main role word appears ("engineer"), but not its specialisation
-export function matchJobTitle(title, resumeText) {
-  const resume = ` ${normalize(resumeText)} `;
-  const words = normalize(title).split(" ").filter((w) => w && !LEVELS.has(w) && !["and", "of", "the", "for", "a", "an", "to", "in", "with"].includes(w));
-  if (words.length === 0) return { level: "full", coreWords: [], missingWords: [] };
+const LEVEL_ORDER = ["exact", "close", "related"];
 
-  const missingWords = words.filter((word) => !resume.includes(` ${word} `) && !resume.includes(` ${word}s `));
-  if (missingWords.length === 0) return { level: "full", coreWords: words, missingWords };
+// Compares the job's title with the titles in the resume (headline, job roles) and the text.
+// Spellings are normalised (Sr./Senior, Front-End/Frontend, Full-Stack/Fullstack...).
+// Returns { level, matched, reasons }:
+//   exact   - the same title ("Sr. Front-End Engineer" = "Senior Frontend Engineer")
+//   close   - the same role with a different seniority, or Developer/Engineer/Programmer swapped
+//   related - the same kind of role in a related specialty (Full Stack vs Front-End)
+//   none    - no similar title
+//   matched - the resume title it matched; reasons - how it differs
+export function matchJobTitle(title, resumeText, resumeTitles = []) {
+  const job = describe(title);
+  const text = ` ${normalize(resumeText)} `;
+  const phrase = (words) => words.length > 0 && text.includes(` ${words.join(" ")} `);
+  let best = { level: "none", matched: null, reasons: [] };
+  const consider = (level, matched, reasons) => {
+    if (LEVEL_ORDER.indexOf(level) >= 0 && (best.level === "none" || LEVEL_ORDER.indexOf(level) < LEVEL_ORDER.indexOf(best.level))) {
+      best = { level, matched, reasons };
+    }
+  };
 
-  const roleWord = words.find((word) => ROLE_NOUNS.test(word));
-  const level = roleWord && !missingWords.includes(roleWord) ? "partial" : "none";
-  return { level, coreWords: words, missingWords };
+  // The resume's own titles first, so the message shows them as written
+  for (const candidate of resumeTitles.filter(Boolean)) {
+    const { level, reasons } = compareTitles(job, describe(candidate));
+    if (level) consider(level, candidate, reasons);
+  }
+  // Then the title (or the same role with another seniority or role word) anywhere in the text
+  if (phrase(normalize(title).split(" "))) consider("exact", title, []);
+  if (job.role) {
+    for (const role of ROLE_FAMILIES.find((family) => family.includes(job.role)) ?? [job.role]) {
+      const roleReasons = role === job.role ? [] : [`${capitalize(role)} and ${capitalize(job.role)} count as the same role`];
+      const withSeniority = [...job.seniority, ...job.specialty, role];
+      const withoutSeniority = [...job.specialty, role];
+      if (phrase(withSeniority)) consider(roleReasons.length ? "close" : "exact", withSeniority.join(" "), roleReasons);
+      else if (phrase(withoutSeniority)) consider("close", withoutSeniority.join(" "), [...roleReasons, ...(job.seniority.length ? ["different seniority"] : [])]);
+    }
+  }
+  return best;
 }

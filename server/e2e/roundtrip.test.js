@@ -16,7 +16,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import extractText from "../services/import/extractText.js";
-import { headingOf } from "../services/import/parseWithRules.js";
+import parseWithRules, { headingOf } from "../services/import/parseWithRules.js";
 import { APP, OUT_DIR, logIn, sleep, startStack } from "./helpers.js";
 
 const ONLY = process.env.ROUNDTRIP_ONLY;
@@ -39,6 +39,7 @@ const SAMPLE = {
     {
       role: "Software Engineer",
       company: "Northwind Labs",
+      subtitle: "BookIt, a booking platform for clinics (React, Node.js)",
       startDate: "Jan 2023",
       endDate: "Present",
       bullets: [
@@ -119,8 +120,19 @@ test("PDF round trip: every template exports a PDF an ATS can read", async (t) =
       for (const job of SAMPLE.experience) {
         const titleAt = lines.findIndex((line) => line.includes(job.role));
         const bulletAt = lines.findIndex((line) => line.startsWith(job.bullets[0].slice(0, 30)));
-        assert.ok(titleAt >= 0 && bulletAt - titleAt >= 1 && bulletAt - titleAt <= 2, `"${job.role}" (line ${titleAt}) should be right above its first bullet (line ${bulletAt})`);
+        const lineBetween = job.subtitle ? 1 : 0; // The subtitle sits between the header and the bullets
+        assert.ok(
+          titleAt >= 0 && bulletAt - titleAt >= 1 + lineBetween && bulletAt - titleAt <= 2 + lineBetween,
+          `"${job.role}" (line ${titleAt}) should be right above its first bullet (line ${bulletAt})`
+        );
+        if (job.subtitle) assert.equal(lines[bulletAt - 1], job.subtitle, "the subtitle should be the line right above the first bullet");
       }
+
+      // Import reads the exported PDF back the same way: the subtitle is the job's subtitle, not a bullet
+      const parsed = parseWithRules(text);
+      const firstJob = parsed.experience.find((job) => job.bullets.some((bullet) => bullet.startsWith(SAMPLE.experience[0].bullets[0].slice(0, 30))));
+      assert.equal(firstJob?.subtitle, SAMPLE.experience[0].subtitle, "import should read the subtitle back as the job's subtitle");
+      assert.ok(!firstJob.bullets.includes(SAMPLE.experience[0].subtitle), "the subtitle shouldn't be read as a bullet");
 
       const stray = lines.filter((line) => /^[\s·•|–—,/-]+$/.test(line) || /^[·•|]\s|\s[·|]$/.test(line));
       assert.deepEqual(stray, [], "stray separator characters");

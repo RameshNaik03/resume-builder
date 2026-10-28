@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto, JobSubtitle } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Timeline: experience and education are drawn on a vertical line with a dot per entry,
@@ -68,6 +68,7 @@ export default function TimelineLayout({ data, theme }) {
                   <span className={job.role ? "text-(--muted)" : "font-bold"}>{job.company}</span>
                 </p>
               </div>
+              <JobSubtitle text={job.subtitle} />
               <BulletList items={job.bullets} rich className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--muted)" />
             </>
           )}

@@ -52,6 +52,7 @@ export default function prepareResume(resume, withLinks = true, design, changed 
       .map((job, index) => ({
         ...job,
         key: job._id ?? index,
+        subtitle: job.subtitle?.trim() ?? "", // Product or project line under the job header
         // With a date format, a range that starts and ends the same (e.g. "2022 – 2022") shows once
         dates: design.dateFormat
           ? joinRange([date(job.startDate), date(job.endDate)])

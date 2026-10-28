@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto, JobSubtitle } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Minimal: left-aligned, lots of white space, no divider lines.
@@ -39,6 +39,7 @@ export default function MinimalLayout({ data, theme }) {
                   {job.dates}
                 </p>
               </div>
+              <JobSubtitle text={job.subtitle} />
               <BulletList
                 items={job.bullets} rich
                 className="mt-[4pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[13pt] marker:text-(--accent)"

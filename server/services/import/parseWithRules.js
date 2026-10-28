@@ -4,6 +4,7 @@
 // the user a solid starting point to fix up in the editor.
 
 import { ROLE_NOUNS } from "../ats/jobTitle.js";
+import { isJobSubtitle } from "../ats/textRules.js";
 
 // ---------- Patterns ----------
 
@@ -184,8 +185,9 @@ function parseExperience(lines) {
 
     // Bullet points (and long sentences) describe the current job. A long line with a date
     // range is a job line ("Front-End Developer — Long Company Name Pvt. Ltd. Apr 2023 – Mar 2024 | City").
-    if (isBullet || (job && line.length > 90 && !DATE_RANGE.test(line))) {
-      if (!job) jobs.push((job = { role: "", company: "", startDate: "", endDate: "", bullets: [] }));
+    const longSubtitle = job && job.bullets.length === 0 && !job.subtitle && isJobSubtitle(line);
+    if (isBullet || (job && line.length > 90 && !DATE_RANGE.test(line) && !longSubtitle)) {
+      if (!job) jobs.push((job = { role: "", company: "", subtitle: "", startDate: "", endDate: "", bullets: [] }));
       job.bullets.push(line);
       continue;
     }
@@ -213,13 +215,19 @@ function parseExperience(lines) {
     // title line, a line without its own dates is treated as one of its bullet points.
     const jobHasHeader = job && job.role && (job.company || job.startDate);
     const isNewJobTitle = wordCount <= 6 && datesLineFollows(index);
+    // A product/project line right under the header is the job's subtitle, not a bullet
+    // ("DevAssist Pro, an AI-powered coding agent (React, Node.js)")
+    if (jobHasHeader && !dateMatch && !job.subtitle && job.bullets.length === 0 && isJobSubtitle(line)) {
+      job.subtitle = line;
+      continue;
+    }
     if (jobHasHeader && !dateMatch && !isNewJobTitle) {
       job.bullets.push(line);
       continue;
     }
 
     // Otherwise this line starts a new job: "Role | Company | Dates"
-    job = { role: restParts[0] ?? "", company: restParts[1] ?? "", startDate: "", endDate: "", bullets: [] };
+    job = { role: restParts[0] ?? "", company: restParts[1] ?? "", subtitle: "", startDate: "", endDate: "", bullets: [] };
     if (dateMatch) setDates(job, dateMatch);
     jobs.push(job);
   }

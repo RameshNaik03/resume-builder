@@ -15,7 +15,7 @@ export default function ExperienceForm({ items, onChange }) {
     <ListEditor
       items={items}
       onChange={onChange}
-      createItem={() => ({ company: "", role: "", startDate: "", endDate: "", bullets: [""] })}
+      createItem={() => ({ company: "", role: "", subtitle: "", startDate: "", endDate: "", bullets: [""] })}
       getTitle={getTitle}
       addLabel="Add experience"
       emptyText="No experience added yet. Internships and part-time jobs count too!"
@@ -41,6 +41,13 @@ export default function ExperienceForm({ items, onChange }) {
                 disabled={isCurrent}
               />
             </div>
+
+            <TextField
+              label="Product or project (optional)"
+              value={job.subtitle}
+              onChange={(subtitle) => update({ subtitle })}
+              placeholder="e.g. Acme Pay, a payments app (React, Node.js)"
+            />
 
             <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
               <input

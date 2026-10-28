@@ -54,6 +54,29 @@ export function startsWithActionVerb(bullet) {
   return first ? baseVerb(first) : null;
 }
 
+// A short line under a job header that names a product or project rather than describing
+// an achievement: "DevAssist Pro, an AI-powered coding agent (React, Node.js)" or
+// "Project Atlas (React, GraphQL)". It has a comma or brackets after a short name, doesn't
+// start with an action verb ("Built...") or a duty phrase ("Responsible for..."), and isn't
+// a full sentence or a result (no full stop at the end, no percentages).
+// Used by the import parser (it becomes the job's subtitle) and the ATS scorer (not a bullet).
+export function isJobSubtitle(line) {
+  const text = line.trim();
+  const words = text.split(/\s+/).length;
+  const name = text.split(/[,(]/)[0].trim(); // The part before the first comma or bracket
+  return (
+    /[,(]/.test(text) &&
+    !/[.!?]$/.test(text) &&
+    !/%/.test(text) &&
+    words <= 20 &&
+    /^[\p{Lu}\d]/u.test(name) &&
+    name.split(/\s+/).length <= 5 &&
+    !/^I\b/.test(text) &&
+    !WEAK_OPENERS.test(text) &&
+    !startsWithActionVerb(text)
+  );
+}
+
 // ---------- Numbers, pronouns and clichés ----------
 
 export const hasNumber = (text) => /\d|%|\$|€|£|₹|\b(one|two|three|four|five|six|seven|eight|nine|ten|twice|double|triple|half)\b/i.test(text);

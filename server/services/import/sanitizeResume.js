@@ -55,6 +55,7 @@ export default function sanitizeResume(data = {}) {
       .map((job) => ({
         company: str(job?.company, 200),
         role: str(job?.role, 200),
+        subtitle: str(job?.subtitle, 300),
         startDate: str(job?.startDate, 50),
         endDate: str(job?.endDate, 50),
         bullets: stringList(job?.bullets, LIMITS.bulletsPerJob, 2000),

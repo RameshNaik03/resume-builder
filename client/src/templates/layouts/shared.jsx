@@ -96,6 +96,17 @@ export function RichText({ html, className = "", ...rest }) {
   return <div className={`rich-text ${className}`} dangerouslySetInnerHTML={{ __html: html }} {...rest} />;
 }
 
+// The optional line under a job header naming the product or project, e.g.
+// "Acme Pay, a payments app (React, Node.js)". It's a block that stays with the first bullet.
+export function JobSubtitle({ text, className = "" }) {
+  if (!text) return null;
+  return (
+    <p className={`mt-[1pt] fs-9.5 text-(--muted) italic ${className}`} data-block data-keep>
+      {text}
+    </p>
+  );
+}
+
 // Bullet points: each one is its own block, so long lists can continue on the next page.
 // The marker (•, –, ▸ or none) comes from the design's --bullet variable.
 //   rich - the items are sanitized HTML (job bullet points) rather than plain text

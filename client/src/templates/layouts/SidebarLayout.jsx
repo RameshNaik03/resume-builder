@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, MaybeLink, Photo, RichText, SectionTitle, Skills, WithPhoto } from "./shared";
+import { BulletList, MaybeLink, Photo, RichText, SectionTitle, Skills, WithPhoto, JobSubtitle } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Sidebar: two columns. A coloured left sidebar holds name, contact details and the
@@ -71,6 +71,7 @@ export default function SidebarLayout({ data, theme }) {
                 {job.dates}
               </p>
             </div>
+            <JobSubtitle text={job.subtitle} />
             <BulletList items={job.bullets} rich className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--accent)" />
           </div>
         ))}

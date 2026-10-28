@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, MaybeLink, RichText, Skills, WithPhoto } from "./shared";
+import { BulletList, MaybeLink, RichText, Skills, WithPhoto, JobSubtitle } from "./shared";
 import { splitSections } from "./sectionLayout";
 
 // Split Modern: a gradient strip across the top, name on the left with contacts
@@ -70,6 +70,7 @@ export default function SplitModernLayout({ data, theme }) {
                   {job.dates && <p className="shrink-0 text-(--muted)">{job.dates}</p>}
                 </div>
               </div>
+              <JobSubtitle text={job.subtitle} />
               <BulletList items={job.bullets} rich className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--accent)" />
             </div>
           ))}

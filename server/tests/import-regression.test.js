@@ -17,7 +17,7 @@ import sanitizeResume from "../services/import/sanitizeResume.js";
 const read = (name) => fs.readFileSync(new URL(`./fixtures/${name}`, import.meta.url), "utf8");
 
 const JOBS = [
-  { role: "Full Stack Developer Intern", company: "Orbit Labs", startDate: "Mar 2026", endDate: "Oct 2026", firstBullet: "DevAssist Pro", lastBullet: "Diagnosed and resolved bugs" },
+  { role: "Full Stack Developer Intern", company: "Orbit Labs", startDate: "Mar 2026", endDate: "Oct 2026", firstBullet: "Built reusable", lastBullet: "Diagnosed and resolved bugs" },
   { role: "Front-End Developer", company: "Contoso Learning Labs Pvt. Ltd.", startDate: "Apr 2023", endDate: "Mar 2024", firstBullet: "Developed responsive front-end templates", lastBullet: "Worked closely with backend developers" },
 ];
 const DEGREES = [
@@ -65,8 +65,14 @@ for (const [order, file] of [
       assert.doesNotMatch(projectText, /SEO best practices|clean-code standards|Delivered two production projects/);
     });
 
+    it("reads the project line under job 1 as its subtitle, not a bullet", () => {
+      assert.equal(resume.experience[0].subtitle, "DevAssist Pro, an AI-powered coding agent (React, Node.js, Express.js, MongoDB)");
+      assert.equal(resume.experience[1].subtitle, "");
+      assert.ok(!bullets.some((b) => b.startsWith("DevAssist Pro")));
+    });
+
     it("never splits inside brackets and joins wrapped lines", () => {
-      assert.ok(bullets.some((b) => b.includes("(React, Node.js, Express.js, MongoDB)")));
+      assert.ok(resume.experience[0].subtitle.includes("(React, Node.js, Express.js, MongoDB)"));
       assert.ok(bullets.some((b) => b.endsWith("an e-commerce platform (see Projects).")));
       assert.ok(bullets.some((b) => b.endsWith("consistency across screens.")));
       assert.ok(!bullets.includes("screens."));
@@ -92,7 +98,7 @@ for (const [order, file] of [
           assert.ok(own[0].startsWith(job.firstBullet), own[0]);
           assert.ok(own.at(-1).startsWith(job.lastBullet), own.at(-1));
         });
-        assert.deepEqual(resume.experience.map((job) => job.bullets.length), [7, 5]);
+        assert.deepEqual(resume.experience.map((job) => job.bullets.length), [6, 5]);
       });
 
       it("doesn't ask the user to check the bullets", () => {
@@ -101,7 +107,7 @@ for (const [order, file] of [
     } else {
       // From the text alone it's unknowable where job 2's bullets start: none are guessed
       it("keeps the bullets together under the first job instead of guessing", () => {
-        assert.deepEqual(resume.experience.map((job) => job.bullets.length), [12, 0]);
+        assert.deepEqual(resume.experience.map((job) => job.bullets.length), [11, 0]);
       });
 
       it("asks the user to check which bullets belong to which job", () => {

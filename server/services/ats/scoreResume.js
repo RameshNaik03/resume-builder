@@ -8,6 +8,7 @@ import {
   findCliches,
   findPronouns,
   hasNumber,
+  isJobSubtitle,
   overusedWords,
   spellingIssues,
   startsWithActionVerb,
@@ -85,13 +86,18 @@ function analyzeText(text, parsed) {
     const entryLines = [];
     let section = null;
     let inEntry = false;
+    let linesInEntry = 0;
     for (const line of lines) {
       const heading = headingOf(line);
       if (heading || looksLikeHeading(line)) {
         section = heading;
         inEntry = false;
-      } else if (dateRanges(line).length) inEntry = true;
-      else if (inEntry && !["education", "skills", "summary"].includes(section)) {
+      } else if (dateRanges(line).length) {
+        inEntry = true;
+        linesInEntry = 0;
+      } else if (inEntry && !["education", "skills", "summary"].includes(section)) {
+        // A product/project subtitle right under the entry isn't a bullet
+        if (linesInEntry++ === 0 && isJobSubtitle(line)) continue;
         if (/^[a-z]/.test(line) && entryLines.length) entryLines[entryLines.length - 1] += ` ${line}`;
         else entryLines.push(line);
       }
@@ -465,20 +471,27 @@ function keywordChecks({ info, text, parsed, jobDescription, jobTitle }) {
     if (!title) {
       checks.push(check(C, "job-title", "Job title", 5, 5, "Couldn't find a job title in the job description to compare.", ""));
     } else {
-      const match = matchJobTitle(title, text);
+      // Compared with the resume's headline and job titles (and the text):
+      // exact 5 points, close (other seniority, Developer = Engineer) 4, related role 2.5
+      const resumeTitles = [parsed.personalInfo?.headline, ...(parsed.experience ?? []).map((job) => job.role)];
+      const match = matchJobTitle(title, text, resumeTitles);
+      const how = match.reasons.length ? ` (${match.reasons.join("; ")})` : "";
       checks.push(
         check(
           C,
           "job-title",
           `Job title ("${title}")`,
           5,
-          match.level === "full" ? 5 : match.level === "partial" ? 2.5 : 0,
-          match.level === "full"
-            ? `Your resume uses the job title "${title}".`
-            : match.level === "partial"
-              ? `Your resume has part of the job title, but not "${match.missingWords.join(" ")}".`
-              : `The job title "${title}" doesn't appear in your resume.`,
-          `If it fits your experience, use the job's title in your headline or summary (e.g. "${title} with 5 years of experience").`
+          { exact: 5, close: 4, related: 2.5, none: 0 }[match.level],
+          {
+            exact: `Exact match: your resume uses the job title "${title}".`,
+            close: `Close match: your resume has "${match.matched}"${how}.`,
+            related: `Related role: your resume has "${match.matched}"${how}, not "${title}".`,
+            none: `The job title "${title}" doesn't appear in your resume, and no similar title was found.`,
+          }[match.level],
+          match.level === "close"
+            ? `For an exact match, use "${title}" in your headline or summary, if it describes your experience.`
+            : `If it fits your experience, use the job's title in your headline or summary (e.g. "${title} with 5 years of experience").`
         )
       );
     }

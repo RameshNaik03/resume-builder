@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { FONTS, itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, Skills, WithPhoto, JobSubtitle } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Executive: elegant and understated. Centred serif name, a fine double rule,
@@ -48,6 +48,7 @@ export default function ExecutiveLayout({ data }) {
                 </div>
                 {job.role && job.company && <p className="text-(--accent) italic">{job.company}</p>}
               </div>
+              <JobSubtitle text={job.subtitle} />
               <BulletList
                 items={job.bullets} rich
                 className="mt-[4pt] space-y-[calc(2.5pt*var(--bullet-space,1))] pl-[14pt] marker:text-(--accent)"
