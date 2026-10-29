@@ -1,8 +1,11 @@
 # Local MongoDB for development. `npm run dev` starts it automatically.
 # Data is kept in the "mongo-data" volume, so it survives restarts.
+# MongoDB 7.0, the same exact version as CI (.github/workflows): MongoDB 8.x refuses to start
+# on Linux kernels 6.19+, which GitHub's runners (and newer Docker Desktop VMs) use. See
+# https://jira.mongodb.org/browse/SERVER-125742. 7.0 is supported until August 2027.
 services:
   mongo:
-    image: mongo:8.0
+    image: mongo:7.0.45
     container_name: resume-builder-mongo
     restart: unless-stopped
     ports:

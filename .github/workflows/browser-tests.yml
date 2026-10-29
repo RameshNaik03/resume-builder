@@ -27,16 +27,30 @@ jobs:
         suite: [test:roundtrip, test:e2e]
     services:
       mongo:
-        image: mongo:8.0
+        # Exact version, the same as server/docker-compose.yml. Not 8.x: it refuses to start on
+        # the runners' Linux kernel (6.19+), see https://jira.mongodb.org/browse/SERVER-125742
+        image: mongo:7.0.45
         ports:
           - 27017:27017
+        # The job waits until this ping answers (and stops if it never does)
         options: >-
           --health-cmd "mongosh --quiet --eval 'db.adminCommand(\"ping\")'"
+          --health-start-period 20s
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
     steps:
       - uses: actions/checkout@v4
+      # A clear failure (with MongoDB's own log) if the database isn't answering
+      - name: Check MongoDB is up
+        run: |
+          if version=$(docker exec "${{ job.services.mongo.id }}" mongosh --quiet --eval 'db.version()' 2>&1); then
+            echo "MongoDB $version is up"
+          else
+            echo "::error title=MongoDB didn't start::The mongo service container isn't answering. Its log is below."
+            docker logs --tail 50 "${{ job.services.mongo.id }}"
+            exit 1
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
