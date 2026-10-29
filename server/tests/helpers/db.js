@@ -28,6 +28,9 @@ export async function connectTestDb(name) {
     uri,
     drop: async () => {
       if (mongoose.connection.readyState !== 1) return;
+      // Wait for the models' index builds first: Mongoose starts them in the background, and one
+      // that finishes after the drop creates the database again (seen in very short suites)
+      await Promise.all(Object.values(mongoose.models).map((model) => model.init().catch(() => {})));
       await mongoose.connection.dropDatabase();
       await mongoose.disconnect();
     },
