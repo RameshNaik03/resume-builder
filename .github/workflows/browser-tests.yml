@@ -1,0 +1,83 @@
+# The slower browser suites: the PDF round trip for every template (test:roundtrip) and the
+# ATS checker / review screens (test:e2e). They run the real API, the React app (Vite) and a
+# headless Chrome installed on the runner, against MongoDB.
+# Runs on pull requests to main, and from the Actions tab ("Run workflow").
+name: Browser tests
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: browser-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-tests:
+    name: ${{ matrix.suite }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [test:roundtrip, test:e2e]
+    services:
+      mongo:
+        # Exact version, the same as server/docker-compose.yml. Not 8.x: it refuses to start on
+        # the runners' Linux kernel (6.19+), see https://jira.mongodb.org/browse/SERVER-125742
+        image: mongo:7.0.45
+        ports:
+          - 27017:27017
+        # The job waits until this ping answers (and stops if it never does)
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand(\"ping\")'"
+          --health-start-period 20s
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      # A clear failure (with MongoDB's own log) if the database isn't answering
+      - name: Check MongoDB is up
+        run: |
+          if version=$(docker exec "${{ job.services.mongo.id }}" mongosh --quiet --eval 'db.version()' 2>&1); then
+            echo "MongoDB $version is up"
+          else
+            echo "::error title=MongoDB didn't start::The mongo service container isn't answering. Its log is below."
+            docker logs --tail 50 "${{ job.services.mongo.id }}"
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            client/package-lock.json
+      # The tests start the API (server/) and Vite (client/), so both need their packages
+      - run: npm ci
+        working-directory: server
+      - run: npm ci
+        working-directory: client
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+        with:
+          chrome-version: stable
+          install-dependencies: true
+      - run: npm run ${{ matrix.suite }}
+        working-directory: server
+        env:
+          TEST_MONGO_URI: mongodb://127.0.0.1:27017
+          BROWSER_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          TMPDIR: ${{ runner.temp }} # Where the tests save their output (uploaded below)
+      # Screenshots, PDFs and extracted text (see e2e/helpers.js), to see why a check failed
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: ${{ matrix.suite == 'test:e2e' && 'e2e' || 'roundtrip' }}-output
+          path: ${{ runner.temp }}/resume-builder-e2e
+          if-no-files-found: ignore

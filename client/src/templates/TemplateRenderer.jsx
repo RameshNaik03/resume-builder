@@ -30,7 +30,9 @@ const LAYOUT_COMPONENTS = {
 //   withLinks  - false for thumbnails (no clickable links)
 //   design     - the resume's design overrides (fonts, sizes, colours...). Leave it out to
 //                show the template as designed (thumbnails, landing page).
-export default function TemplateRenderer({ resume, templateId, withLinks = true, design }) {
+//   highlightPlaceholders - mark "[X%]"-style placeholders in yellow (on-screen previews only,
+//                never the printed sheet)
+export default function TemplateRenderer({ resume, templateId, withLinks = true, design, highlightPlaceholders = false }) {
   const template = getTemplate(templateId ?? resume.template);
   const Layout = LAYOUT_COMPONENTS[template.layout];
   const { theme } = template;
@@ -43,8 +45,8 @@ export default function TemplateRenderer({ resume, templateId, withLinks = true,
 
   // Only re-clean the data when the resume or its design actually changes
   const data = useMemo(
-    () => prepareResume(resume, withLinks, resolvedDesign.resolved, resolvedDesign.overrides),
-    [resume, withLinks, resolvedDesign]
+    () => prepareResume(resume, withLinks, resolvedDesign.resolved, resolvedDesign.overrides, { highlightPlaceholders }),
+    [resume, withLinks, resolvedDesign, highlightPlaceholders]
   );
 
   return (

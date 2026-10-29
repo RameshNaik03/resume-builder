@@ -25,6 +25,7 @@ const ResumeSchema = z.object({
     z.object({
       company: z.string(),
       role: z.string(),
+      subtitle: z.string(),
       startDate: z.string(),
       endDate: z.string(),
       bullets: z.array(z.string()),
@@ -47,6 +48,7 @@ Accuracy:
 - personalInfo.headline is the person's professional title if the resume states one (e.g. "Full Stack Developer").
 - linkedin and github: the profile URL or path exactly as written (e.g. "linkedin.com/in/name").
 - Dates: keep them as written, short form if possible (e.g. "Jan 2024", "2021"). Use "Present" for a current role.
+- experience.subtitle: a short line directly under the job title that names a product or project rather than describing an achievement (e.g. "Acme Pay, a payments app (React, Node.js)"), or "" if there is none. It is not a bullet point.
 - experience.bullets: one achievement or responsibility per item, without bullet symbols. Keep the original wording.
 - skills: individual skills (e.g. "React", "SQL"), not category labels like "Languages:".
 

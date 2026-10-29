@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { FONTS, itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, Skills, WithPhoto, JobSubtitle } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Executive: elegant and understated. Centred serif name, a fine double rule,
@@ -16,7 +16,7 @@ function Section({ title, children }) {
       {/* Centred heading with a thin line on each side */}
       <div className="flex items-center gap-[10pt]" data-block data-keep>
         <span className="divider-rule flex-1" aria-hidden="true" />
-        <h2 className="hfs-11 tracking-[0.2em] text-(--heading) uppercase" style={SERIF}>
+        <h2 className="hfs-11 text-(--heading) uppercase" style={SERIF}>
           {title}
         </h2>
         <span className="divider-rule flex-1" aria-hidden="true" />
@@ -48,6 +48,7 @@ export default function ExecutiveLayout({ data }) {
                 </div>
                 {job.role && job.company && <p className="text-(--accent) italic">{job.company}</p>}
               </div>
+              <JobSubtitle text={job.subtitle} />
               <BulletList
                 items={job.bullets} rich
                 className="mt-[4pt] space-y-[calc(2.5pt*var(--bullet-space,1))] pl-[14pt] marker:text-(--accent)"
@@ -127,10 +128,10 @@ export default function ExecutiveLayout({ data }) {
     <div className="fs-10 leading-(--lh)">
       <header style={HEADER_ALIGN} data-block>
         <WithPhoto photo={data.photo} align={data.headerAlign}>
-          <h1 className="hfs-28 leading-tight tracking-[0.04em]" style={SERIF}>
+          <h1 className="hfs-28 leading-tight" style={SERIF}>
             {data.name}
           </h1>
-          {data.headline && <p className="mt-[4pt] fs-9.5 tracking-[0.28em] text-(--accent) uppercase">{data.headline}</p>}
+          {data.headline && <p className="mt-[4pt] fs-9.5 font-semibold text-(--accent) uppercase">{data.headline}</p>}
           <ContactLine contacts={data.contacts} className="mt-[8pt] fs-9 text-(--muted)" />
         </WithPhoto>
         {/* Fine double rule (full width, below the photo too) */}

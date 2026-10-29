@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto, JobSubtitle } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Compact: smaller text and tighter spacing to fit more on one page.
@@ -41,6 +41,7 @@ export default function CompactLayout({ data, theme }) {
                 </p>
                 {job.dates && <p className="shrink-0 fs-9 text-(--muted)">{job.dates}</p>}
               </div>
+              <JobSubtitle text={job.subtitle} />
               <BulletList items={job.bullets} rich className="mt-[2pt] space-y-[calc(1pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--muted)" />
             </div>
           ))}
@@ -107,7 +108,9 @@ export default function CompactLayout({ data, theme }) {
         <WithPhoto photo={data.photo} align={data.headerAlign}>
           <h1 className="font-heading hfs-20 leading-tight font-bold tracking-tight">
             {data.name}
-            {data.headline && <span className="ml-[8pt] font-(family-name:--font-body) fs-11 font-normal text-(--accent)">{data.headline}</span>}
+            {/* The "|" keeps the name and title apart when an ATS reads this line as text */}
+            {data.headline && <span className="mx-[6pt] font-(family-name:--font-body) fs-11 font-normal text-(--muted)">|</span>}
+            {data.headline && <span className="font-(family-name:--font-body) fs-11 font-normal text-(--accent)">{data.headline}</span>}
           </h1>
           <ContactLine contacts={data.contacts} separator="|" className="mt-[3pt] fs-9 text-(--muted)" />
         </WithPhoto>

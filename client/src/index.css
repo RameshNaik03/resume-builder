@@ -193,4 +193,21 @@
     text-decoration: underline;
     text-underline-offset: 1.5pt;
   }
+
+  /* "[X%]"-style placeholders the user still has to replace (on-screen previews only) */
+  mark.ats-placeholder {
+    @apply rounded-[2px] bg-yellow-200 px-px text-inherit;
+  }
+  /* What the ATS optimizer changed, in the review screen's previews */
+  .ats-changed-new {
+    @apply rounded-[2px] bg-emerald-100 ring-1 ring-emerald-400/70;
+  }
+  .ats-changed-old {
+    @apply rounded-[2px] bg-rose-100 ring-1 ring-rose-400/70;
+  }
+  @media print {
+    mark.ats-placeholder {
+      @apply bg-transparent p-0;
+    }
+  }
 }

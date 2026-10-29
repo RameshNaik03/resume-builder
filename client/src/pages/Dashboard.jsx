@@ -27,6 +27,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState(null);
+  const [recheckingId, setRecheckingId] = useState(null);
   const [resumeToDelete, setResumeToDelete] = useState(null); // The resume shown in the modal
   const [deleting, setDeleting] = useState(false);
   const [loadError, setLoadError] = useState(null);
@@ -87,6 +88,20 @@ export default function Dashboard() {
       toast.error(getErrorMessage(error));
     } finally {
       setDuplicatingId(null);
+    }
+  };
+
+  // Scores the resume again (against the job it was last checked for) and updates its badge
+  const handleRecheck = async (resume) => {
+    setRecheckingId(resume._id);
+    try {
+      const { data } = await api.post(`/ats/rescore/${resume._id}`);
+      setResumes((current) => current.map((r) => (r._id === resume._id ? { ...r, atsScore: { score: data.score, grade: data.grade, checkedAt: data.checkedAt } } : r)));
+      toast.success(`ATS score: ${data.score} (${data.grade})`);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setRecheckingId(null);
     }
   };
 
@@ -163,7 +178,9 @@ export default function Dashboard() {
                 resume={resume}
                 onDuplicate={handleDuplicate}
                 onDelete={setResumeToDelete}
+                onRecheck={handleRecheck}
                 isDuplicating={duplicatingId === resume._id}
+                isRechecking={recheckingId === resume._id}
               />
             ))}
           </div>

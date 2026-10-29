@@ -7,6 +7,7 @@ import { PAGE_SIZES, resolveDesign, usedFontIds } from "../templates/design";
 import { getPrintFonts } from "../templates/fonts";
 import useResume from "../hooks/useResume";
 import usePageTitle from "../hooks/usePageTitle";
+import { placeholdersIn } from "../utils/placeholders";
 import Loader from "../components/Loader";
 import ResumePreview from "../components/ResumePreview";
 import CollapsibleSection from "../components/editor/CollapsibleSection";
@@ -53,13 +54,25 @@ export default function Editor() {
   // After importing a file, the dashboard sends us here with { imported: true }
   const location = useLocation();
   const [showImportBanner, setShowImportBanner] = useState(Boolean(location.state?.imported));
+  // The import parser put several jobs' bullet points under the first job
+  const bulletsUnassigned = Boolean(location.state?.importWarnings?.includes("experience-bullets-unassigned"));
   const dismissImportBanner = () => {
     setShowImportBanner(false);
     // Clear the flag so the banner doesn't come back when the page is refreshed
     navigate(location.pathname, { replace: true, state: null });
   };
 
+  // After the ATS optimizer, the checker sends { optimized: { before, after, changes, skillsToConsider } }
+  const [optimized, setOptimized] = useState(location.state?.optimized ?? null);
+  const dismissOptimizedBanner = () => {
+    setOptimized(null);
+    navigate(location.pathname, { replace: true, state: null });
+  };
+
   usePageTitle(resume?.title?.trim() || "Editor");
+
+  // "[X%]"-style placeholders (from the ATS optimizer) that still need real numbers
+  const placeholders = useMemo(() => (resume ? placeholdersIn(resume) : []), [resume]);
 
   // The A4 sheet inside ResumePreview; react-to-print turns it into the PDF.
   // The PDF file name comes from documentTitle.
@@ -165,7 +178,7 @@ export default function Editor() {
             onBlur={() => !resume.title.trim() && updateResume({ title: "Untitled Resume" })}
             maxLength={100}
             aria-label="Resume title"
-            className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 text-lg font-semibold text-slate-900 dark:text-white outline-none hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/30"
+            className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 text-lg font-semibold text-ellipsis text-slate-900 dark:text-white outline-none hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/30"
           />
 
           <span className="hidden items-center gap-2 text-sm text-slate-500 dark:text-slate-400 sm:flex" aria-live="polite">
@@ -248,6 +261,11 @@ export default function Editor() {
             <p className="flex-1 text-sm text-indigo-900 dark:text-indigo-100">
               <span className="font-semibold">We imported your resume.</span> Please check each section, as imports
               aren't always perfect. You can change the template anytime.
+              {bulletsUnassigned && (
+                <span className="mt-1 block font-semibold text-amber-800 dark:text-amber-300">
+                  We couldn't tell which bullets belong to which job. Please check your Experience section.
+                </span>
+              )}
             </p>
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setIsPickerOpen(true)} className="btn-secondary px-3 py-1.5">
@@ -265,6 +283,61 @@ export default function Editor() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Shown once, right after the ATS optimizer created this resume */}
+      {optimized && (
+        <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
+          <div
+            className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 sm:flex-row sm:items-center dark:border-emerald-900 dark:bg-emerald-950/50"
+            role="status"
+          >
+            <span className="w-fit shrink-0 rounded-lg bg-white px-3 py-1.5 text-center font-display text-lg font-extrabold tabular-nums text-slate-900 dark:bg-slate-900 dark:text-white">
+              {optimized.before} <span aria-hidden="true">→</span>
+              <span className="sr-only">to</span> <span className="text-emerald-600 dark:text-emerald-400">{optimized.after}</span>
+            </span>
+            <p className="flex-1 text-sm text-emerald-900 dark:text-emerald-100">
+              <span className="font-semibold">
+                ATS-optimized copy created
+                {optimized.after > optimized.before && `: your score went up ${optimized.after - optimized.before} points`}.
+              </span>{" "}
+              We made {optimized.changes} change{optimized.changes === 1 ? "" : "s"}; your original resume is unchanged.
+              Please check each section before you use it.
+              {optimized.skillsToConsider > 0 &&
+                ` ${optimized.skillsToConsider} keyword${optimized.skillsToConsider === 1 ? " from the job wasn't" : "s from the job weren't"} added because your resume doesn't show ${optimized.skillsToConsider === 1 ? "it" : "them"} yet. Add only the ones you really have.`}
+              <span className="mt-1 block text-emerald-800/80 dark:text-emerald-200/80">
+                Fonts and layout were reset for ATS compatibility. You can still change colors in the Design tab.
+              </span>
+            </p>
+            <button
+              type="button"
+              onClick={dismissOptimizedBanner}
+              aria-label="Dismiss"
+              className="grid size-8 shrink-0 place-items-center self-end rounded-lg text-emerald-500 hover:bg-emerald-100 hover:text-emerald-800 sm:self-auto dark:hover:bg-emerald-900 dark:hover:text-emerald-200"
+            >
+              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Shown while placeholders like "[X%]" are left (highlighted in the preview, not in the PDF) */}
+      {placeholders.length > 0 && (
+        <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
+          <p
+            className="rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900 dark:border-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-100"
+            role="status"
+          >
+            <span className="font-semibold">
+              {placeholders.length} placeholder{placeholders.length === 1 ? "" : "s"} still need{placeholders.length === 1 ? "s" : ""} real
+              numbers
+            </span>{" "}
+            ({[...new Set(placeholders)].slice(0, 3).join(", ")}). Replace each with your actual figure, or remove it. They're
+            highlighted in yellow in the preview (not in the PDF).
+          </p>
         </div>
       )}
 
@@ -351,7 +424,7 @@ export default function Editor() {
                 {getTemplate(resume.template).name} · Change
               </button>
             </div>
-            <ResumePreview resume={resume} printRef={printRef} />
+            <ResumePreview resume={resume} printRef={printRef} highlightPlaceholders />
           </div>
         </div>
       </div>

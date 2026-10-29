@@ -3,6 +3,9 @@
 // then reads each section with a few patterns. It won't be perfect, but it gives
 // the user a solid starting point to fix up in the editor.
 
+import { ROLE_NOUNS } from "../ats/jobTitle.js";
+import { isJobSubtitle } from "../ats/textRules.js";
+
 // ---------- Patterns ----------
 
 const EMAIL = /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/;
@@ -49,7 +52,9 @@ const HEADINGS = {
 // "WORK EXPERIENCE:" -> "experience"; returns null if the line isn't a heading
 // Also used by the ATS checker to find which standard sections a resume has
 export function headingOf(line) {
-  if (line.length > 40) return null;
+  // Only letters, spaces and & / : , - (so the end of a wrapped sentence, e.g. "Projects).",
+  // is never mistaken for a heading)
+  if (line.length > 40 || !/^[\p{L} &/:,-]+$/u.test(line.trim())) return null;
   const normalized = line
     .toLowerCase()
     .replace(/&/g, "and")
@@ -65,8 +70,25 @@ export function headingOf(line) {
 // ---------- Helpers ----------
 
 const stripBullet = (line) => line.replace(BULLET, "").trim();
-const trimSeparators = (text) => text.replace(/^[\s|,•·()–—-]+|[\s|,•·()–—-]+$/g, "").trim();
-const splitParts = (text) => text.split(SEPARATORS).map(trimSeparators).filter(Boolean);
+
+// Separators and dashes around a piece of text. Brackets only go when they're left over
+// (an empty "()" after removing a date, or a "(" that never closes): "(MSBT)" stays whole.
+function trimSeparators(text) {
+  let trimmed = text.replace(/\(\s*\)|\[\s*\]/g, "").replace(/^[\s|,•·–—-]+|[\s|,•·–—-]+$/g, "");
+  if (trimmed.startsWith("(") && !trimmed.includes(")")) trimmed = trimmed.slice(1);
+  if (trimmed.endsWith(")") && !trimmed.includes("(")) trimmed = trimmed.slice(0, -1);
+  return trimmed.trim();
+}
+
+// Splits text at a separator pattern, but never inside (round) or [square] brackets:
+// "MongoDB (schema design, query optimization), SQL" -> ["MongoDB (schema design, query optimization)", "SQL"]
+function splitOutsideBrackets(text, pattern) {
+  const saved = [];
+  const masked = text.replace(/\([^()]*\)|\[[^\]]*\]/g, (match) => `\u0000${saved.push(match) - 1}\u0000`);
+  return masked.split(pattern).map((part) => part.replace(/\u0000(\d+)\u0000/g, (_, index) => saved[index]));
+}
+const splitParts = (text) => splitOutsideBrackets(text, SEPARATORS).map(trimSeparators).filter(Boolean);
+const unclosedBracket = (text) => (text.match(/\(/g) ?? []).length > (text.match(/\)/g) ?? []).length;
 
 // Real phone numbers have 9-15 digits (this skips things like "2019-2023")
 function findPhone(text) {
@@ -78,6 +100,15 @@ function findPhone(text) {
 }
 
 const findLink = (text) => (text.match(GITHUB) ?? text.match(ANY_URL) ?? [""])[0];
+
+// Email, phone, LinkedIn and GitHub found in a piece of text ("" when missing).
+// Also used by the ATS optimizer to recover contact details from a page header.
+export const findContactDetails = (text) => ({
+  email: (text.match(EMAIL) ?? [""])[0],
+  phone: findPhone(text),
+  linkedin: (text.match(LINKEDIN) ?? [""])[0],
+  github: (text.match(GITHUB) ?? [""])[0],
+});
 
 const isContactPart = (part) =>
   EMAIL.test(part) || LINKEDIN.test(part) || GITHUB.test(part) || findPhone(part) !== "" || /https?:\/\//i.test(part);
@@ -104,16 +135,29 @@ function parseHeader(lines) {
   return info;
 }
 
+// Category labels at the start of a skills line, written without a colon
+// ("Languages JavaScript, TypeScript"), so the label isn't merged into the first skill
+const SKILL_LABELS = [
+  "programming languages", "languages", "frontend", "front-end", "front end", "backend", "back-end", "back end",
+  "databases", "database", "security", "cloud & tools", "cloud and tools", "cloud & devops", "devops & cloud", "cloud",
+  "devops", "tools & platforms", "tools", "testing", "frameworks & libraries", "frameworks", "libraries", "core concepts",
+  "concepts", "soft skills", "platforms", "methodologies", "mobile", "version control", "other", "others",
+];
+const LABEL_AT_START = new RegExp(
+  `^(?:${SKILL_LABELS.map((label) => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})\\s+(?=[\\p{Lu}\\d.])`,
+  "iu"
+);
+
 function parseSkills(lines) {
   return lines.flatMap((rawLine) => {
     let line = stripBullet(rawLine);
-    // Drop a label like "Languages:" at the start of the line
+    // Drop a label like "Languages:" or "Languages " at the start of the line
     const colon = line.indexOf(":");
     if (colon > 0 && colon < 30) line = line.slice(colon + 1);
-    return line
-      .split(/[,|•·;]|\s{2,}/)
+    else line = line.replace(LABEL_AT_START, "");
+    return splitOutsideBrackets(line, /[,|•·;]|\s{2,}/)
       .map((skill) => trimSeparators(skill))
-      .filter((skill) => skill.length > 0 && skill.length <= 40);
+      .filter((skill) => skill.length > 0 && skill.length <= 60);
   });
 }
 
@@ -139,9 +183,11 @@ function parseExperience(lines) {
     const line = stripBullet(rawLine);
     if (!line) continue;
 
-    // Bullet points (and long sentences) describe the current job
-    if (isBullet || (job && line.length > 90)) {
-      if (!job) jobs.push((job = { role: "", company: "", startDate: "", endDate: "", bullets: [] }));
+    // Bullet points (and long sentences) describe the current job. A long line with a date
+    // range is a job line ("Front-End Developer — Long Company Name Pvt. Ltd. Apr 2023 – Mar 2024 | City").
+    const longSubtitle = job && job.bullets.length === 0 && !job.subtitle && isJobSubtitle(line);
+    if (isBullet || (job && line.length > 90 && !DATE_RANGE.test(line) && !longSubtitle)) {
+      if (!job) jobs.push((job = { role: "", company: "", subtitle: "", startDate: "", endDate: "", bullets: [] }));
       job.bullets.push(line);
       continue;
     }
@@ -169,13 +215,19 @@ function parseExperience(lines) {
     // title line, a line without its own dates is treated as one of its bullet points.
     const jobHasHeader = job && job.role && (job.company || job.startDate);
     const isNewJobTitle = wordCount <= 6 && datesLineFollows(index);
+    // A product/project line right under the header is the job's subtitle, not a bullet
+    // ("DevAssist Pro, an AI-powered coding agent (React, Node.js)")
+    if (jobHasHeader && !dateMatch && !job.subtitle && job.bullets.length === 0 && isJobSubtitle(line)) {
+      job.subtitle = line;
+      continue;
+    }
     if (jobHasHeader && !dateMatch && !isNewJobTitle) {
       job.bullets.push(line);
       continue;
     }
 
     // Otherwise this line starts a new job: "Role | Company | Dates"
-    job = { role: restParts[0] ?? "", company: restParts[1] ?? "", startDate: "", endDate: "", bullets: [] };
+    job = { role: restParts[0] ?? "", company: restParts[1] ?? "", subtitle: "", startDate: "", endDate: "", bullets: [] };
     if (dateMatch) setDates(job, dateMatch);
     jobs.push(job);
   }
@@ -192,6 +244,12 @@ function parseEducation(lines) {
     if (!line || /\b(gpa|cgpa|grade|percentage|marks)\b/i.test(line)) continue;
 
     const yearMatch = line.match(YEAR_OR_RANGE);
+    // Detail lines under a degree ("Focus: cloud computing", "Pune, India · Coursework: ...")
+    // aren't new entries: labelled lines, and lines without a school, degree or year once the
+    // current entry is complete
+    const isLabelled = /^[\p{L} ]{2,25}:/u.test(line);
+    const looksLikeEntry = SCHOOL.test(line) || DEGREE.test(line) || yearMatch;
+    if (isLabelled || (!looksLikeEntry && entry?.school && entry?.degree)) continue;
     const parts = splitParts(yearMatch ? line.replace(yearMatch[0], " ") : line);
 
     let school = "";
@@ -215,6 +273,9 @@ function parseEducation(lines) {
   return entries;
 }
 
+// Commas outside brackets: a tech-stack line like "Angular, TypeScript, NgRx, RxJS" has several
+const commasOutsideBrackets = (line) => splitOutsideBrackets(line, /,/).length - 1;
+
 function parseProjects(lines) {
   const projects = [];
   let project = null;
@@ -224,12 +285,21 @@ function parseProjects(lines) {
     const line = stripBullet(rawLine);
     if (!line) continue;
     const link = findLink(line);
+    const dateMatch = line.match(DATE_RANGE);
 
-    // A short, non-bullet line starts a new project (its name), unless the
-    // current project has no description yet (then it's the first description line)
-    const startsProject = !isBullet && line.length <= 80 && (!project || project.description);
+    // A project's name line: dated ("ShopNest — E-Commerce Platform Oct 2023 – Mar 2024"),
+    // or short with a link or no commas. Sentences (ending in ".") and tech-stack lists
+    // ("Angular, TypeScript, NgRx") are its description. A short undated line right after
+    // a name is the description too.
+    const words = line.split(/\s+/).length;
+    const looksLikeName =
+      !isBullet &&
+      !/[.!?]$/.test(line) &&
+      (dateMatch || (words <= 8 && (link || commasOutsideBrackets(line) === 0)));
+    const startsProject = looksLikeName && (!project || project.description || dateMatch);
     if (startsProject) {
-      const name = trimSeparators(link ? line.replace(link, " ") : line);
+      // Projects have no date field, so the dates are left out of the name
+      const name = trimSeparators(line.replace(link || "\u0000", " ").replace(dateMatch?.[0] ?? "\u0000", " "));
       projects.push((project = { name, description: "", link }));
       continue;
     }
@@ -250,14 +320,110 @@ const toHeading = (line) => {
   return text === text.toUpperCase() ? text.toLowerCase().replace(/\b\p{L}/gu, (c) => c.toUpperCase()) : text;
 };
 
+// ---------- Fixing the line order ----------
+
+// PDFs wrap long sentences onto several lines. Joins the pieces back together inside the
+// sections (not in the header), so a wrapped "...platform (see" + "Projects)." stays one line
+// instead of the second half looking like a "Projects" heading.
+// A line continues the previous one when it starts in lowercase, with a bracket or other
+// punctuation, when it closes a bracket the previous line opened, or when it's the short end
+// of an unfinished sentence ("...HTML5, CSS3, JavaScript, Angular and" + "TypeScript.").
+// Job titles never end with a full stop, so they're never joined onto a bullet.
+function joinWrappedLines(lines) {
+  const joined = [];
+  let inSection = false;
+  for (const line of lines) {
+    const previous = joined[joined.length - 1];
+    const endsSentence = /[.!?]$/.test(line) && line.split(/\s+/).length <= 4 && !/[.!?:;]$/.test(previous ?? "");
+    const continues =
+      inSection &&
+      previous &&
+      !headingOf(previous) &&
+      !BULLET.test(line) &&
+      !EMAIL.test(line) &&
+      !/^(https?:\/\/|www\.)/i.test(line) &&
+      (/^[\p{Ll}]/u.test(line) || /^[()\],.;:]/.test(line) || (unclosedBracket(previous) && line.includes(")")) || endsSentence);
+    if (continues) joined[joined.length - 1] = `${previous} ${line}`;
+    else joined.push(line);
+    inSection ||= Boolean(headingOf(line));
+  }
+  return joined;
+}
+
+// Some PDFs list every bold title line first (job, project and degree titles with their
+// dates), above the name, because they're drawn in a separate pass. This moves them back:
+//   job lines (a role word: Developer, Engineer...) -> Experience, in order
+//   degree / school lines                           -> Education
+//   other dated title lines                         -> Projects
+// Each title goes before its own group of lines when the groups can be told apart (each
+// project starting with its tech-stack line). Otherwise the first title keeps the section's
+// lines and the others are added after them, so nothing is attached to the wrong title.
+// Returns { lines, experienceBulletsUnassigned } - the flag is true when several jobs' bullet
+// points had to stay together under the first job (the user is asked to check them).
+function restoreDisplacedTitles(lines) {
+  let count = 0;
+  while (count < lines.length && DATE_RANGE.test(lines[count])) count++;
+  const contactFollows = lines.slice(count, count + 5).some((line) => EMAIL.test(line) || findPhone(line));
+  if (count === 0 || !contactFollows) return { lines, experienceBulletsUnassigned: false };
+  let experienceBulletsUnassigned = false;
+
+  const titles = { experience: [], education: [], projects: [] };
+  for (const line of lines.slice(0, count)) {
+    const beforeSeparator = line.split(/\s+[—–|-]\s+|\s+(?:at|@)\s+/)[0];
+    if (DEGREE.test(line) || SCHOOL.test(line)) titles.education.push(line);
+    else if (ROLE_NOUNS.test(beforeSeparator.replace(DATE_RANGE, ""))) titles.experience.push(line);
+    else titles.projects.push(line);
+  }
+
+  const result = lines.slice(count);
+  for (const [section, sectionTitles] of Object.entries(titles)) {
+    if (!sectionTitles.length) continue;
+    let start = result.findIndex((line) => headingOf(line) === section);
+    if (start < 0) {
+      result.push(section.toUpperCase()); // No such heading: add one at the end
+      start = result.length - 1;
+    }
+    let end = result.findIndex((line, i) => i > start && headingOf(line));
+    if (end < 0) end = result.length;
+    const body = result.slice(start + 1, end);
+
+    // Groups start at tech-stack lines ("Angular, TypeScript, NgRx, RxJS")
+    const isGroupStart = (line) => commasOutsideBrackets(line) >= 2 && !/[.!?]$/.test(line) && line.split(/\s+/).length <= 15;
+    const starts = body.map((line, i) => (isGroupStart(line) ? i : -1)).filter((i) => i >= 0);
+    let rebuilt;
+    if (section !== "education" && starts.length === sectionTitles.length && starts[0] === 0) {
+      rebuilt = body.flatMap((line, i) => (starts.includes(i) ? [sectionTitles[starts.indexOf(i)], line] : [line]));
+    } else if (section === "education") {
+      rebuilt = [...sectionTitles, ...body]; // Detail lines under degrees are skipped by the parser
+    } else {
+      rebuilt = [sectionTitles[0], ...body, ...sectionTitles.slice(1)];
+      if (section === "experience" && sectionTitles.length > 1 && body.length > 0) experienceBulletsUnassigned = true;
+    }
+    result.splice(start + 1, end - start - 1, ...rebuilt);
+  }
+  return { lines: result, experienceBulletsUnassigned };
+}
+
+// An all-caps line of 1-4 words that isn't a known heading, e.g. "MY JOURNEY"
+const looksLikeHeading = (line) =>
+  line === line.toUpperCase() && /^[A-Z][A-Z &/-]{2,30}$/.test(line) && line.split(" ").length <= 4;
+
 export default function parseWithRules(text) {
   const sections = { header: [], summary: [], experience: [], education: [], skills: [], projects: [] };
   const additional = []; // Sections like Certifications or Languages: [{ heading, items }]
   let currentLines = sections.header; // Where the next line goes
+  let pastContactDetails = false; // An all-caps name at the very top isn't a heading
 
-  for (const line of text.split("\n").map((l) => l.trim()).filter(Boolean)) {
+  const { lines, experienceBulletsUnassigned } = restoreDisplacedTitles(
+    joinWrappedLines(text.split("\n").map((l) => l.trim()).filter(Boolean))
+  );
+  for (const line of lines) {
     const heading = headingOf(line);
-    if (heading === "other") {
+    // An unknown heading below the contact details starts its own section (kept under its
+    // own name) instead of its content being lost in the header. Only before the first known
+    // heading: inside a section, all-caps lines are usually content (e.g. "ACME CORP").
+    const unknownHeading = !heading && currentLines === sections.header && pastContactDetails && looksLikeHeading(line);
+    if (heading === "other" || unknownHeading) {
       const section = { heading: toHeading(line), items: [] };
       additional.push(section);
       currentLines = section.items;
@@ -266,6 +432,7 @@ export default function parseWithRules(text) {
     } else {
       currentLines.push(line);
     }
+    pastContactDetails ||= Boolean(heading) || EMAIL.test(line) || findPhone(line) !== "";
   }
 
   // Contact details can be anywhere, but the top of the resume is checked first
@@ -289,5 +456,7 @@ export default function parseWithRules(text) {
       heading: section.heading,
       items: section.items.map(stripBullet).filter(Boolean),
     })),
+    // Not resume data (sanitizeResume drops it): things the importer should tell the user
+    notes: { experienceBulletsUnassigned },
   };
 }

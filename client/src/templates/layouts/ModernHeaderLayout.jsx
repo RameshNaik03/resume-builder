@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, SectionTitle, Skills, WithPhoto, JobSubtitle } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Modern Header: a bold coloured band across the top with name, title and contacts,
@@ -42,6 +42,7 @@ export default function ModernHeaderLayout({ data, theme }) {
                 </p>
                 {job.dates && <p className="shrink-0 fs-9 text-(--muted)">{job.dates}</p>}
               </div>
+              <JobSubtitle text={job.subtitle} />
               <BulletList
                 items={job.bullets} rich
                 className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[14pt] marker:text-(--accent)"
@@ -118,8 +119,8 @@ export default function ModernHeaderLayout({ data, theme }) {
         {/* On the coloured band the photo's border defaults to the band's text colour */}
         <WithPhoto photo={data.photo} align={data.headerAlign} defaultBorderColor="var(--on-accent)">
           <h1 className="font-heading hfs-26 leading-tight font-bold tracking-tight">{data.name}</h1>
-          {data.headline && <p className="mt-[3pt] fs-12.5 opacity-90">{data.headline}</p>}
-          <ContactLine contacts={data.contacts} className="mt-[9pt] fs-9 opacity-90" />
+          {data.headline && <p className="mt-[3pt] fs-12.5 text-current/90">{data.headline}</p>}
+          <ContactLine contacts={data.contacts} className="mt-[9pt] fs-9 text-current/90" />
         </WithPhoto>
       </header>
 

@@ -1,15 +1,18 @@
 import { headingOf } from "../import/parseWithRules.js";
 import analyzeKeywords, { findKnownSkills } from "./keywords.js";
 import { extractJobTitle, matchJobTitle } from "./jobTitle.js";
+import SKILLS from "./skills.js";
 import {
   dateRanges,
   dateStyles,
   findCliches,
   findPronouns,
   hasNumber,
+  isJobSubtitle,
   overusedWords,
   spellingIssues,
   startsWithActionVerb,
+  synonymsFor,
 } from "./textRules.js";
 
 // Rule-based ATS score out of 100: five weighted categories, each made of checks.
@@ -30,7 +33,7 @@ export const CATEGORIES = [
 
 export const gradeFor = (score) => (score >= 85 ? "Excellent" : score >= 70 ? "Good" : score >= 50 ? "Needs work" : "Poor");
 
-const MIN_READABLE_WORDS = 50; // Below this, the file is treated as unreadable
+const MAX_UNREADABLE_WORDS = 10; // This few words (or every page without text): treated as unreadable
 
 const roundHalf = (value) => Math.round(value * 2) / 2;
 const percent = (part, whole) => (whole ? Math.round((part / whole) * 100) : 0);
@@ -83,13 +86,18 @@ function analyzeText(text, parsed) {
     const entryLines = [];
     let section = null;
     let inEntry = false;
+    let linesInEntry = 0;
     for (const line of lines) {
       const heading = headingOf(line);
       if (heading || looksLikeHeading(line)) {
         section = heading;
         inEntry = false;
-      } else if (dateRanges(line).length) inEntry = true;
-      else if (inEntry && !["education", "skills", "summary"].includes(section)) {
+      } else if (dateRanges(line).length) {
+        inEntry = true;
+        linesInEntry = 0;
+      } else if (inEntry && !["education", "skills", "summary"].includes(section)) {
+        // A product/project subtitle right under the entry isn't a bullet
+        if (linesInEntry++ === 0 && isJobSubtitle(line)) continue;
         if (/^[a-z]/.test(line) && entryLines.length) entryLines[entryLines.length - 1] += ` ${line}`;
         else entryLines.push(line);
       }
@@ -133,8 +141,12 @@ function parseabilityChecks({ inspection, text }) {
           "Single-column layout",
           6,
           0,
-          `The layout has more than one column${columnWhere}. Many ATS read straight across the page, mixing the columns' text together.`,
-          "Use a single-column layout. Put skills and contact details in their own sections from top to bottom instead of a side column."
+          columns.fromTemplate
+            ? "Your template uses two columns. Many ATS read straight across the page, mixing the columns' text together."
+            : `The layout has more than one column${columnWhere}. Many ATS read straight across the page, mixing the columns' text together.`,
+          columns.fromTemplate
+            ? 'In the editor, switch to a single-column template (such as Classic), or set Columns to 1 in the Design tab.'
+            : "Use a single-column layout. Put skills and contact details in their own sections from top to bottom instead of a side column."
         )
       : check(C, "single-column", "Single-column layout", 6, 6, "The text runs in a single column, so it's read in the right order.", "")
   );
@@ -270,21 +282,39 @@ function structureChecks({ info, parsed }) {
       : check(C, "consistent-dates", "Consistent date format", 3, 3, styles.length ? `All dates use the "${styles[0].style}" style.` : "Dates are consistent.", "")
   );
 
-  // Contact details near the top (first ~15% of lines)
-  const top = info.lines.slice(0, Math.max(8, Math.ceil(info.lines.length * 0.15))).join(" ");
-  const atTop = [/[\w.+-]+@[\w-]+\.[\w.-]+/.test(top) && "email", /\+?\(?\d[\d\s().-]{7,}\d/.test(top) && "phone"].filter(Boolean);
-  const hasName = Boolean(parsed.personalInfo?.fullName);
+  // Name and contact details at the top: the name in the first lines, then the contact
+  // details in the lines right below it. Name, email and phone are what matter most
+  // (1 + 0.75 + 0.75 points); location and LinkedIn are 0.25 each. Rounded down to the half
+  // point, so a missing location or LinkedIn costs 0.5 and a missing phone or email costs 1.
+  const fullName = parsed.personalInfo?.fullName ?? "";
+  const nameAt = fullName ? info.lines.findIndex((line) => line.toLowerCase().includes(fullName.toLowerCase())) : -1;
+  const hasName = nameAt >= 0 && nameAt < Math.max(10, info.lines.length * 0.2);
+  const contactBlock = (hasName ? info.lines.slice(nameAt, nameAt + 6) : info.lines.slice(0, 8)).join("\n");
+  const found = {
+    email: /[\w.+-]+@[\w-]+\.[\w.-]+/.test(contactBlock),
+    phone: /\+?\(?\d[\d\s().-]{7,}\d/.test(contactBlock),
+    location: Boolean(parsed.personalInfo?.location) && contactBlock.includes(parsed.personalInfo.location),
+    LinkedIn: /linkedin\.com\//i.test(contactBlock),
+  };
+  const missingCore = [!hasName && "your name", !found.email && "email", !found.phone && "phone"].filter(Boolean);
+  const missingExtra = ["location", "LinkedIn"].filter((item) => !found[item]);
+  const rawPoints = (hasName ? 1 : 0) + (found.email ? 0.75 : 0) + (found.phone ? 0.75 : 0) + (2 - missingExtra.length) * 0.25;
+  const contactPoints = Math.floor(rawPoints * 2) / 2;
   checks.push(
     check(
       C,
       "contact-top",
       "Name and contact details at the top",
       3,
-      (hasName ? 1 : 0) + atTop.length,
-      hasName && atTop.length === 2
-        ? `Your name, email and phone are at the top (${parsed.personalInfo.fullName}).`
-        : `At the top, couldn't find: ${[!hasName && "your name", !atTop.includes("email") && "email", !atTop.includes("phone") && "phone"].filter(Boolean).join(", ")}.`,
-      "Start the resume with your full name, then a line with your email, phone, location and LinkedIn."
+      contactPoints,
+      missingCore.length
+        ? `At the top, couldn't find: ${[...missingCore, ...missingExtra].join(", ")}.`
+        : missingExtra.length
+          ? `Your name, email and phone are at the top; missing: ${missingExtra.join(" and ")}.`
+          : "Your name is at the top, followed by your email, phone, location and LinkedIn.",
+      missingCore.length
+        ? "Start the resume with your full name, then a line with your email, phone, location and LinkedIn."
+        : `Add your ${missingExtra.join(" and ")} to the contact line under your name.`
     )
   );
   return checks;
@@ -441,20 +471,27 @@ function keywordChecks({ info, text, parsed, jobDescription, jobTitle }) {
     if (!title) {
       checks.push(check(C, "job-title", "Job title", 5, 5, "Couldn't find a job title in the job description to compare.", ""));
     } else {
-      const match = matchJobTitle(title, text);
+      // Compared with the resume's headline and job titles (and the text):
+      // exact 5 points, close (other seniority, Developer = Engineer) 4, related role 2.5
+      const resumeTitles = [parsed.personalInfo?.headline, ...(parsed.experience ?? []).map((job) => job.role)];
+      const match = matchJobTitle(title, text, resumeTitles);
+      const how = match.reasons.length ? ` (${match.reasons.join("; ")})` : "";
       checks.push(
         check(
           C,
           "job-title",
           `Job title ("${title}")`,
           5,
-          match.level === "full" ? 5 : match.level === "partial" ? 2.5 : 0,
-          match.level === "full"
-            ? `Your resume uses the job title "${title}".`
-            : match.level === "partial"
-              ? `Your resume has part of the job title, but not "${match.missingWords.join(" ")}".`
-              : `The job title "${title}" doesn't appear in your resume.`,
-          `If it fits your experience, use the job's title in your headline or summary (e.g. "${title} with 5 years of experience").`
+          { exact: 5, close: 4, related: 2.5, none: 0 }[match.level],
+          {
+            exact: `Exact match: your resume uses the job title "${title}".`,
+            close: `Close match: your resume has "${match.matched}"${how}.`,
+            related: `Related role: your resume has "${match.matched}"${how}, not "${title}".`,
+            none: `The job title "${title}" doesn't appear in your resume, and no similar title was found.`,
+          }[match.level],
+          match.level === "close"
+            ? `For an exact match, use "${title}" in your headline or summary, if it describes your experience.`
+            : `If it fits your experience, use the job's title in your headline or summary (e.g. "${title} with 5 years of experience").`
         )
       );
     }
@@ -507,7 +544,7 @@ function keywordChecks({ info, text, parsed, jobDescription, jobTitle }) {
 
 // ---------- 5. Length and polish (10) ----------
 
-function polishChecks({ inspection, info, text, parsed }) {
+function polishChecks({ inspection, info, text, parsed, jobDescription }) {
   const C = "polish";
   const checks = [];
   const pages = inspection.pages;
@@ -528,13 +565,30 @@ function polishChecks({ inspection, info, text, parsed }) {
           )
   );
 
-  // Ignore the person's name, known skills and section headings when looking for repeated words
+  // Repeated words, ignoring the person's name, section headings and every word that's part of
+  // a technology, skill or keyword: the skills dictionary (all spellings, so "node" from
+  // Node.js and "native" from React Native), the resume's Skills list and the job's keywords
+  const wordsOf = (terms) => terms.flatMap((term) => term.toLowerCase().split(/[^a-z]+/)).filter(Boolean);
+  let jobKeywords = [];
+  if (jobDescription) {
+    const { matched, missing } = analyzeKeywords(jobDescription, "");
+    jobKeywords = [...matched, ...missing].map((keyword) => keyword.term);
+  }
   const ignore = new Set([
-    ...(parsed.personalInfo?.fullName ?? "").toLowerCase().split(/\s+/),
-    ...findKnownSkills(text).map((s) => s.toLowerCase()),
+    ...wordsOf([parsed.personalInfo?.fullName ?? ""]),
+    ...wordsOf(SKILLS.flatMap((skill) => [skill.name, ...skill.terms])),
+    ...wordsOf(parsed.skills ?? []),
+    ...wordsOf(jobKeywords),
     "experience", "education", "skills", "projects", "summary", "present",
   ]);
   const overused = overusedWords(text, ignore);
+  // A suggestion per word: its own synonyms, or a plain "vary it" when there are none
+  const suggestion = ({ word }) => {
+    const synonyms = synonymsFor(word);
+    return synonyms.length
+      ? `instead of repeating "${word}", try ${synonyms.slice(0, -1).map((s) => `"${s}"`).join(", ")} or "${synonyms.at(-1)}"`
+      : `"${word}": try varying this word`;
+  };
   checks.push(
     check(
       C,
@@ -543,7 +597,7 @@ function polishChecks({ inspection, info, text, parsed }) {
       3,
       3 - overused.length,
       overused.length ? `Repeated a lot: ${list(overused.map((o) => `"${o.word}" (${o.count}×)`), 3)}.` : "No word is overused.",
-      `Vary your wording: use synonyms for "${overused[0]?.word}" (e.g. "led", "directed", "ran", "oversaw").`
+      overused.length ? `Vary your wording: ${overused.slice(0, 3).map(suggestion).join("; ")}.` : ""
     )
   );
 
@@ -588,12 +642,14 @@ export default function scoreResume({ text, inspection, parsed, jobDescription, 
     ...structureChecks({ info, parsed }),
     ...contentChecks({ info, parsed, text }),
     ...keywordResult.checks,
-    ...polishChecks({ inspection, info, text, parsed }),
+    ...polishChecks({ inspection, info, text, parsed, jobDescription }),
   ];
 
   // Almost no readable text (e.g. a scanned resume): an ATS sees an empty page, so checks
-  // like "no typos" or "no clichés" can't pass just because there's nothing to read
-  if (info.words < MIN_READABLE_WORDS) {
+  // like "no typos" or "no clichés" can't pass just because there's nothing to read.
+  // (A short resume with real text is scored normally; its length check says it's short.)
+  const unreadable = inspection.imagePages.length >= inspection.pages || info.words <= MAX_UNREADABLE_WORDS;
+  if (unreadable) {
     checks = checks.map((c) =>
       c.category === "parseability"
         ? c

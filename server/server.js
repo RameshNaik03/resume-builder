@@ -1,46 +1,31 @@
-import "dotenv/config"; // Loads variables from .env into process.env
-import express from "express";
-import cors from "cors";
+import "dotenv/config"; // Loads variables from .env into process.env (first, before the app reads them)
+import mongoose from "mongoose";
+import app from "./app.js";
 import connectDB from "./config/db.js";
-import authRoutes from "./routes/authRoutes.js";
-import resumeRoutes from "./routes/resumeRoutes.js";
-import atsRoutes from "./routes/atsRoutes.js";
-import { notFound, errorHandler } from "./middleware/errorHandler.js";
+import checkEnv from "./config/checkEnv.js";
 
-const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Hosting platforms (Render, Railway...) put a proxy in front of the app.
-// This lets Express (and the rate limiter) see the real visitor IP address.
-app.set("trust proxy", 1);
-
-// Middleware
-app.use(express.json()); // Parse JSON request bodies
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL, // Only allow requests from our React app
-    credentials: true,
-  })
-);
-
-// Routes
-app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", message: "Server is running" });
-});
-app.use("/api/auth", authRoutes);
-app.use("/api/resumes", resumeRoutes);
-app.use("/api/ats", atsRoutes);
-
-// Error handling (must come after all routes)
-app.use(notFound);
-app.use(errorHandler);
-
-// Connect to the database first, then start the server
+// Check the settings, connect to the database, then start the server
 const startServer = async () => {
+  checkEnv();
   await connectDB();
-  app.listen(PORT, () => {
+  const server = app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
   });
+
+  // Hosting platforms send SIGTERM before stopping or redeploying the app (Ctrl+C sends
+  // SIGINT): finish the requests in progress and close the database connection first
+  const shutDown = (signal) => {
+    console.log(`${signal} received, shutting down...`);
+    server.close(async () => {
+      await mongoose.disconnect();
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 10_000).unref(); // Don't wait forever for slow requests
+  };
+  process.on("SIGTERM", shutDown);
+  process.on("SIGINT", shutDown);
 };
 
 startServer();

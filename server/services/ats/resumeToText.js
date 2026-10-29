@@ -25,6 +25,7 @@ export default function resumeToText(resume) {
     experience.flatMap((job) => [
       [job.role, job.company].filter(Boolean).join(" - "),
       [job.startDate, job.endDate].filter(Boolean).join(" - "),
+      job.subtitle, // Product or project line, as the templates show it (not a bullet)
       ...job.bullets.map((bullet) => `• ${htmlToText(bullet)}`),
     ])
   );

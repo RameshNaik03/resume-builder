@@ -108,7 +108,8 @@ const TIER_CONFIG = [
           lineHeight: 1.45,
           dividerStyle: "line",
           headerAlign: "center",
-          sectionTitles: { summary: "Profile", skills: "Expertise", projects: "Selected Projects" },
+          // Headings ATS recognise ("Expertise" often isn't)
+          sectionTitles: { summary: "Profile", projects: "Selected Projects" },
         }),
       },
       // Decorative shapes

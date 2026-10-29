@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, Skills, WithPhoto } from "./shared";
+import { BulletList, ContactLine, MaybeLink, RichText, SectionColumns, Skills, WithPhoto, JobSubtitle } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Creative: bold and colourful. Gradient shapes in the top corner, a big name,
@@ -16,7 +16,7 @@ function Section({ title, theme, children }) {
     <section style={{ marginTop: sectionGap(15) }}>
       <h2
         className={`font-heading divider-b flex items-center gap-[7pt] font-extrabold text-(--heading) ${
-          isCaps ? "hfs-11.5 tracking-[0.1em] uppercase" : "hfs-14"
+          isCaps ? "hfs-11.5 uppercase" : "hfs-14"
         }`}
         data-block
         data-keep
@@ -55,6 +55,7 @@ export default function CreativeLayout({ data, theme }) {
                   </p>
                 )}
               </div>
+              <JobSubtitle text={job.subtitle} />
               <BulletList items={job.bullets} rich className="mt-[4pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[13pt] marker:text-(--accent)" />
             </div>
           ))}

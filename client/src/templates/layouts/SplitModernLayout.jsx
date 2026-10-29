@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { itemGap, sectionGap } from "../themes";
-import { BulletList, MaybeLink, RichText, Skills, WithPhoto } from "./shared";
+import { BulletList, MaybeLink, RichText, Skills, WithPhoto, JobSubtitle } from "./shared";
 import { splitSections } from "./sectionLayout";
 
 // Split Modern: a gradient strip across the top, name on the left with contacts
@@ -24,7 +24,7 @@ function Heading({ theme, children }) {
   const isCaps = theme.headingStyle === "caps";
   return (
     <div data-block data-keep>
-      <h2 className={`font-heading font-bold text-(--heading) ${isCaps ? "hfs-10 tracking-[0.12em] uppercase" : "hfs-12.5"}`}>
+      <h2 className={`font-heading font-bold text-(--heading) ${isCaps ? "hfs-10 uppercase" : "hfs-12.5"}`}>
         {children}
       </h2>
       <div className="mt-[3pt] h-[2pt] w-[22pt] rounded-full" style={GRADIENT} aria-hidden="true" />
@@ -45,7 +45,7 @@ export default function SplitModernLayout({ data, theme }) {
   // The highlighted summary box (its label is the section heading)
   const summaryBox = (title) => (
     <div className="rounded-[6pt] border-l-[3pt] border-(--accent) bg-(--soft) px-[11pt] py-[8pt]">
-      <p className="font-heading hfs-8 font-bold tracking-[0.14em] text-(--accent) uppercase">{title}</p>
+      <p className="font-heading hfs-8 font-bold text-(--accent) uppercase">{title}</p>
       <RichText html={data.summary} className="mt-[3pt] fs-10" />
     </div>
   );
@@ -70,6 +70,7 @@ export default function SplitModernLayout({ data, theme }) {
                   {job.dates && <p className="shrink-0 text-(--muted)">{job.dates}</p>}
                 </div>
               </div>
+              <JobSubtitle text={job.subtitle} />
               <BulletList items={job.bullets} rich className="mt-[3pt] space-y-[calc(2pt*var(--bullet-space,1))] pl-[12pt] marker:text-(--accent)" />
             </div>
           ))}

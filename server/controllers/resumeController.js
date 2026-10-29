@@ -62,7 +62,7 @@ export const findOwnedResume = async (req, res) => {
 // GET /api/resumes
 export const getResumes = async (req, res) => {
   const resumes = await Resume.find({ userId: req.user._id })
-    .select("title updatedAt")
+    .select("title updatedAt atsScore.score atsScore.grade atsScore.checkedAt") // The ATS badge, without the job description
     .sort({ updatedAt: -1 }); // Most recently edited first
 
   res.json(resumes);
@@ -84,9 +84,19 @@ export const getResumeById = async (req, res) => {
   res.json(resume);
 };
 
+// The parts of a resume the ATS optimizer's review covers (not the title or the photo)
+const REVIEWED_FIELDS = EDITABLE_FIELDS.filter((field) => field !== "title");
+const reviewedContent = (resume) => {
+  const plain = resume.toObject();
+  delete plain.personalInfo?.photoUrl;
+  return JSON.stringify(REVIEWED_FIELDS.map((field) => plain[field]));
+};
+
 // PUT /api/resumes/:id
 export const updateResume = async (req, res) => {
   const resume = await findOwnedResume(req, res);
+  // An optimized resume's review is locked once its content is edited here (see the ATS review)
+  const contentBefore = resume.atsOptimization && !resume.atsOptimization.lockedAt ? reviewedContent(resume) : null;
 
   const { personalInfo, ...changes } = pickEditableFields(req.body);
   resume.set(changes);
@@ -94,6 +104,10 @@ export const updateResume = async (req, res) => {
   // touches photoUrl (a photo uploaded while this request was running stays in place)
   for (const [field, value] of Object.entries(personalInfo ?? {})) {
     resume.set(`personalInfo.${field}`, value);
+  }
+  if (contentBefore !== null && reviewedContent(resume) !== contentBefore) {
+    resume.atsOptimization.lockedAt = new Date();
+    resume.markModified("atsOptimization");
   }
   const updatedResume = await resume.save(); // save() runs schema validation
 
@@ -118,7 +132,8 @@ export const duplicateResume = async (req, res) => {
   const original = await findOwnedResume(req, res);
 
   // Turn the document into a plain object and drop the fields MongoDB should regenerate
-  const { _id, createdAt, updatedAt, photoPublicId, ...data } = original.toObject();
+  // The copy is a new resume: no ATS score or optimizer review of its own yet
+  const { _id, createdAt, updatedAt, photoPublicId, atsScore, atsOptimization, ...data } = original.toObject();
 
   // The copy starts without a photo; it gets its own copy of the photo below
   const copy = await Resume.create({
