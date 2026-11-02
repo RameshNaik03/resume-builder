@@ -20,6 +20,10 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Editor = lazy(() => import("./pages/Editor"));
 const AtsReview = lazy(() => import("./pages/AtsReview"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+// Development-only pages: import.meta.env.DEV is false in production builds, so these
+// routes don't exist there and their code is left out of the bundle
+const DevTemplates = import.meta.env.DEV ? lazy(() => import("./pages/dev/DevTemplates")) : null;
+const DevTemplatePreview = import.meta.env.DEV ? lazy(() => import("./pages/dev/DevTemplatePreview")) : null;
 
 // Shown while a page's code downloads
 const page = (element, text = "Loading...") => <Suspense fallback={<Loader text={text} />}>{element}</Suspense>;
@@ -54,6 +58,10 @@ export default function App() {
               <Route path="/editor/:id" element={page(<Editor />, "Opening the editor...")} />
               <Route path="/ats/review/:id" element={page(<AtsReview />, "Opening your review...")} />
             </Route>
+
+            {/* Development only: every template side by side (not linked anywhere) */}
+            {import.meta.env.DEV && <Route path="/dev/templates" element={page(<DevTemplates />)} />}
+            {import.meta.env.DEV && <Route path="/dev/templates/:templateId" element={page(<DevTemplatePreview />)} />}
 
             {/* Any other URL */}
             <Route path="*" element={page(<NotFound />)} />
