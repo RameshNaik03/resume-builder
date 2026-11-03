@@ -11,12 +11,15 @@
 import { Fragment } from "react";
 import "./foundation.css";
 import { MaybeLink, RichText, SectionColumns } from "../layouts/shared";
+import { SectionIcon } from "./icons";
 
 // The root of a foundation layout.
-//   vars - foundationVars(type, rhythm), computed once at module level by the layout
-export function FoundationPage({ vars, className = "", children }) {
+//   vars  - foundationVars(type, rhythm), computed once at module level by the layout
+//   fill  - the root fills every page (for backgrounds drawn down the whole sheet)
+//   style - extra inline styles (e.g. that background)
+export function FoundationPage({ vars, fill = false, className = "", style, children }) {
   return (
-    <div className={`f-page ${className}`} style={vars}>
+    <div className={`f-page ${fill ? "f-page-fill" : ""} ${className}`} style={{ ...vars, ...style }}>
       {children}
     </div>
   );
@@ -44,12 +47,25 @@ export function ContactLine({ contacts, separator = "dot", className = "" }) {
   );
 }
 
+// Contact details one per line, for narrow columns such as a sidebar
+export function ContactList({ contacts, className = "" }) {
+  if (contacts.length === 0) return null;
+  return (
+    <ul className={`f-contact-list ${className}`} data-block>
+      {contacts.map((item) => (
+        <li key={item.text}>{item.href ? <a href={item.href}>{item.text}</a> : item.text}</li>
+      ))}
+    </ul>
+  );
+}
+
 // A section heading.
 //   variant - "plain", "underline" (the design's divider below), "ruled" (rules beside it,
 //             placed by the header alignment), "bar" (a bar on its left) or "short" (a short
 //             rule under it, aligned like the header)
 //   caps    - uppercase (no letter-spacing either way, so an ATS reads it as one word)
-export function SectionHeading({ variant = "plain", caps = true, className = "", children }) {
+//   icon    - a section id: draws that section's icon before the text (see icons.jsx)
+export function SectionHeading({ variant = "plain", caps = true, icon, className = "", children }) {
   const variantClass = {
     plain: "",
     underline: "divider-b",
@@ -58,19 +74,22 @@ export function SectionHeading({ variant = "plain", caps = true, className = "",
     short: "f-heading-short",
   }[variant];
   return (
-    <h2 className={`f-heading ${caps ? "f-caps" : ""} ${variantClass} ${className}`} data-block data-keep>
+    <h2 className={`f-heading ${caps ? "f-caps" : ""} ${variantClass} ${icon ? "f-heading-icon" : ""} ${className}`} data-block data-keep>
+      {icon && <SectionIcon id={icon} />}
       {children}
     </h2>
   );
 }
 
 // A section: the same gap above every heading, the same gap between heading and content.
-//   heading - props for SectionHeading (variant, caps)
-export function Section({ title, heading, children }) {
+//   heading - props for SectionHeading (variant, caps, icon)
+//   card    - draw the section as a softly tinted card (its tint is cut at page breaks)
+//   bodyClassName - classes for the content wrapper (e.g. f-indent)
+export function Section({ title, heading, card = false, bodyClassName = "", children }) {
   return (
-    <section className="f-section">
+    <section className={`f-section ${card ? "f-card" : ""}`} {...(card && { "data-segmented": "", "data-seg-pad": 16 })}>
       <SectionHeading {...heading}>{title}</SectionHeading>
-      <div className="f-section-body">{children}</div>
+      <div className={`f-section-body ${bodyClassName}`}>{children}</div>
     </section>
   );
 }
@@ -140,6 +159,49 @@ export function ExperienceList({ jobs, orgInline = false }) {
   );
 }
 
+// Experience on a timeline: dates in the left column, a drawn dot on a vertical line, the job
+// to the right. Needs .f-tl-root on the page (the column widths). In the page source the title
+// comes first, then the dates (on the same line), then the company, so the text reads in order.
+export function TimelineList({ jobs }) {
+  return (
+    <div className="f-entries f-timeline" data-segmented>
+      {jobs.map((job) => (
+        <div key={job.key}>
+          <div className="f-tl-head" data-block data-keep={job.bullets.length > 0 || Boolean(job.subtitle)}>
+            <p className="f-tl-main f-job-title">{job.role || job.company}</p>
+            {job.dates && <p className="f-tl-date f-meta f-date">{job.dates}</p>}
+            <span className="f-tl-dot" aria-hidden="true" data-seg-start />
+            {job.role && job.company && <p className="f-tl-org f-meta">{job.company}</p>}
+          </div>
+          <div className="f-tl-body">
+            {job.subtitle && (
+              <p className="f-subtitle" data-block data-keep={job.bullets.length > 0}>
+                {job.subtitle}
+              </p>
+            )}
+            <BulletList items={job.bullets} rich />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Education with the year in the timeline's date column (no dots or line)
+export function DatedEducationList({ entries }) {
+  return (
+    <div className="f-entries">
+      {entries.map((entry) => (
+        <div key={entry.key} className="f-tl-head" data-block>
+          <p className="f-tl-main f-job-title">{entry.degree || entry.school}</p>
+          {entry.year && <p className="f-tl-date f-meta f-date">{entry.year}</p>}
+          {entry.degree && entry.school && <p className="f-tl-org f-meta">{entry.school}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function EducationList({ entries, orgInline = false }) {
   return (
     <div className="f-entries">
@@ -199,33 +261,54 @@ export function SkillsList({ skills, display, defaultDisplay = "comma" }) {
   return <p data-block>{skills.join(", ")}</p>;
 }
 
-// Every section of the resume in the design's order (one or two columns), drawn with the
-// foundation pieces. Layouts add their own header and choose:
+// One section of the resume (or, for "additional", one section per extra heading), drawn with
+// the foundation pieces. Options (the same for every section of a layout):
 //   heading       - SectionHeading props, e.g. { variant: "underline" }
+//   icons         - draw each section's icon in its heading
+//   card          - draw each section as a tinted card
 //   orgInline     - "Role, Company" on one line instead of the company below
 //   defaultSkills - the skills style when the design doesn't choose one
-export function FoundationSections({ data, heading, orgInline = false, defaultSkills = "comma" }) {
-  const body = {
+//   bodies        - replacement bodies by section id, e.g. { experience: (data) => <TimelineList ... /> }
+//   bodyClassName - classes for the standard bodies (not the replacements)
+export function FoundationSection({ data, section, options = {} }) {
+  const { heading, icons = false, card = false, orgInline = false, defaultSkills = "comma", bodies = {}, bodyClassName = "" } = options;
+  const standard = {
     summary: () => <RichText html={data.summary} data-block />,
     experience: () => <ExperienceList jobs={data.experience} orgInline={orgInline} />,
     education: () => <EducationList entries={data.education} orgInline={orgInline} />,
     skills: () => <SkillsList skills={data.skills} display={data.skillsDisplay} defaultDisplay={defaultSkills} />,
     projects: () => <ProjectList projects={data.projects} />,
   };
+  const headingFor = (id) => ({ ...heading, icon: icons ? id : undefined });
 
-  const render = (section) =>
-    section.id === "additional" ? (
-      // Each additional section (Certifications, Languages...) has its own heading
-      data.additional.map((extra) => (
-        <Section key={`${section.key}-${extra.key}`} title={extra.heading} heading={heading}>
-          <BulletList items={extra.items} />
-        </Section>
-      ))
-    ) : (
-      <Section key={section.key} title={section.title} heading={heading}>
-        {body[section.id]()}
+  if (section.id === "additional") {
+    // Each additional section (Certifications, Languages...) has its own heading
+    return data.additional.map((extra) => (
+      <Section key={extra.key} title={extra.heading} heading={headingFor("additional")} card={card} bodyClassName={bodyClassName}>
+        <BulletList items={extra.items} />
       </Section>
-    );
+    ));
+  }
+  const replacement = bodies[section.id];
+  return (
+    <Section title={section.title} heading={headingFor(section.id)} card={card} bodyClassName={replacement ? "" : bodyClassName}>
+      {replacement ? replacement(data) : standard[section.id]()}
+    </Section>
+  );
+}
 
-  return <SectionColumns data={data} render={render} />;
+// A list of sections, in order (e.g. one column of a custom two-column layout)
+export function FoundationSectionList({ data, sections, options }) {
+  return sections.map((section) => <FoundationSection key={section.key} data={data} section={section} options={options} />);
+}
+
+// Every section of the resume in the design's order, in one column or two (SectionColumns).
+// Layouts add their own header; options as for FoundationSection.
+export function FoundationSections({ data, ...options }) {
+  return (
+    <SectionColumns
+      data={data}
+      render={(section) => <FoundationSection key={section.key} data={data} section={section} options={options} />}
+    />
+  );
 }

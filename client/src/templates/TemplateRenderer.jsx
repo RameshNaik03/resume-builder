@@ -8,9 +8,11 @@ import ModernLineLayout from "./layouts/ModernLineLayout";
 import SoftHeaderLayout from "./layouts/SoftHeaderLayout";
 import CompactProLayout from "./layouts/CompactProLayout";
 import ElegantSerifLayout from "./layouts/ElegantSerifLayout";
-import ModernHeaderLayout from "./layouts/ModernHeaderLayout";
-import SidebarLayout from "./layouts/SidebarLayout";
-import TimelineLayout from "./layouts/TimelineLayout";
+import SidebarProLayout from "./layouts/SidebarProLayout";
+import BoldHeaderLayout from "./layouts/BoldHeaderLayout";
+import SplitAccentLayout from "./layouts/SplitAccentLayout";
+import CardSectionsLayout from "./layouts/CardSectionsLayout";
+import TimelinePlusLayout from "./layouts/TimelinePlusLayout";
 import ExecutiveLayout from "./layouts/ExecutiveLayout";
 import CreativeLayout from "./layouts/CreativeLayout";
 import SplitModernLayout from "./layouts/SplitModernLayout";
@@ -22,9 +24,11 @@ const LAYOUT_COMPONENTS = {
   "soft-header": SoftHeaderLayout,
   "compact-pro": CompactProLayout,
   "elegant-serif": ElegantSerifLayout,
-  "modern-header": ModernHeaderLayout,
-  sidebar: SidebarLayout,
-  timeline: TimelineLayout,
+  "sidebar-pro": SidebarProLayout,
+  "bold-header": BoldHeaderLayout,
+  "split-accent": SplitAccentLayout,
+  "card-sections": CardSectionsLayout,
+  "timeline-plus": TimelinePlusLayout,
   executive: ExecutiveLayout,
   creative: CreativeLayout,
   "split-modern": SplitModernLayout,

@@ -188,6 +188,123 @@
     min-width: 0;
   }
 
+  /* ---------- Coloured areas and full pages ---------- */
+  /* Text on the accent colour (a header block, a sidebar): the text, heading, rule and tag
+     colours switch to the accent's contrast colour, faded with semi-transparent colours */
+  .f-on-accent {
+    --text: var(--on-accent);
+    --muted: color-mix(in srgb, var(--on-accent) 80%, transparent);
+    --heading: var(--on-accent);
+    --name-color: var(--on-accent);
+    --line: color-mix(in srgb, var(--on-accent) 35%, transparent);
+    --soft: color-mix(in srgb, var(--on-accent) 14%, transparent);
+    --marker-color: color-mix(in srgb, var(--on-accent) 70%, transparent);
+    color: var(--text);
+  }
+  /* A page root that fills every page, for backgrounds drawn down the whole sheet
+     (--sheet-height is set by ResumeSheet; printing makes the sheet 1mm shorter) */
+  .f-page-fill {
+    min-height: var(--sheet-height, 297mm);
+  }
+  @media print {
+    .f-page-fill {
+      min-height: calc(var(--sheet-height, 297mm) - 1mm);
+    }
+  }
+
+  /* Contact details one per line (narrow columns) */
+  .f-contact-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4pt;
+    font-size: var(--f-meta);
+    color: var(--muted);
+    overflow-wrap: anywhere;
+  }
+  .f-contact-list a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  /* Heading with a small drawn icon before the text */
+  .f-heading-icon {
+    display: flex;
+    align-items: center;
+    gap: 8pt;
+  }
+  .f-icon {
+    flex: none;
+    width: 1.1em;
+    height: 1.1em;
+    color: var(--icon-color, var(--line));
+  }
+
+  /* ---------- Cards ----------
+     A softly tinted section. data-segmented (pagination.js) cuts the tint at page breaks. */
+  .f-card {
+    --seg-color: var(--soft);
+    background-image: var(--seg-image, linear-gradient(var(--soft), var(--soft)));
+    border-radius: 6pt;
+    padding: 16pt;
+  }
+
+  /* ---------- Timeline ----------
+     Dates in a left column, a drawn dot per entry on a vertical line, the entry to the right.
+     .f-tl-root (on the page) sets the date column's width and the dot column's width. The
+     line is the list's background (cut at page breaks by data-segmented), through the
+     centre of the dot column. .f-timeline-plain lists use the columns without dots or line. */
+  .f-tl-root {
+    --tl-date: 31mm;
+    --tl-rail: 24pt;
+  }
+  .f-timeline {
+    --seg-color: var(--line);
+    background-image: var(--seg-image, linear-gradient(var(--line), var(--line)));
+    background-repeat: no-repeat;
+    /* Unpaginated (thumbnails): the line starts at the first dot's centre; paginated, the
+       segments already do (pagination sets --seg-y and --seg-h) */
+    background-size: var(--divider-w, 0.75pt) var(--seg-h, calc(100% - var(--lh, 1.4) * var(--f-job) / 2));
+    background-position: calc(var(--tl-date) + var(--tl-rail) / 2 - var(--divider-w, 0.75pt) / 2)
+      var(--seg-y, calc(var(--lh, 1.4) * var(--f-job) / 2));
+  }
+  .f-tl-head {
+    display: grid;
+    grid-template-columns: var(--tl-date) var(--tl-rail) minmax(0, 1fr);
+    align-items: baseline;
+  }
+  .f-tl-main {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .f-tl-date {
+    grid-column: 1;
+    grid-row: 1;
+    text-align: right;
+  }
+  .f-tl-dot {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    justify-self: center;
+    width: 7pt;
+    height: 7pt;
+    margin-top: calc((var(--lh, 1.4) * var(--f-job) - 7pt) / 2);
+    border-radius: 50%;
+    background-color: var(--line);
+    box-shadow: 0 0 0 2pt var(--bg, #fff);
+  }
+  .f-tl-org {
+    grid-column: 3;
+    grid-row: 2;
+  }
+  .f-tl-body {
+    margin-left: calc(var(--tl-date) + var(--tl-rail));
+  }
+  /* Section bodies lined up with the timeline's text column */
+  .f-indent {
+    margin-left: calc(var(--tl-date) + var(--tl-rail));
+  }
+
   /* ---------- Skills ---------- */
   .f-tags {
     display: flex;

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import TemplateRenderer from "../templates/TemplateRenderer";
-import { applyGaps, paginate } from "../templates/pagination";
+import { applyDecorations, applyGaps, pageDecorations, paginate } from "../templates/pagination";
 import { getTemplate } from "../templates/registry";
 import { pageMetrics, resolveDesign, usedFontIds } from "../templates/design";
 import { loadFonts } from "../templates/fonts";
@@ -55,7 +55,13 @@ export default function ResumePreview({ resume, printRef, highlightPlaceholders 
   useLayoutEffect(() => {
     const { gaps, pageCount: pagesNeeded } = paginate(printRef.current, { heightPx, marginTopPx, marginBottomPx });
     applyGaps(printRef.current, gaps);
-    for (const page of pagesRef.current.querySelectorAll("[data-page]")) applyGaps(page, gaps);
+    // Page-aware decorations (column dividers, card tints...) are measured once the gaps are in
+    const decorations = pageDecorations(printRef.current, { heightPx, marginBottomPx });
+    applyDecorations(printRef.current, decorations);
+    for (const page of pagesRef.current.querySelectorAll("[data-page]")) {
+      applyGaps(page, gaps);
+      applyDecorations(page, decorations);
+    }
     if (pagesNeeded !== pageCount) setPageCount(pagesNeeded); // Re-runs once with the new page count
   }, [resume, pageCount, printRef, heightPx, marginTopPx, marginBottomPx, fontsLoaded]);
 

@@ -6,13 +6,15 @@ import usePageTitle from "../../hooks/usePageTitle";
 import galleryResume from "./galleryResume";
 
 // Development only (/dev/templates/:templateId): one template at full size, every page,
-// paginated exactly like the editor preview. ?photo=0 hides the sample photo;
+// paginated exactly like the editor preview. ?photo=0 hides the sample photo; ?long=1 uses a
+// longer sample;
 // ?design={...} applies Design tab overrides, e.g. ?design={"columns":2,"bulletStyle":"dash"}
 export default function DevTemplatePreview() {
   const { templateId } = useParams();
   const [searchParams] = useSearchParams();
   const withPhoto = searchParams.get("photo") !== "0";
   const designParam = searchParams.get("design");
+  const long = searchParams.get("long") === "1";
   const printRef = useRef(null);
   const template = TEMPLATES.find((candidate) => candidate.id === templateId);
   usePageTitle(`${template?.name ?? templateId} (dev)`);
@@ -24,8 +26,8 @@ export default function DevTemplatePreview() {
     } catch {
       // Ignore a malformed ?design= and show the template defaults
     }
-    return { ...galleryResume(templateId, withPhoto), design };
-  }, [templateId, withPhoto, designParam]);
+    return { ...galleryResume(templateId, withPhoto, long), design };
+  }, [templateId, withPhoto, long, designParam]);
 
   if (!template) {
     return (

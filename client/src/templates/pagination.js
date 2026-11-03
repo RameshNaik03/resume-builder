@@ -10,14 +10,17 @@
 //   3. Any block that would cross the bottom of a page gets extra top padding (a "gap")
 //      that moves it to the top of the next page.
 //   4. applyGaps() adds the same padding to the printed sheet and to every visible page.
+//   5. pageDecorations() then measures the paginated sheet for decorations that must respect
+//      page breaks, and applyDecorations() copies them to every visible page (see below).
 // Page height and margins come from the resume's design (see pageMetrics in design.js).
 
-// Removes gaps from earlier runs, so we measure the natural layout
+// Removes gaps and decorations from earlier runs, so we measure the natural layout
 function clearGaps(container) {
   for (const el of container.querySelectorAll("[data-block]")) {
     el.style.paddingTop = "";
     el.style.removeProperty("--gap");
   }
+  applyDecorations(container, { fills: [], segments: [] });
 }
 
 // gaps[i] is the extra space (px) before the i-th [data-block] element
@@ -98,4 +101,87 @@ export function paginate(sheet, { heightPx: PAGE_HEIGHT, marginTopPx: MARGIN_TOP
 
   const pageCount = Math.max(1, Math.floor(lowestBottom / PAGE_HEIGHT) + 1);
   return { gaps, pageCount };
+}
+
+// ---------- Decorations that respect page breaks ----------
+//
+// data-fill-page: an element (e.g. the side column of two columns, which carries the column
+//   divider) that grows to the bottom margin of the last page its own content reaches, and
+//   no further, so its divider never runs on past the content into an empty next page.
+//   It must not stretch by itself (use align-self: start in a grid).
+//
+// data-segmented: an element whose background (a card's tint, a timeline's line) would
+//   otherwise run straight through the page margins at a page break. Per page, its
+//   background is drawn from its first block's top to its last block's bottom on that page,
+//   plus data-seg-pad points of padding. The result is set as the --seg-image variable (a
+//   vertical gradient in var(--seg-color)); the element's CSS uses it as its background
+//   image, falling back to a solid background when it isn't paginated (thumbnails).
+//   An element inside marked data-seg-start (e.g. a timeline's first dot) makes the first
+//   segment start at its vertical centre. With a background image set, --seg-y / --seg-h are
+//   set to 0 / 100% so the element's CSS can position its unpaginated fallback differently.
+
+const PT_TO_PX = 96 / 72;
+
+// Measures the decorations on a sheet whose gaps are already applied
+export function pageDecorations(sheet, { heightPx: PAGE_HEIGHT, marginBottomPx: MARGIN_BOTTOM }) {
+  applyDecorations(sheet, { fills: [], segments: [] });
+  const sheetTop = sheet.getBoundingClientRect().top;
+  const pageOf = (y) => Math.floor(y / PAGE_HEIGHT);
+
+  const fills = [...sheet.querySelectorAll("[data-fill-page]")].map((el) => {
+    const rect = el.getBoundingClientRect();
+    const top = rect.top - sheetTop;
+    const lastPage = pageOf(rect.bottom - sheetTop - 1);
+    return Math.max(0, (lastPage + 1) * PAGE_HEIGHT - MARGIN_BOTTOM - top);
+  });
+
+  const segments = [...sheet.querySelectorAll("[data-segmented]")].map((el) => {
+    const rect = el.getBoundingClientRect();
+    const top = rect.top - sheetTop;
+    const bottom = rect.bottom - sheetTop;
+    const pad = Number(el.dataset.segPad ?? 0) * PT_TO_PX;
+
+    // The top (below any gap padding) and bottom of each block inside, grouped by page
+    const pages = new Map();
+    for (const block of el.querySelectorAll("[data-block]")) {
+      const blockRect = block.getBoundingClientRect();
+      const blockTop = blockRect.top - sheetTop + (parseFloat(block.style.paddingTop) || 0);
+      const blockBottom = blockRect.bottom - sheetTop;
+      const page = pageOf(blockTop);
+      const range = pages.get(page) ?? { start: Infinity, end: -Infinity };
+      pages.set(page, { start: Math.min(range.start, blockTop), end: Math.max(range.end, blockBottom) });
+    }
+    const startMark = el.querySelector("[data-seg-start]");
+    // Entirely on one page (and no start mark), the element's own background is already right.
+    // An element whose blocks all moved to the next page still starts on the page before, so
+    // it needs a segment too (otherwise an empty tinted stub is left behind).
+    const onePage = pages.size === 1 && pageOf(top) === pageOf(bottom - 1);
+    if (pages.size === 0 || (onePage && !startMark)) return "";
+
+    const ranges = [...pages.values()].map(({ start, end }) => [Math.max(top, start - pad) - top, Math.min(bottom, end + pad) - top]);
+    if (startMark) {
+      const markRect = startMark.getBoundingClientRect();
+      ranges[0][0] = Math.max(ranges[0][0], (markRect.top + markRect.bottom) / 2 - sheetTop - top);
+    }
+    const stops = ranges.flatMap(([start, end], index) => {
+      const previousEnd = index === 0 ? 0 : ranges[index - 1][1];
+      return [`transparent ${previousEnd}px ${start}px`, `var(--seg-color) ${start}px ${end}px`];
+    });
+    return `linear-gradient(to bottom, ${stops.join(", ")}, transparent ${ranges.at(-1)[1]}px)`;
+  });
+
+  return { fills, segments };
+}
+
+// Applies measured decorations (in the same order) to the sheet or a visible page copy
+export function applyDecorations(container, { fills, segments }) {
+  container.querySelectorAll("[data-fill-page]").forEach((el, index) => {
+    el.style.minHeight = fills[index] ? `${fills[index]}px` : "";
+  });
+  container.querySelectorAll("[data-segmented]").forEach((el, index) => {
+    for (const [name, value] of [["--seg-image", segments[index]], ["--seg-y", "0px"], ["--seg-h", "100%"]]) {
+      if (segments[index]) el.style.setProperty(name, value);
+      else el.style.removeProperty(name);
+    }
+  });
 }

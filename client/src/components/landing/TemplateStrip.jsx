@@ -12,15 +12,17 @@ const SCALE = THUMB_WIDTH_PX / A4_WIDTH_PX;
 // One of each layout, in a mix of colours (missing ids are skipped if the registry changes)
 const FEATURED_IDS = [
   "classic-navy",
-  "modern-header-plum",
+  "bold-header-burgundy",
   "executive-burgundy",
   "modern-line-slate-blue",
-  "sidebar-teal",
+  "sidebar-pro-teal",
+  "split-accent-navy",
+  "card-sections-forest",
   "elegant-serif-forest",
   "creative-rose",
   "soft-header-teal",
   "compact-pro-graphite",
-  "timeline-sunset",
+  "timeline-plus-graphite",
   "split-modern-emerald",
 ];
 const FEATURED = FEATURED_IDS.map((id) => TEMPLATES.find((template) => template.id === id)).filter(Boolean);

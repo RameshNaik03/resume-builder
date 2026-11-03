@@ -218,6 +218,8 @@ export function WithPhoto({ photo, align, defaultBorderColor, children }) {
 // (side column first, at the design's width ratio) when the design asks for them.
 //   render(section, column) - draws one section; column is "main", "side" or "all" (spans both)
 // data-column tells pagination which column a block is in, so each one breaks independently.
+// The column divider is drawn by the side column (data-fill-page: it reaches the bottom of the
+// last page its content is on, never an empty page after it, see templates/pagination.js).
 export function SectionColumns({ data, render }) {
   const { twoColumns, lead, main, side } = splitSections(data);
   if (!twoColumns) return main.map((section) => render(section, "main"));
@@ -225,11 +227,11 @@ export function SectionColumns({ data, render }) {
   return (
     <>
       {lead && <div data-column="all">{render(lead, "all")}</div>}
-      <div className="grid gap-x-[6mm]" style={{ gridTemplateColumns: `${data.sideRatio}fr ${100 - data.sideRatio}fr` }}>
-        <div className="min-w-0" data-column="side">
+      <div className="grid" style={{ gridTemplateColumns: `${data.sideRatio}fr ${100 - data.sideRatio}fr` }}>
+        <div className="divider-r min-w-0 self-start pr-[6mm]" data-column="side" data-fill-page>
           {side.map((section) => render(section, "side"))}
         </div>
-        <div className="divider-l min-w-0 pl-[6mm]" data-column="main">
+        <div className="min-w-0 pl-[6mm]" data-column="main">
           {main.map((section) => render(section, "main"))}
         </div>
       </div>

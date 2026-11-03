@@ -103,10 +103,47 @@ const GALLERY_RESUME = {
   design: {},
 };
 
+// Extra content for ?long=1: two more jobs and more skills, so every layout reaches a second
+// page and two-column layouts get a long side column
+const LONG_EXTRAS = {
+  experience: [
+    {
+      _id: "gallery-exp-4",
+      role: "Junior Web Developer",
+      company: "Pixel & Co",
+      startDate: "Jan 2016",
+      endDate: "Jun 2017",
+      bullets: [
+        "Maintained WordPress and Shopify sites for 15 retail clients",
+        "Introduced a shared Sass toolkit that halved the time to build a new client theme",
+      ],
+    },
+    {
+      _id: "gallery-exp-5",
+      role: "IT Support Intern",
+      company: "Chennai Software Park",
+      startDate: "May 2014",
+      endDate: "Dec 2015",
+      bullets: ["Supported 120 staff across Windows and macOS", "Wrote internal guides that cut repeat tickets by 30%"],
+    },
+  ],
+  skills: ["Storybook", "Cypress", "Figma", "Webpack", "Vite", "AWS", "Docker", "CI/CD", "Design Systems", "Mentoring"],
+  additional: [{ _id: "gallery-add-3", heading: "Awards", items: ["Ledgerly Engineering Excellence Award (2023)", "Hackathon winner, SF DevFest (2019)"] }],
+};
+
 // The gallery resume for one template, with or without the photo
-export default function galleryResume(templateId, withPhoto = true) {
+//   long - add LONG_EXTRAS
+export default function galleryResume(templateId, withPhoto = true, long = false) {
+  const base = long
+    ? {
+        ...GALLERY_RESUME,
+        experience: [...GALLERY_RESUME.experience, ...LONG_EXTRAS.experience],
+        skills: [...GALLERY_RESUME.skills, ...LONG_EXTRAS.skills],
+        additional: [...GALLERY_RESUME.additional, ...LONG_EXTRAS.additional],
+      }
+    : GALLERY_RESUME;
   return {
-    ...GALLERY_RESUME,
+    ...base,
     template: templateId,
     personalInfo: { ...GALLERY_RESUME.personalInfo, photoUrl: withPhoto ? PHOTO_URL : "" },
   };

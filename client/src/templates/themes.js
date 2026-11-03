@@ -18,78 +18,10 @@ export const FONTS = { SANS, HUMANIST, SERIF };
 //   spacing      - default multiplier for vertical gaps (1 = normal, 0.9 = tighter, 1.1 = roomier)
 // These are only defaults: a resume's design settings can override fonts, colours and spacing.
 
-// Richer themes for the Advanced tier. Two extra colours for layouts with coloured areas:
+// Premium themes (Creative, Split Modern) also have:
 //   soft     - a light tint of the accent (backgrounds, chips)
 //   onAccent - text colour used on top of the accent colour
-export const ADVANCED_THEMES = [
-  {
-    id: "ocean",
-    name: "Ocean",
-    accent: "#0c4a6e",
-    soft: "#e0f2fe",
-    onAccent: "#ffffff",
-    text: "#0f172a",
-    muted: "#475569",
-    line: "#cbd5e1",
-    fontFamily: SANS,
-    headingStyle: "caps",
-    spacing: 1,
-  },
-  {
-    id: "plum",
-    name: "Plum",
-    accent: "#5b2163",
-    soft: "#f6ecf5",
-    onAccent: "#ffffff",
-    text: "#1f1724",
-    muted: "#5f5466",
-    line: "#ddd3df",
-    fontFamily: SERIF,
-    headingStyle: "title",
-    spacing: 1,
-  },
-  {
-    id: "teal",
-    name: "Teal",
-    accent: "#0f766e",
-    soft: "#e6f4f1",
-    onAccent: "#ffffff",
-    text: "#132522",
-    muted: "#4b5f5b",
-    line: "#cfe0dc",
-    fontFamily: HUMANIST,
-    headingStyle: "caps",
-    spacing: 1,
-  },
-  {
-    id: "sunset",
-    name: "Sunset",
-    accent: "#c2410c",
-    soft: "#fff1e8",
-    onAccent: "#ffffff",
-    text: "#1c1917",
-    muted: "#57534e",
-    line: "#e7d8cf",
-    fontFamily: SANS,
-    headingStyle: "title",
-    spacing: 1,
-  },
-  {
-    id: "graphite",
-    name: "Graphite",
-    accent: "#374151",
-    soft: "#f3f4f6",
-    onAccent: "#ffffff",
-    text: "#111827",
-    muted: "#6b7280",
-    line: "#d1d5db",
-    fontFamily: HUMANIST,
-    headingStyle: "caps",
-    spacing: 0.95,
-  },
-];
-
-// Premium themes add two more options for decorative layouts:
+// and two more options for decorative layouts:
 //   deep     - a dark colour for bands and shapes
 //   gradient - a CSS gradient for shapes and highlights
 export const PREMIUM_THEMES = [

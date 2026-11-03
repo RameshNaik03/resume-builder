@@ -1,4 +1,4 @@
-import { ADVANCED_THEMES, PREMIUM_THEMES } from "./themes";
+import { PREMIUM_THEMES } from "./themes";
 import { FOUNDATION_THEMES, checkLayoutDefaults } from "./foundation/tokens";
 
 // The three tiers shown as tabs in the template picker
@@ -8,7 +8,7 @@ export const TIERS = [
     id: "advanced",
     name: "Advanced",
     description:
-      "Bolder designs with colour and two-column layouts. Templates without the ATS-friendly badge look great but can be harder for applicant tracking systems to read.",
+      "More designed layouts with colour blocks, icons, cards and a timeline. Sidebar Pro and Timeline Plus look great but can be harder for applicant tracking systems to read.",
   },
   {
     id: "premium",
@@ -139,28 +139,76 @@ const TIER_CONFIG = [
     tier: "advanced",
     atsFriendly: true,
     layouts: [
-      { id: "modern-header", name: "Modern Header", fullBleed: true, defaults: layoutDefaults({ margins: [13, 16, 14, 16] }) },
-      // Two columns
+      // Full-height accent sidebar (photo, contact, skills, languages) beside a white main
+      // column. Two columns, so not ATS-friendly (the text still reads in order).
       {
-        id: "sidebar",
-        name: "Sidebar",
+        id: "sidebar-pro",
+        name: "Sidebar Pro",
         fullBleed: true,
         atsFriendly: false,
-        defaults: layoutDefaults({
-          baseFontSize: 9.5,
-          margins: [14, 10, 14, 8],
+        defaults: foundationDefaults("sidebar-pro", {
           dividerStyle: "line",
-          sectionOrder: SIDE_FIRST_ORDER,
+          fontFamily: "lato",
+          accentOn: "rules",
+          margins: [16, 16, 16, 16],
           sectionTitles: { summary: "Profile" },
           columns: 2,
-          sideRatio: 30,
+          sideSections: ["skills", "additional"],
+          sideRatio: 35,
           photoSize: 34,
           photoPosition: "sidebar", // At the top of the coloured column
         }),
       },
-      { id: "timeline", name: "Timeline", atsFriendly: false, defaults: layoutDefaults() }, // Graphic timeline
+      // Full-width accent header block with white text
+      {
+        id: "bold-header",
+        name: "Bold Header",
+        fullBleed: true,
+        defaults: foundationDefaults("bold-header", {
+          dividerStyle: "line",
+          fontFamily: "inter",
+          accentOn: "name",
+          margins: [16, 18, 16, 18],
+        }),
+      },
+      // Slim accent strip down the left edge, drawn icons in the headings
+      {
+        id: "split-accent",
+        name: "Split Accent",
+        fullBleed: true,
+        defaults: foundationDefaults("split-accent", {
+          dividerStyle: "line",
+          fontFamily: "ibm-plex-sans",
+          accentOn: "rules",
+          margins: [16, 18, 16, 18],
+        }),
+      },
+      // Each section in a softly tinted rounded card
+      {
+        id: "card-sections",
+        name: "Card Sections",
+        defaults: foundationDefaults("card-sections", {
+          dividerStyle: "line",
+          fontFamily: "source-sans-3",
+          accentOn: "headings",
+          margins: [16, 16, 16, 16],
+        }),
+      },
+      // Experience on a timeline with dates in a left column. The date column reads as a
+      // separate column to some ATS, so it's not marked ATS-friendly (the text reads in order).
+      {
+        id: "timeline-plus",
+        name: "Timeline Plus",
+        atsFriendly: false,
+        defaults: foundationDefaults("timeline-plus", {
+          dividerStyle: "line",
+          fontFamily: "source-sans-3",
+          accentOn: "rules",
+          margins: [16, 18, 16, 18],
+        }),
+      },
     ],
-    themes: ADVANCED_THEMES,
+    themes: FOUNDATION_THEMES,
   },
   {
     tier: "premium",
@@ -258,9 +306,19 @@ const RETIRED_BASIC_IDS = Object.fromEntries(
   )
 );
 
+// Old Advanced layouts and themes -> the closest new ones
+const RETIRED_ADVANCED_LAYOUTS = { "modern-header": "bold-header", sidebar: "sidebar-pro", timeline: "timeline-plus" };
+const RETIRED_ADVANCED_THEMES = { ocean: "navy", plum: "burgundy", teal: "teal", sunset: "burgundy", graphite: "graphite" };
+const RETIRED_ADVANCED_IDS = Object.fromEntries(
+  Object.entries(RETIRED_ADVANCED_LAYOUTS).flatMap(([oldLayout, newLayout]) =>
+    Object.entries(RETIRED_ADVANCED_THEMES).map(([oldTheme, newTheme]) => [`${oldLayout}-${oldTheme}`, `${newLayout}-${newTheme}`])
+  )
+);
+
 const LEGACY_IDS = {
   classic: "classic-navy",
   ...RETIRED_BASIC_IDS,
+  ...RETIRED_ADVANCED_IDS,
   // Executive moved to the foundation palettes
   "executive-royal-gold": "executive-navy",
   "executive-emerald": "executive-forest",
