@@ -9,7 +9,7 @@ const SERIF = 'Georgia, "Times New Roman", Times, serif';
 // Exported so a layout can use a specific font for parts of the page (e.g. serif headings)
 export const FONTS = { SANS, HUMANIST, SERIF };
 
-// Each theme:
+// Every theme has (the Basic tier uses the foundation palettes, see foundation/tokens.js):
 //   accent       - the one highlight colour (headings, name, rules)
 //   text / muted - main and secondary text colours
 //   line         - thin divider lines
@@ -17,63 +17,6 @@ export const FONTS = { SANS, HUMANIST, SERIF };
 //   headingStyle - "caps" (small uppercase headings) or "title" (larger normal-case headings)
 //   spacing      - default multiplier for vertical gaps (1 = normal, 0.9 = tighter, 1.1 = roomier)
 // These are only defaults: a resume's design settings can override fonts, colours and spacing.
-export const THEMES = [
-  {
-    id: "navy",
-    name: "Navy",
-    accent: "#1e3a8a",
-    text: "#1e293b",
-    muted: "#475569",
-    line: "#cbd5e1",
-    fontFamily: SANS,
-    headingStyle: "caps",
-    spacing: 1,
-  },
-  {
-    id: "charcoal",
-    name: "Charcoal",
-    accent: "#262626",
-    text: "#171717",
-    muted: "#525252",
-    line: "#d4d4d4",
-    fontFamily: HUMANIST,
-    headingStyle: "title",
-    spacing: 1,
-  },
-  {
-    id: "forest",
-    name: "Forest",
-    accent: "#166534",
-    text: "#1f2937",
-    muted: "#4b5563",
-    line: "#d1d5db",
-    fontFamily: SERIF,
-    headingStyle: "title",
-    spacing: 1.1,
-  },
-  {
-    id: "burgundy",
-    name: "Burgundy",
-    accent: "#881337",
-    text: "#1c1917",
-    muted: "#57534e",
-    line: "#d6d3d1",
-    fontFamily: SERIF,
-    headingStyle: "caps",
-    spacing: 1,
-  },
-  {
-    id: "slate",
-    name: "Slate",
-    accent: "#334155",
-    text: "#0f172a",
-    muted: "#64748b",
-    line: "#e2e8f0",
-    fontFamily: SANS,
-    headingStyle: "caps",
-    spacing: 0.9,
-  },
-];
 
 // Richer themes for the Advanced tier. Two extra colours for layouts with coloured areas:
 //   soft     - a light tint of the accent (backgrounds, chips)

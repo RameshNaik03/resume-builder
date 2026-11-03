@@ -95,6 +95,27 @@
     border-top-width: calc(var(--divider-w, 0.75pt) * var(--rule-end, 1));
   }
 
+  /* Heading with a solid bar on its left in the divider colour (the accent when the layout
+     puts its accent on rules); the design's divider style "none" removes the bar */
+  .f-heading-bar {
+    border-left: calc(3pt * var(--divider-on, 1)) solid var(--line);
+    padding-left: calc(8pt * var(--divider-on, 1));
+  }
+  /* Heading with a short rule under it, aligned like the header. The rule is part of the
+     heading, so it takes the heading colour. */
+  .f-heading-short {
+    text-align: var(--header-align, left);
+  }
+  .f-heading-short::after {
+    content: "";
+    display: block;
+    width: 24pt;
+    margin-top: 4pt;
+    margin-left: var(--header-ml, 0);
+    margin-right: var(--header-mr, auto);
+    border-top: var(--divider-w, 0.75pt) var(--divider-style, solid) var(--heading);
+  }
+
   /* ---------- Entries (jobs, schools, projects) ---------- */
   .f-entries {
     display: flex;

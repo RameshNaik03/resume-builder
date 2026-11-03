@@ -1,4 +1,4 @@
-import { ADVANCED_THEMES, PREMIUM_THEMES, THEMES } from "./themes";
+import { ADVANCED_THEMES, PREMIUM_THEMES } from "./themes";
 import { FOUNDATION_THEMES, checkLayoutDefaults } from "./foundation/tokens";
 
 // The three tiers shown as tabs in the template picker
@@ -69,10 +69,10 @@ const TIER_CONFIG = [
     tier: "basic",
     atsFriendly: true,
     layouts: [
+      // Centred header, accent headings with a hairline underneath
       {
         id: "classic",
         name: "Classic",
-        themes: FOUNDATION_THEMES,
         defaults: foundationDefaults("classic", {
           dividerStyle: "line",
           headerAlign: "center",
@@ -81,14 +81,59 @@ const TIER_CONFIG = [
           margins: [16, 18, 16, 18],
         }),
       },
-      { id: "minimal", name: "Minimal", defaults: layoutDefaults({ lineHeight: 1.45 }) },
+      // Left-aligned header, an accent bar beside each heading
       {
-        id: "compact",
-        name: "Compact",
-        defaults: layoutDefaults({ baseFontSize: 9.5, lineHeight: 1.35, dividerStyle: "line", photoSize: 22 }),
+        id: "modern-line",
+        name: "Modern Line",
+        defaults: foundationDefaults("modern-line", {
+          dividerStyle: "line",
+          fontFamily: "ibm-plex-sans",
+          accentOn: "rules",
+          margins: [16, 18, 16, 18],
+        }),
+      },
+      // Pale tinted band behind the name and contact details
+      {
+        id: "soft-header",
+        name: "Soft Header",
+        fullBleed: true,
+        defaults: foundationDefaults("soft-header", {
+          dividerStyle: "line",
+          fontFamily: "lato",
+          accentOn: "name",
+          margins: [16, 18, 16, 18],
+        }),
+      },
+      // Dense but readable, for long experience
+      {
+        id: "compact-pro",
+        name: "Compact Pro",
+        defaults: foundationDefaults("compact-pro", {
+          baseFontSize: 9.5,
+          lineHeight: 1.35,
+          dividerStyle: "line",
+          fontFamily: "source-sans-3",
+          accentOn: "rules",
+          margins: [14, 15, 14, 15],
+          photoSize: 22,
+        }),
+      },
+      // Serif headings, centred header, generous spacing
+      {
+        id: "elegant-serif",
+        name: "Elegant Serif",
+        defaults: foundationDefaults("elegant-serif", {
+          lineHeight: 1.45,
+          dividerStyle: "line",
+          headerAlign: "center",
+          fontFamily: "source-sans-3",
+          headingFontFamily: "playfair-display",
+          accentOn: "headings",
+          margins: [18, 18, 18, 18],
+        }),
       },
     ],
-    themes: THEMES,
+    themes: FOUNDATION_THEMES,
   },
   {
     tier: "advanced",
@@ -204,11 +249,19 @@ export const LAYOUTS = TIER_CONFIG.flatMap(({ tier, layouts }) =>
 export const DEFAULT_TEMPLATE_ID = "classic-navy";
 
 // Template ids saved by older versions of the app
+// Old Basic layouts -> the closest new one, and old Basic themes -> the closest foundation palette
+const RETIRED_BASIC_LAYOUTS = { classic: "classic", minimal: "modern-line", compact: "compact-pro" };
+const RETIRED_BASIC_THEMES = { navy: "navy", charcoal: "graphite", forest: "forest", burgundy: "burgundy", slate: "slate-blue" };
+const RETIRED_BASIC_IDS = Object.fromEntries(
+  Object.entries(RETIRED_BASIC_LAYOUTS).flatMap(([oldLayout, newLayout]) =>
+    Object.entries(RETIRED_BASIC_THEMES).map(([oldTheme, newTheme]) => [`${oldLayout}-${oldTheme}`, `${newLayout}-${newTheme}`])
+  )
+);
+
 const LEGACY_IDS = {
   classic: "classic-navy",
-  // Classic and Executive moved to the foundation palettes
-  "classic-charcoal": "classic-graphite",
-  "classic-slate": "classic-slate-blue",
+  ...RETIRED_BASIC_IDS,
+  // Executive moved to the foundation palettes
   "executive-royal-gold": "executive-navy",
   "executive-emerald": "executive-forest",
   "executive-midnight": "executive-navy",

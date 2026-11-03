@@ -10,7 +10,7 @@
 //   --para-space / --section-space   spacing multipliers (see itemGap / sectionGap in themes.js)
 //   --bullet-space                   bullet gaps, relative to the template default
 //   --m-top / --m-right / ...        page margins
-//   --divider-w / -style / -pad      divider lines (divider-b, divider-l, divider-rule utilities)
+//   --divider-w / -style / -pad / -on  divider lines (divider-b, divider-l, divider-rule utilities)
 //   --bullet / --header-align        bullet marker and header alignment
 //   --bm-w / -h / -r / -clip / -indent  drawn bullet marker (foundation layouts)
 //   --base-size                      body text size (foundation layouts)
@@ -319,6 +319,7 @@ export function designCssVars(template, { resolved: d, overrides }) {
     "--divider-w": divider.width,
     "--divider-style": divider.style,
     "--divider-pad": divider.pad,
+    "--divider-on": d.dividerStyle === "none" ? 0 : 1,
     "--bullet": BULLET_STYLES[d.bulletStyle].css,
     "--bm-w": marker.w,
     "--bm-h": marker.h,

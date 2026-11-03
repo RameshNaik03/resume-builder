@@ -4,7 +4,7 @@ import { SAMPLE_RESUME } from "../../templates/sampleResume";
 import usePrefersReducedMotion from "../../hooks/usePrefersReducedMotion";
 import ResumeSheet from "../ResumeSheet";
 
-const TEMPLATE_ID = "minimal-burgundy";
+const TEMPLATE_ID = "modern-line-burgundy";
 const A4_WIDTH_PX = 794; // 210mm at 96 DPI
 const A4_HEIGHT_PX = 1123; // 297mm
 

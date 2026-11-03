@@ -30,7 +30,8 @@ export const SERIF_HEADING_FONTS = ["source-serif-4", "merriweather", "playfair-
 
 // ---------- Spacing ----------
 
-// The only gaps a layout may use (pt)
+// The only gaps a layout may use (pt). A rhythm gap may also be 0 (none), e.g. between the
+// bullets of a dense layout.
 export const SPACE = [4, 8, 12, 16, 24, 32];
 
 // Default vertical rhythm, the same in every section:
@@ -89,7 +90,7 @@ function checkRange(label, value, { min, max }) {
 }
 
 function checkSpace(label, value) {
-  if (!SPACE.includes(value)) report(`${label} must be one of ${SPACE.join(", ")}pt, got ${value}`);
+  if (value !== 0 && !SPACE.includes(value)) report(`${label} must be one of ${SPACE.join(", ")}pt, got ${value}`);
 }
 
 // Checks a foundation layout's registry defaults (see registry.js)

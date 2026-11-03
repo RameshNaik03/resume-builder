@@ -4,8 +4,10 @@ import prepareResume from "./prepareResume";
 import { designCssVars, resolveDesign, usedFontIds } from "./design";
 import { loadFonts } from "./fonts";
 import ClassicLayout from "./layouts/ClassicLayout";
-import MinimalLayout from "./layouts/MinimalLayout";
-import CompactLayout from "./layouts/CompactLayout";
+import ModernLineLayout from "./layouts/ModernLineLayout";
+import SoftHeaderLayout from "./layouts/SoftHeaderLayout";
+import CompactProLayout from "./layouts/CompactProLayout";
+import ElegantSerifLayout from "./layouts/ElegantSerifLayout";
 import ModernHeaderLayout from "./layouts/ModernHeaderLayout";
 import SidebarLayout from "./layouts/SidebarLayout";
 import TimelineLayout from "./layouts/TimelineLayout";
@@ -16,8 +18,10 @@ import SplitModernLayout from "./layouts/SplitModernLayout";
 // Maps a template's "layout" id to the component that draws it
 const LAYOUT_COMPONENTS = {
   classic: ClassicLayout,
-  minimal: MinimalLayout,
-  compact: CompactLayout,
+  "modern-line": ModernLineLayout,
+  "soft-header": SoftHeaderLayout,
+  "compact-pro": CompactProLayout,
+  "elegant-serif": ElegantSerifLayout,
   "modern-header": ModernHeaderLayout,
   sidebar: SidebarLayout,
   timeline: TimelineLayout,
