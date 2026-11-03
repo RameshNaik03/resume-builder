@@ -12,9 +12,12 @@
 //   --m-top / --m-right / ...        page margins
 //   --divider-w / -style / -pad      divider lines (divider-b, divider-l, divider-rule utilities)
 //   --bullet / --header-align        bullet marker and header alignment
+//   --bm-w / -h / -r / -clip / -indent  drawn bullet marker (foundation layouts)
+//   --base-size                      body text size (foundation layouts)
 // Section order, visibility, headings, columns, skills style and date format don't need CSS:
 // prepareResume() applies them to the data the layouts render.
-//   --accent, --text, --muted, --heading, --line, --bg, --soft, --deep, --gradient, --on-accent
+//   --accent, --text, --muted, --heading, --line, --bg, --soft, --deep, --gradient, --on-accent,
+//   --name-color (foundation layouts: the accent when the layout puts it on the name)
 
 export const MM_TO_PX = 96 / 25.4; // CSS pixels per millimetre
 
@@ -31,10 +34,13 @@ export const FONT_OPTIONS = [
   { id: "open-sans", name: "Open Sans", category: "Sans-serif", fallback: "Arial, sans-serif", google: "Open+Sans:ital,wght@0,400;0,600;0,700;0,800;1,400" },
   { id: "lato", name: "Lato", category: "Sans-serif", fallback: "Arial, sans-serif", google: "Lato:ital,wght@0,400;0,700;0,900;1,400" },
   { id: "source-sans-3", name: "Source Sans 3", category: "Sans-serif", fallback: "Arial, sans-serif", google: "Source+Sans+3:ital,wght@0,400;0,600;0,700;0,800;1,400" },
+  { id: "ibm-plex-sans", name: "IBM Plex Sans", category: "Sans-serif", fallback: "Arial, sans-serif", google: "IBM+Plex+Sans:ital,wght@0,400;0,600;0,700;1,400" },
   { id: "montserrat", name: "Montserrat", category: "Sans-serif", fallback: "Arial, sans-serif", google: "Montserrat:ital,wght@0,400;0,600;0,700;0,800;1,400" },
   { id: "merriweather", name: "Merriweather", category: "Serif", fallback: "Georgia, serif", google: "Merriweather:ital,wght@0,400;0,700;0,900;1,400" },
   { id: "lora", name: "Lora", category: "Serif", fallback: "Georgia, serif", google: "Lora:ital,wght@0,400;0,600;0,700;1,400" },
   { id: "playfair-display", name: "Playfair Display", category: "Serif", fallback: "Georgia, serif", google: "Playfair+Display:ital,wght@0,400;0,600;0,700;0,800;1,400" },
+  { id: "source-serif-4", name: "Source Serif 4", category: "Serif", fallback: "Georgia, serif", google: "Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400" },
+  { id: "fraunces", name: "Fraunces", category: "Serif", fallback: "Georgia, serif", google: "Fraunces:ital,wght@0,400;0,600;0,700;1,400" },
   { id: "eb-garamond", name: "EB Garamond", category: "Serif", fallback: "Garamond, Georgia, serif", google: "EB+Garamond:ital,wght@0,400;0,600;0,700;0,800;1,400" },
 ];
 
@@ -97,12 +103,19 @@ export const SIDE_RATIOS = [30, 35, 40]; // Side column width in %; the main col
 export const HEADER_ALIGNS = ["left", "center", "right"];
 export const SKILLS_DISPLAYS = { comma: "Comma list", tags: "Tags", bullets: "Bullet list" };
 export const DATE_FORMATS = { short: "Jan 2024", numeric: "01/2024", year: "2024" };
-// css = the list-style-type value
+// css = the list-style-type value (older layouts).
+// shape = the drawn marker of foundation layouts (no character, so nothing stray reaches an ATS):
+//   w / h - size, r - border radius, clip - clip-path, indent - marker + gap before the text
 export const BULLET_STYLES = {
-  disc: { label: "•", name: "Dot", css: "disc" },
-  dash: { label: "–", name: "Dash", css: '"–  "' },
-  arrow: { label: "▸", name: "Arrow", css: '"▸  "' },
-  none: { label: "None", name: "No bullets", css: "none" },
+  disc: { label: "•", name: "Dot", css: "disc", shape: { w: "3.5pt", h: "3.5pt", r: "50%", clip: "none", indent: "12pt" } },
+  dash: { label: "–", name: "Dash", css: '"–  "', shape: { w: "6pt", h: "0.9pt", r: "0", clip: "none", indent: "12pt" } },
+  arrow: {
+    label: "▸",
+    name: "Arrow",
+    css: '"▸  "',
+    shape: { w: "4.5pt", h: "5.5pt", r: "0", clip: "polygon(0 0, 100% 50%, 0 100%)", indent: "12pt" },
+  },
+  none: { label: "None", name: "No bullets", css: "none", shape: { w: "0pt", h: "0pt", r: "0", clip: "none", indent: "0pt" } },
 };
 
 // Profile photo. radius = the CSS border-radius for each shape.
@@ -150,13 +163,21 @@ const luminance = (hex) => {
 
 // ---------- Defaults and overrides ----------
 
+// Default heading colour. Foundation layouts (with `accentOn`) colour headings with the
+// accent only when the accent goes on the headings; otherwise headings use the text colour.
+const defaultHeadingColor = (layout, accent, deep, text) => {
+  if (layout.accentOn) return layout.accentOn === "headings" ? accent : text;
+  return layout.headingTone === "deep" ? deep : accent;
+};
+
 // The settings a template uses when the resume hasn't changed anything
 export function getDesignDefaults(template) {
   const { theme, layoutDefaults: layout } = template;
   const [marginTop, marginRight, marginBottom, marginLeft] = layout.margins;
   return {
-    fontFamily: null, // null = the theme's own (system) font
-    headingFontFamily: null, // null = same as the body / the layout's heading font
+    // null = the theme's own (system) font; foundation layouts name their web fonts
+    fontFamily: layout.fontFamily ?? null,
+    headingFontFamily: layout.headingFontFamily ?? null, // null = same as the body / the layout's heading font
     baseFontSize: layout.baseFontSize,
     headingSize: 100,
     lineHeight: layout.lineHeight,
@@ -169,10 +190,10 @@ export function getDesignDefaults(template) {
     marginLeft,
     accentColor: theme.accent,
     textColor: theme.text,
-    headingColor: layout.headingTone === "deep" ? (theme.deep ?? theme.accent) : theme.accent,
+    headingColor: defaultHeadingColor(layout, theme.accent, theme.deep ?? theme.accent, theme.text),
     backgroundColor: "#ffffff",
     dividerStyle: layout.dividerStyle,
-    dividerColor: theme.line,
+    dividerColor: layout.accentOn === "rules" ? theme.accent : theme.line,
 
     sectionOrder: layout.sectionOrder,
     hiddenSections: [],
@@ -258,10 +279,13 @@ export function resolveDesign(template, design) {
   // Renamed headings replace only the sections that were renamed
   resolved.sectionHeadings = { ...defaults.sectionHeadings, ...overrides.sectionHeadings };
 
-  if (overrides.accentColor && !overrides.headingColor) {
-    resolved.headingColor =
-      template.layoutDefaults.headingTone === "deep" ? mix(overrides.accentColor, "#000000", 0.45) : overrides.accentColor;
+  const layout = template.layoutDefaults;
+  // Headings in the text colour (foundation layouts without accent headings) follow a new text colour
+  const headingIsText = layout.accentOn && layout.accentOn !== "headings";
+  if ((overrides.accentColor || (headingIsText && overrides.textColor)) && !overrides.headingColor) {
+    resolved.headingColor = defaultHeadingColor(layout, resolved.accentColor, mix(resolved.accentColor, "#000000", 0.45), resolved.textColor);
   }
+  if (overrides.accentColor && !overrides.dividerColor && layout.accentOn === "rules") resolved.dividerColor = overrides.accentColor;
   return { resolved, overrides };
 }
 
@@ -271,6 +295,7 @@ export function designCssVars(template, { resolved: d, overrides }) {
   const bodyFont = getFont(d.fontFamily);
   const headingFont = getFont(d.headingFontFamily);
   const divider = DIVIDER_STYLES[d.dividerStyle];
+  const marker = BULLET_STYLES[d.bulletStyle].shape;
 
   // Colours derived from the accent / text / background when those were changed
   const accentChanged = Boolean(overrides.accentColor);
@@ -279,6 +304,7 @@ export function designCssVars(template, { resolved: d, overrides }) {
   return {
     "--font-body": bodyFont ? fontStack(bodyFont) : theme.fontFamily,
     ...(headingFont && { "--font-heading": fontStack(headingFont) }),
+    "--base-size": `${d.baseFontSize}pt`,
     "--fs-scale": d.baseFontSize / layout.baseFontSize,
     "--hs-scale": d.headingSize / 100,
     "--lh": d.lineHeight,
@@ -294,6 +320,11 @@ export function designCssVars(template, { resolved: d, overrides }) {
     "--divider-style": divider.style,
     "--divider-pad": divider.pad,
     "--bullet": BULLET_STYLES[d.bulletStyle].css,
+    "--bm-w": marker.w,
+    "--bm-h": marker.h,
+    "--bm-r": marker.r,
+    "--bm-clip": marker.clip,
+    "--bm-indent": marker.indent,
     "--header-align": d.headerAlign,
     // Margins that line up fixed-width header pieces (e.g. a short rule) with the text
     "--header-ml": d.headerAlign === "left" ? "0" : "auto",
@@ -309,6 +340,8 @@ export function designCssVars(template, { resolved: d, overrides }) {
     "--text": d.textColor,
     "--muted": overrides.textColor || overrides.backgroundColor ? mix(d.textColor, d.backgroundColor, 0.35) : theme.muted,
     "--heading": d.headingColor,
+    // Foundation layouts: the name takes the accent only when the accent goes on the name
+    "--name-color": layout.accentOn === "name" ? d.accentColor : d.textColor,
     "--line": d.dividerColor,
     "--bg": d.backgroundColor,
     color: d.textColor,

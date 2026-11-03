@@ -23,7 +23,7 @@ const STANDARD_FONTS = [
   "aptos", "roboto", "opensans", "lato", "inter", "sourcesans", "sourcesanspro", "sourcesans3", "montserrat", "merriweather",
   "lora", "playfairdisplay", "notosans", "notoserif", "liberationsans", "liberationserif", "dejavusans", "dejavuserif",
   "helveticaneue", "franklingothic", "candara", "corbel", "constantia", "bookman", "baskerville", "didot", "sfpro", "ptsans", "ptserif",
-  "ibmplexsans", "nunito", "raleway", "worksans", "poppins", "ubuntu", "arimo", "tinos", "symbolmt",
+  "ibmplexsans", "sourceserif", "fraunces", "nunito", "raleway", "worksans", "poppins", "ubuntu", "arimo", "tinos", "symbolmt",
 ];
 const ICON_FONTS = /fontawesome|awesome|materialicons|materialsymbols|glyphicons|ionicons|icomoon|wingdings|webdings|zapfdingbats|dingbats|^symbol$|feather|lucide|bootstrapicons|remixicon/;
 

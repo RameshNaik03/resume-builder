@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { getTemplate } from "./registry";
 import prepareResume from "./prepareResume";
-import { designCssVars, resolveDesign } from "./design";
+import { designCssVars, resolveDesign, usedFontIds } from "./design";
+import { loadFonts } from "./fonts";
 import ClassicLayout from "./layouts/ClassicLayout";
 import MinimalLayout from "./layouts/MinimalLayout";
 import CompactLayout from "./layouts/CompactLayout";
@@ -42,6 +43,13 @@ export default function TemplateRenderer({ resume, templateId, withLinks = true,
   // date format...) are applied to the data by prepareResume
   const resolvedDesign = useMemo(() => resolveDesign(template, design), [template, design]);
   const style = useMemo(() => designCssVars(template, resolvedDesign), [template, resolvedDesign]);
+
+  // Load the web fonts this template and design use (thumbnails and galleries too, not just
+  // the editor's preview). loadFonts skips fonts that are already loaded.
+  const fontIds = usedFontIds(resolvedDesign.resolved).join(",");
+  useEffect(() => {
+    if (fontIds) loadFonts(fontIds.split(","));
+  }, [fontIds]);
 
   // Only re-clean the data when the resume or its design actually changes
   const data = useMemo(

@@ -1,4 +1,5 @@
 import { ADVANCED_THEMES, PREMIUM_THEMES, THEMES } from "./themes";
+import { FOUNDATION_THEMES, checkLayoutDefaults } from "./foundation/tokens";
 
 // The three tiers shown as tabs in the template picker
 export const TIERS = [
@@ -47,6 +48,13 @@ const layoutDefaults = ({ sectionTitles, ...overrides } = {}) => ({
   photoPosition: "left",
   ...overrides,
 });
+// Defaults for a layout built on the design foundation (templates/foundation), checked
+// against its type scale, line heights, margins and fonts. Extra settings:
+//   fontFamily / headingFontFamily - font ids (body and headings; headings default to the body font)
+//   accentOn - where the one accent colour goes: "name", "headings" or "rules"
+const foundationDefaults = (id, overrides) =>
+  checkLayoutDefaults(id, layoutDefaults({ margins: [16, 16, 16, 16], headingFontFamily: null, ...overrides }));
+
 // Sidebar and Split Modern list side-column sections first, as they always appeared
 const SIDE_FIRST_ORDER = ["summary", "experience", "skills", "education", "projects", "additional"];
 
@@ -55,12 +63,24 @@ const SIDE_FIRST_ORDER = ["summary", "experience", "skills", "education", "proje
 // Optional per-layout settings:
 //   atsFriendly - overrides the tier's value for this layout
 //   fullBleed   - the layout draws its own page margins (for colour that runs to the page edge)
+//   themes      - overrides the tier's themes (foundation layouts use the foundation palettes)
 const TIER_CONFIG = [
   {
     tier: "basic",
     atsFriendly: true,
     layouts: [
-      { id: "classic", name: "Classic", defaults: layoutDefaults({ dividerStyle: "line", headerAlign: "center" }) },
+      {
+        id: "classic",
+        name: "Classic",
+        themes: FOUNDATION_THEMES,
+        defaults: foundationDefaults("classic", {
+          dividerStyle: "line",
+          headerAlign: "center",
+          fontFamily: "inter",
+          accentOn: "headings",
+          margins: [16, 18, 16, 18],
+        }),
+      },
       { id: "minimal", name: "Minimal", defaults: layoutDefaults({ lineHeight: 1.45 }) },
       {
         id: "compact",
@@ -104,10 +124,15 @@ const TIER_CONFIG = [
       {
         id: "executive",
         name: "Executive",
-        defaults: layoutDefaults({
-          lineHeight: 1.45,
+        themes: FOUNDATION_THEMES,
+        defaults: foundationDefaults("executive", {
+          lineHeight: 1.4,
           dividerStyle: "line",
           headerAlign: "center",
+          fontFamily: "source-sans-3",
+          headingFontFamily: "source-serif-4",
+          accentOn: "name",
+          margins: [18, 18, 16, 18],
           // Headings ATS recognise ("Expertise" often isn't)
           sectionTitles: { summary: "Profile", projects: "Selected Projects" },
         }),
@@ -153,7 +178,7 @@ const TIER_CONFIG = [
 // e.g. { id: "classic-navy", name: "Classic Navy", tier: "basic", layout: "classic", theme: {...}, atsFriendly: true }
 export const TEMPLATES = TIER_CONFIG.flatMap(({ tier, atsFriendly, layouts, themes }) =>
   layouts.flatMap((layout) =>
-    themes.map((theme) => ({
+    (layout.themes ?? themes).map((theme) => ({
       id: `${layout.id}-${theme.id}`,
       name: `${layout.name} ${theme.name}`,
       tier,
@@ -171,6 +196,14 @@ export const DEFAULT_TEMPLATE_ID = "classic-navy";
 // Template ids saved by older versions of the app
 const LEGACY_IDS = {
   classic: "classic-navy",
+  // Classic and Executive moved to the foundation palettes
+  "classic-charcoal": "classic-graphite",
+  "classic-slate": "classic-slate-blue",
+  "executive-royal-gold": "executive-navy",
+  "executive-emerald": "executive-forest",
+  "executive-midnight": "executive-navy",
+  "executive-rose": "executive-burgundy",
+  "executive-indigo-gradient": "executive-slate-blue",
 };
 
 // Finds a template by id. Old or unknown ids fall back to the default,

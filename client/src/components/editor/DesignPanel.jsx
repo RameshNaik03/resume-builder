@@ -18,6 +18,7 @@ import {
   SKILLS_DISPLAYS,
   fontStack,
   getDesignDefaults,
+  getFont,
   resolveDesign,
   sameValue,
 } from "../../templates/design";
@@ -194,16 +195,16 @@ export default function DesignPanel({ resume, onChange }) {
       <Group title="Typography" {...groupProps("typography")}>
         <FontPicker
           label="Body font"
-          value={resolved.fontFamily}
+          value={overrides.fontFamily ?? null}
           defaultLabel="Template font"
-          defaultStack={template.theme.fontFamily}
+          defaultStack={getFont(defaults.fontFamily) ? fontStack(getFont(defaults.fontFamily)) : template.theme.fontFamily}
           onChange={(fontFamily) => update({ fontFamily })}
         />
         <FontPicker
           label="Heading font"
-          value={resolved.headingFontFamily}
-          defaultLabel="Same as body"
-          defaultStack="inherit"
+          value={overrides.headingFontFamily ?? null}
+          defaultLabel={defaults.headingFontFamily ? "Template font" : "Same as body"}
+          defaultStack={getFont(defaults.headingFontFamily) ? fontStack(getFont(defaults.headingFontFamily)) : "inherit"}
           onChange={(headingFontFamily) => update({ headingFontFamily })}
         />
         <Slider

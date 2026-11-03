@@ -13,7 +13,7 @@ const SCALE = THUMB_WIDTH_PX / A4_WIDTH_PX;
 const FEATURED_IDS = [
   "classic-navy",
   "modern-header-plum",
-  "executive-royal-gold",
+  "executive-burgundy",
   "minimal-burgundy",
   "sidebar-teal",
   "creative-rose",

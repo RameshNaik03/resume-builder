@@ -1,0 +1,173 @@
+/* Shared styles for foundation templates (see tokens.js and components.jsx).
+   Sizes and gaps come from the variables foundationVars() sets on .f-page; colours, fonts,
+   line height and the bullet shape from the design variables (design.js).
+   In the components layer, so Tailwind utilities on a layout can still adjust them.
+
+   ATS rules for everything here: no letter-spacing, no opacity on text, no positioned
+   wrappers around text, and every separator or marker is a drawn shape, never a character. */
+@layer components {
+  .f-page {
+    font-size: var(--base-size, 10pt);
+    line-height: var(--lh, 1.4);
+    color: var(--text);
+    /* Ligatures ("fi") can extract as a single odd character */
+    font-variant-ligatures: no-common-ligatures;
+  }
+
+  /* ---------- Header ---------- */
+  .f-name {
+    font-family: var(--font-heading, inherit);
+    font-size: var(--f-name);
+    line-height: var(--f-name-lh);
+    font-weight: 700;
+    color: var(--name-color, var(--text));
+  }
+  .f-headline {
+    font-size: var(--f-headline);
+    line-height: 1.3;
+    color: var(--muted);
+  }
+  .f-contact {
+    font-size: var(--f-meta);
+    color: var(--muted);
+    text-wrap: balance; /* Two even lines rather than one item left alone on the second */
+  }
+  .f-contact a {
+    color: inherit;
+    text-decoration: none;
+  }
+  /* Drawn separator between contact items */
+  .f-sep {
+    display: inline-block;
+    vertical-align: middle;
+    margin-inline: 6pt;
+    background-color: color-mix(in srgb, currentColor 55%, transparent);
+  }
+  .f-sep-dot {
+    width: 2.5pt;
+    height: 2.5pt;
+    border-radius: 50%;
+  }
+  .f-sep-bar {
+    width: 0.75pt;
+    height: 0.9em;
+  }
+
+  /* ---------- Sections ---------- */
+  .f-section {
+    margin-top: var(--f-section-gap);
+  }
+  .f-heading {
+    font-family: var(--font-heading, inherit);
+    font-size: var(--f-heading);
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--heading);
+    break-after: avoid;
+  }
+  .f-caps {
+    text-transform: uppercase;
+  }
+  .f-section-body {
+    margin-top: var(--f-heading-gap);
+  }
+  /* Centred heading between two drawn rules */
+  .f-heading-centered {
+    display: flex;
+    align-items: center;
+    gap: 12pt;
+  }
+  .f-heading-centered::before,
+  .f-heading-centered::after {
+    content: "";
+    flex: 1;
+    height: 0;
+    border-top: var(--divider-w, 0.75pt) var(--divider-style, solid) var(--line);
+  }
+
+  /* ---------- Entries (jobs, schools, projects) ---------- */
+  .f-entries {
+    display: flex;
+    flex-direction: column;
+    gap: var(--f-item-gap);
+  }
+  /* Title on the left, dates on the right, on the same line */
+  .f-entry-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    column-gap: 12pt;
+  }
+  .f-job-title {
+    font-size: var(--f-job);
+    font-weight: 600;
+  }
+  .f-meta {
+    font-size: var(--f-meta);
+    color: var(--muted);
+  }
+  .f-org-inline {
+    font-weight: 400;
+  }
+  .f-date {
+    flex: none;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .f-subtitle {
+    font-size: var(--f-meta);
+    color: var(--muted);
+    font-style: italic;
+  }
+  .f-link {
+    color: var(--muted);
+    text-decoration: none;
+  }
+  .f-entry-text {
+    margin-top: var(--f-tight-gap);
+  }
+
+  /* ---------- Bullets ---------- */
+  .f-bullets {
+    display: flex;
+    flex-direction: column;
+    gap: var(--f-bullet-gap);
+  }
+  * + .f-bullets {
+    margin-top: var(--f-tight-gap);
+  }
+  /* Hanging indent: the marker is its own flex item, so wrapped lines align with the text.
+     The marker is a drawn shape (--bm-* from the design's bullet style), centred on the first line. */
+  .f-bullet {
+    display: flex;
+  }
+  .f-bullet::before {
+    content: "";
+    flex: none;
+    width: var(--bm-w, 3.5pt);
+    height: var(--bm-h, 3.5pt);
+    border-radius: var(--bm-r, 50%);
+    clip-path: var(--bm-clip, none);
+    background-color: var(--marker-color, var(--muted));
+    margin-top: calc((var(--lh, 1.4) * 1em - var(--bm-h, 3.5pt)) / 2);
+    margin-right: calc(var(--bm-indent, 12pt) - var(--bm-w, 3.5pt));
+  }
+  .f-bullet-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* ---------- Skills ---------- */
+  .f-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4pt;
+  }
+  .f-tag {
+    font-size: var(--f-small);
+    line-height: 16pt;
+    padding-inline: 8pt;
+    border-radius: 4pt;
+    background-color: var(--soft);
+  }
+}

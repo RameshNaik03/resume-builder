@@ -22,7 +22,7 @@ import { dateRanges, dateStyles, dateValue, findCliches, findPronouns, hasNumber
 //   marks      - text to highlight in the previews: { original: [...], optimized: [...] }
 //   revertible - false when rejecting is impossible (an uploaded file's own layout)
 
-export const OPTIMIZED_TEMPLATE = "classic-navy"; // Basic tier: one column, standard system fonts
+export const OPTIMIZED_TEMPLATE = "classic-navy"; // Basic tier: one column, standard fonts
 const STANDARD_HEADINGS = { summary: "Summary", experience: "Experience", education: "Education", skills: "Skills", projects: "Projects" };
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
