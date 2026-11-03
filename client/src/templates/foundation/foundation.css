@@ -337,6 +337,126 @@
     margin-left: calc(var(--tl-date) + var(--tl-rail));
   }
 
+  /* ---------- Premium heading styles ---------- */
+  /* A rule above the heading (drawn in the content box, so a page-break gap above the
+     heading never separates the rule from it) */
+  .f-heading-over::before {
+    content: "";
+    display: block;
+    margin-bottom: 6pt;
+    border-top: calc(var(--divider-w, 0.75pt) * 1.5) var(--divider-style, solid) var(--line);
+  }
+  /* A solid square before the heading */
+  .f-heading-block {
+    display: flex;
+    align-items: center;
+    gap: 8pt;
+  }
+  .f-heading-block::before {
+    content: "";
+    flex: none;
+    width: 8pt;
+    height: 8pt;
+    background-color: var(--line);
+  }
+  /* A small diamond under the heading, aligned like the header */
+  .f-heading-ornament {
+    text-align: var(--header-align, left);
+  }
+  .f-heading-ornament::after {
+    content: "";
+    display: block;
+    width: 5pt;
+    height: 5pt;
+    margin-top: 6pt;
+    margin-left: var(--header-ml, 0);
+    margin-right: var(--header-mr, auto);
+    transform: rotate(45deg);
+    background-color: var(--line);
+  }
+  /* A drawn section number before the heading (Minimal Grid). With --grid-gutter set, the
+     number fills a gutter column and the heading text starts where the content starts. */
+  .f-heading-numbered {
+    display: flex;
+    align-items: flex-end;
+    gap: 8pt;
+  }
+  .f-heading-number {
+    color: var(--number-color, var(--line));
+  }
+  .f-gutter .f-heading-numbered {
+    gap: 0;
+  }
+  .f-gutter .f-heading-number-box {
+    flex: none;
+    width: var(--grid-gutter);
+  }
+  .f-gutter-body {
+    margin-left: var(--grid-gutter, 0);
+  }
+
+  /* ---------- Pull quote (Editorial) ---------- */
+  .f-pull-quote {
+    display: flex;
+    gap: 12pt;
+    font-family: var(--font-heading, inherit);
+    font-size: var(--f-headline);
+    line-height: 1.45;
+    font-style: italic;
+  }
+  .f-quote-mark {
+    flex: none;
+    width: 20pt;
+    height: 16pt;
+    color: var(--line);
+  }
+
+  /* ---------- Skill levels (Infographic) ---------- */
+  .f-levels {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24pt;
+    row-gap: 4pt;
+  }
+  .f-level {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8pt;
+  }
+  .f-level-dots {
+    display: flex;
+    flex: none;
+    gap: 3pt;
+  }
+  .f-level-dot {
+    width: 6pt;
+    height: 6pt;
+    border-radius: 50%;
+    border: 0.75pt solid var(--line);
+  }
+  .f-level-dot-on {
+    background-color: var(--line);
+  }
+  * + .f-tags-after {
+    margin-top: 8pt;
+  }
+
+  /* ---------- Career strip (Infographic) ----------
+     A drawn bar spanning the first job's start to the last job's end, with each job's time
+     as a segment and the first and last years drawn (not text) at its ends */
+  .f-career {
+    display: flex;
+    align-items: center;
+    gap: 8pt;
+    color: var(--muted);
+  }
+  .f-career-bar {
+    flex: 1;
+    height: 6pt;
+    border-radius: 3pt;
+  }
+
   /* ---------- Skills ---------- */
   .f-tags {
     display: flex;

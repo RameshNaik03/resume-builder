@@ -28,6 +28,16 @@ const projectSchema = new mongoose.Schema({
   link: { type: String, trim: true, default: "" },
 });
 
+// Optional skill level (1-5) for a skill, by its name. Only skills the user rated have one;
+// templates show levels only where they exist and never make one up.
+const skillLevelSchema = new mongoose.Schema(
+  {
+    name: { type: String, trim: true, required: true, maxlength: 100 },
+    level: { type: Number, required: true, min: 1, max: 5, validate: { validator: Number.isInteger, message: "Skill levels are whole numbers from 1 to 5" } },
+  },
+  { _id: false }
+);
+
 // Anything that doesn't fit the sections above: certifications, languages, awards...
 const additionalSectionSchema = new mongoose.Schema({
   heading: { type: String, trim: true, default: "" }, // e.g. "Certifications"
@@ -141,6 +151,11 @@ const resumeSchema = new mongoose.Schema(
     experience: { type: [experienceSchema], default: [] },
     education: { type: [educationSchema], default: [] },
     skills: { type: [String], default: [] },
+    skillLevels: {
+      type: [skillLevelSchema],
+      default: [],
+      validate: { validator: (levels) => levels.length <= 300, message: "Too many skill levels" },
+    },
     projects: { type: [projectSchema], default: [] },
     additional: { type: [additionalSectionSchema], default: [] },
     // Every resume (created, imported or duplicated) has one; {} = template defaults

@@ -51,6 +51,14 @@ export default function prepareResume(resume, withLinks = true, design, changed 
     contacts,
     summary: richHtml(resume.summary), // "" when empty
     skills: (resume.skills ?? []).filter((skill) => skill.trim()),
+    // Each skill with its level (1-5) if the user gave it one, else null. Levels are matched
+    // by name; a skill without a saved level never gets one.
+    skillItems: (() => {
+      const levels = new Map((resume.skillLevels ?? []).map(({ name, level }) => [name.trim().toLowerCase(), level]));
+      return (resume.skills ?? [])
+        .filter((skill) => skill.trim())
+        .map((skill) => ({ name: skill, level: levels.get(skill.trim().toLowerCase()) ?? null }));
+    })(),
 
     experience: (resume.experience ?? [])
       .filter((job) => hasContent(job, ["role", "company", "startDate", "endDate"]))

@@ -82,6 +82,15 @@ const GALLERY_RESUME = {
     "Web Performance",
     "Accessibility",
   ],
+  // Six rated skills (the rest unrated), so templates that draw levels show both kinds
+  skillLevels: [
+    { name: "React", level: 5 },
+    { name: "TypeScript", level: 5 },
+    { name: "JavaScript", level: 5 },
+    { name: "Next.js", level: 4 },
+    { name: "GraphQL", level: 4 },
+    { name: "Node.js", level: 3 },
+  ],
   projects: [
     {
       _id: "gallery-proj-1",

@@ -60,6 +60,14 @@ test("resume API: auth, CRUD and ownership", async (t) => {
   r = await req("GET", `/resumes/${second._id}`, { token: a.token });
   await check("A's resume unchanged after B's attempts", r.body.title === "Frontend v2");
 
+  // Optional skill levels (1-5 per skill, by name)
+  r = await req("PUT", `/resumes/${second._id}`, { token: a.token, body: { skillLevels: [{ name: "React", level: 4 }] } });
+  await check("skill levels are saved", r.status === 200 && r.body.skillLevels.length === 1 && r.body.skillLevels[0].level === 4, r.body.skillLevels);
+  for (const level of [0, 6, 2.5]) {
+    r = await req("PUT", `/resumes/${second._id}`, { token: a.token, body: { skillLevels: [{ name: "React", level }] } });
+    await check(`skill level ${level} -> 400`, r.status === 400, r.status);
+  }
+
   // Invalid ids
   for (const id of ["abc", "aaaaaaaaaaaa", fakeId]) {
     r = await req("GET", `/resumes/${id}`, { token: a.token });

@@ -86,14 +86,6 @@
    Read the design variables set by TemplateRenderer (see templates/design.js), so every
    layout follows the resume's font size, heading size, dividers and fonts. */
 
-/* Text size in pt that scales with the design's font size: fs-10 = 10pt at the template default */
-@utility fs-* {
-  font-size: calc(--value(number) * 1pt * var(--fs-scale, 1));
-}
-/* Same for headings (and the name), which also follow the heading size setting */
-@utility hfs-* {
-  font-size: calc(--value(number) * 1pt * var(--fs-scale, 1) * var(--hs-scale, 1));
-}
 /* Heading font (falls back to the body font, or to a layout's own heading font) */
 @utility font-heading {
   font-family: var(--font-heading, inherit);

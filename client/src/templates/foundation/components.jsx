@@ -12,6 +12,8 @@ import { Fragment } from "react";
 import "./foundation.css";
 import { MaybeLink, RichText, SectionColumns } from "../layouts/shared";
 import { SectionIcon } from "./icons";
+import { DrawnText } from "./glyphs";
+import { careerSpan } from "./career";
 
 // The root of a foundation layout.
 //   vars  - foundationVars(type, rhythm), computed once at module level by the layout
@@ -64,15 +66,33 @@ export function ContactList({ contacts, className = "" }) {
 //             placed by the header alignment), "bar" (a bar on its left) or "short" (a short
 //             rule under it, aligned like the header)
 //   caps    - uppercase (no letter-spacing either way, so an ATS reads it as one word)
+//             Also "over" (a rule above it), "block" (a solid square before it) and "ornament"
+//             (a small diamond under it, aligned like the header)
+//   caps    - uppercase (no letter-spacing either way, so an ATS reads it as one word)
 //   icon    - a section id: draws that section's icon before the text (see icons.jsx)
-export function SectionHeading({ variant = "plain", caps = true, icon, className = "", children }) {
+//   number  - "01", "02"...: drawn (not text) before the heading, so the heading an ATS reads
+//             is just "Experience"; numberHeight sets its size
+export function SectionHeading({ variant = "plain", caps = true, icon, number, numberHeight = "24pt", className = "", children }) {
   const variantClass = {
     plain: "",
     underline: "divider-b",
     ruled: "f-heading-ruled",
     bar: "f-heading-bar",
     short: "f-heading-short",
+    over: "f-heading-over",
+    block: "f-heading-block",
+    ornament: "f-heading-ornament",
   }[variant];
+  if (number) {
+    return (
+      <div className={`f-heading-numbered ${className}`} data-block data-keep>
+        <span className="f-heading-number-box">
+          <DrawnText text={number} height={numberHeight} weight={0.9} className="f-heading-number" />
+        </span>
+        <h2 className={`f-heading ${caps ? "f-caps" : ""} ${variantClass}`}>{children}</h2>
+      </div>
+    );
+  }
   return (
     <h2 className={`f-heading ${caps ? "f-caps" : ""} ${variantClass} ${icon ? "f-heading-icon" : ""} ${className}`} data-block data-keep>
       {icon && <SectionIcon id={icon} />}
@@ -248,22 +268,97 @@ export function ProjectList({ projects }) {
 }
 
 // Skills in the design's style ("comma", "tags" or "bullets"), or the layout's own
-// (defaultDisplay) when the design doesn't choose
-export function SkillsList({ skills, display, defaultDisplay = "comma" }) {
+// (defaultDisplay) when the design doesn't choose. A layout can also default to "levels":
+// skills the user rated show their level as drawn dots, the rest as tags after them.
+//   items - [{ name, level }] (data.skillItems), for "levels"
+export function SkillsList({ skills, items = [], display, defaultDisplay = "comma" }) {
   const style = display ?? defaultDisplay;
-  if (style === "bullets") return <BulletList items={skills} />;
-  if (style === "tags") {
+  if (style === "levels") {
+    const rated = items.filter((item) => item.level);
+    const unrated = items.filter((item) => !item.level).map((item) => item.name);
+    if (rated.length === 0) return <SkillsList skills={skills} display="tags" />;
     return (
-      <ul className="f-tags" data-block>
-        {skills.map((skill, index) => (
-          <li key={`${skill}-${index}`} className="f-tag">
-            {skill}
-          </li>
-        ))}
-      </ul>
+      <>
+        <SkillLevels items={rated} />
+        {unrated.length > 0 && <SkillsList skills={unrated} display="tags" />}
+      </>
     );
   }
+  if (style === "bullets") return <BulletList items={skills} />;
+  if (style === "tags") return <TagList skills={skills} />;
   return <p data-block>{skills.join(", ")}</p>;
+}
+
+function TagList({ skills }) {
+  return (
+    <ul className="f-tags f-tags-after" data-block>
+      {skills.map((skill, index) => (
+        <li key={`${skill}-${index}`} className="f-tag">
+          {skill}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// Rated skills in two columns, each with five drawn dots (filled up to its level).
+// One block per row, so a long list can continue on the next page.
+export function SkillLevels({ items }) {
+  const rows = [];
+  for (let index = 0; index < items.length; index += 2) rows.push(items.slice(index, index + 2));
+  return (
+    <div className="flex flex-col gap-[4pt]">
+      {rows.map((row) => (
+        <div key={row[0].name} className="f-levels" data-block>
+          {row.map((item) => (
+            <div key={item.name} className="f-level">
+              <span className="min-w-0">{item.name}</span>
+              <span className="f-level-dots" aria-hidden="true">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <span key={value} className={`f-level-dot ${value <= item.level ? "f-level-dot-on" : ""}`} />
+                ))}
+              </span>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// The summary as a pull quote: italic heading-font text after a drawn quote mark
+export function PullQuote({ html }) {
+  return (
+    <div className="f-pull-quote" data-block>
+      <svg className="f-quote-mark" viewBox="0 0 20 16" fill="currentColor" aria-hidden="true">
+        <path d="M0 16V9.6C0 4.4 2.6 1.2 7.8 0l.9 2.2C5.9 3.1 4.6 5 4.4 7.6H8V16zm11.2 0V9.6c0-5.2 2.6-8.4 7.8-9.6l.9 2.2c-2.8.9-4.1 2.8-4.3 5.4h3.6V16z" />
+      </svg>
+      <RichText html={html} className="min-w-0 flex-1" />
+    </div>
+  );
+}
+
+// A drawn strip of the career's time span (see career.js): the first and last years drawn as
+// strokes at the ends, each job's time as a segment of the bar. Nothing when no job has
+// readable dates. Purely decorative: nothing in it is text.
+export function CareerStrip({ jobs, className = "" }) {
+  const span = careerSpan(jobs);
+  if (!span) return null;
+  const pct = (fraction) => `${(fraction * 100).toFixed(2)}%`;
+  const stops = ["var(--soft) 0%"];
+  span.segments.forEach(({ from, to }, index) => {
+    const color = index % 2 === 0 ? "var(--line)" : "color-mix(in srgb, var(--line) 55%, var(--bg, #fff))";
+    // A hairline gap between neighbouring jobs
+    stops.push(`var(--soft) ${pct(from)}`, `${color} calc(${pct(from)} + ${index === 0 ? 0 : 1}pt)`, `${color} ${pct(to)}`, `var(--soft) ${pct(to)}`);
+  });
+  stops.push("var(--soft) 100%");
+  return (
+    <div className={`f-career ${className}`} aria-hidden="true" data-block>
+      <DrawnText text={String(span.firstYear)} height="6pt" weight={1.4} />
+      <div className="f-career-bar" style={{ backgroundImage: `linear-gradient(to right, ${stops.join(", ")})` }} />
+      <DrawnText text={String(span.lastYear)} height="6pt" weight={1.4} />
+    </div>
+  );
 }
 
 // One section of the resume (or, for "additional", one section per extra heading), drawn with
@@ -275,21 +370,29 @@ export function SkillsList({ skills, display, defaultDisplay = "comma" }) {
 //   defaultSkills - the skills style when the design doesn't choose one
 //   bodies        - replacement bodies by section id, e.g. { experience: (data) => <TimelineList ... /> }
 //   bodyClassName - classes for the standard bodies (not the replacements)
+//   numbers       - drawn section numbers by key (sectionNumbers() in layouts/sectionLayout.js)
 export function FoundationSection({ data, section, options = {} }) {
-  const { heading, icons = false, card = false, orgInline = false, defaultSkills = "comma", bodies = {}, bodyClassName = "" } = options;
+  const { heading, icons = false, card = false, orgInline = false, defaultSkills = "comma", bodies = {}, bodyClassName = "", numbers } =
+    options;
   const standard = {
     summary: () => <RichText html={data.summary} data-block />,
     experience: () => <ExperienceList jobs={data.experience} orgInline={orgInline} />,
     education: () => <EducationList entries={data.education} orgInline={orgInline} />,
-    skills: () => <SkillsList skills={data.skills} display={data.skillsDisplay} defaultDisplay={defaultSkills} />,
+    skills: () => <SkillsList skills={data.skills} items={data.skillItems} display={data.skillsDisplay} defaultDisplay={defaultSkills} />,
     projects: () => <ProjectList projects={data.projects} />,
   };
-  const headingFor = (id) => ({ ...heading, icon: icons ? id : undefined });
+  const headingFor = (id, numberKey = id) => ({ ...heading, icon: icons ? id : undefined, number: numbers?.[numberKey] });
 
   if (section.id === "additional") {
     // Each additional section (Certifications, Languages...) has its own heading
     return data.additional.map((extra) => (
-      <Section key={extra.key} title={extra.heading} heading={headingFor("additional")} card={card} bodyClassName={bodyClassName}>
+      <Section
+        key={extra.key}
+        title={extra.heading}
+        heading={headingFor("additional", `additional:${extra.key}`)}
+        card={card}
+        bodyClassName={bodyClassName}
+      >
         <BulletList items={extra.items} />
       </Section>
     ));

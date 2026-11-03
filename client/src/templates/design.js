@@ -7,7 +7,7 @@
 //   --font-body / --font-heading     fonts
 //   --fs-scale / --hs-scale          text and heading size (used by the fs-* / hfs-* utilities)
 //   --lh                             line height
-//   --para-space / --section-space   spacing multipliers (see itemGap / sectionGap in themes.js)
+//   --para-space / --section-space   spacing multipliers (see foundationVars in foundation/tokens.js)
 //   --bullet-space                   bullet gaps, relative to the template default
 //   --m-top / --m-right / ...        page margins
 //   --divider-w / -style / -pad / -on  divider lines (divider-b, divider-l, divider-rule utilities)
@@ -163,12 +163,9 @@ const luminance = (hex) => {
 
 // ---------- Defaults and overrides ----------
 
-// Default heading colour. Foundation layouts (with `accentOn`) colour headings with the
-// accent only when the accent goes on the headings; otherwise headings use the text colour.
-const defaultHeadingColor = (layout, accent, deep, text) => {
-  if (layout.accentOn) return layout.accentOn === "headings" ? accent : text;
-  return layout.headingTone === "deep" ? deep : accent;
-};
+// Default heading colour: the accent only when the layout puts its accent on the headings
+// (`accentOn`, see registry.js); otherwise headings use the text colour.
+const defaultHeadingColor = (layout, accent, text) => (layout.accentOn === "headings" ? accent : text);
 
 // The settings a template uses when the resume hasn't changed anything
 export function getDesignDefaults(template) {
@@ -190,7 +187,7 @@ export function getDesignDefaults(template) {
     marginLeft,
     accentColor: theme.accent,
     textColor: theme.text,
-    headingColor: defaultHeadingColor(layout, theme.accent, theme.deep ?? theme.accent, theme.text),
+    headingColor: defaultHeadingColor(layout, theme.accent, theme.text),
     backgroundColor: "#ffffff",
     dividerStyle: layout.dividerStyle,
     dividerColor: layout.accentOn === "rules" ? theme.accent : theme.line,
@@ -283,7 +280,7 @@ export function resolveDesign(template, design) {
   // Headings in the text colour (foundation layouts without accent headings) follow a new text colour
   const headingIsText = layout.accentOn && layout.accentOn !== "headings";
   if ((overrides.accentColor || (headingIsText && overrides.textColor)) && !overrides.headingColor) {
-    resolved.headingColor = defaultHeadingColor(layout, resolved.accentColor, mix(resolved.accentColor, "#000000", 0.45), resolved.textColor);
+    resolved.headingColor = defaultHeadingColor(layout, resolved.accentColor, resolved.textColor);
   }
   if (overrides.accentColor && !overrides.dividerColor && layout.accentOn === "rules") resolved.dividerColor = overrides.accentColor;
   return { resolved, overrides };

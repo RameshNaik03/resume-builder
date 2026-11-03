@@ -1,4 +1,3 @@
-import { PREMIUM_THEMES } from "./themes";
 import { FOUNDATION_THEMES, checkLayoutDefaults } from "./foundation/tokens";
 
 // The three tiers shown as tabs in the template picker
@@ -14,7 +13,7 @@ export const TIERS = [
     id: "premium",
     name: "Premium",
     description:
-      "Our most polished, design-forward templates, free for everyone. Executive is ATS-friendly; Creative and Split Modern are best when a person, not software, reads your resume first.",
+      "Our most polished, design-forward templates, free for everyone. Editorial's two columns are best when a person, not software, reads your resume first.",
   },
 ];
 
@@ -22,7 +21,6 @@ export const TIERS = [
 //   baseFontSize - body text size in pt (all other text sizes scale with it)
 //   lineHeight   - body line height
 //   margins      - page margins in mm: [top, right, bottom, left]
-//   headingTone  - section headings use the "accent" or the darker "deep" colour
 //   dividerStyle - "none" | "line" | "thick" | "dotted"
 //   sectionOrder - the order sections appear in (per column when there are two)
 //   sectionTitles - the layout's own section headings (users can rename them)
@@ -36,7 +34,6 @@ const layoutDefaults = ({ sectionTitles, ...overrides } = {}) => ({
   baseFontSize: 10,
   lineHeight: 1.4,
   margins: [14, 16, 14, 16],
-  headingTone: "accent",
   dividerStyle: "none",
   sectionOrder: STANDARD_ORDER,
   sectionTitles: { ...STANDARD_TITLES, ...sectionTitles },
@@ -55,15 +52,12 @@ const layoutDefaults = ({ sectionTitles, ...overrides } = {}) => ({
 const foundationDefaults = (id, overrides) =>
   checkLayoutDefaults(id, layoutDefaults({ margins: [16, 16, 16, 16], headingFontFamily: null, ...overrides }));
 
-// Sidebar and Split Modern list side-column sections first, as they always appeared
-const SIDE_FIRST_ORDER = ["summary", "experience", "skills", "education", "projects", "additional"];
 
 // Which layouts and themes make up each tier.
 // To add a tier later, add an entry here (and the layout components in TemplateRenderer).
 // Optional per-layout settings:
 //   atsFriendly - overrides the tier's value for this layout
 //   fullBleed   - the layout draws its own page margins (for colour that runs to the page edge)
-//   themes      - overrides the tier's themes (foundation layouts use the foundation palettes)
 const TIER_CONFIG = [
   {
     tier: "basic",
@@ -217,7 +211,6 @@ const TIER_CONFIG = [
       {
         id: "executive",
         name: "Executive",
-        themes: FOUNDATION_THEMES,
         defaults: foundationDefaults("executive", {
           lineHeight: 1.4,
           dividerStyle: "line",
@@ -230,40 +223,74 @@ const TIER_CONFIG = [
           sectionTitles: { summary: "Profile", projects: "Selected Projects" },
         }),
       },
-      // Decorative shapes
+      // Magazine-style: large serif name, pull-quote summary, two columns with a column rule
       {
-        id: "creative",
-        name: "Creative",
-        fullBleed: true,
-        atsFriendly: false,
-        defaults: layoutDefaults({
-          margins: [15, 16, 15, 16],
-          headingTone: "deep",
-          sectionOrder: ["summary", "experience", "projects", "skills", "education", "additional"],
-          sectionTitles: { summary: "About Me" },
-          photoSize: 30,
-          photoPosition: "right", // Next to the decorative circles
-        }),
-      },
-      // Two columns
-      {
-        id: "split-modern",
-        name: "Split Modern",
-        fullBleed: true,
-        atsFriendly: false,
-        defaults: layoutDefaults({
-          baseFontSize: 9.75,
-          margins: [10, 14, 14, 14],
-          headingTone: "deep",
+        id: "editorial",
+        name: "Editorial",
+        atsFriendly: false, // Two columns
+        defaults: foundationDefaults("editorial", {
           dividerStyle: "line",
-          sectionOrder: SIDE_FIRST_ORDER,
+          fontFamily: "source-sans-3",
+          headingFontFamily: "fraunces",
+          accentOn: "rules",
+          margins: [18, 18, 16, 18],
           columns: 2,
           sideSections: ["skills", "education", "additional"],
-          sideRatio: 30,
+          sideRatio: 35,
+        }),
+      },
+      // Icon-led headings, drawn skill levels and a drawn career strip
+      {
+        id: "infographic",
+        name: "Infographic",
+        defaults: foundationDefaults("infographic", {
+          dividerStyle: "line",
+          fontFamily: "inter",
+          accentOn: "rules",
+          margins: [16, 18, 16, 18],
+        }),
+      },
+      // Drawn initials badge, two-tone header, refined serif headings
+      {
+        id: "monogram",
+        name: "Monogram",
+        fullBleed: true,
+        defaults: foundationDefaults("monogram", {
+          lineHeight: 1.45,
+          dividerStyle: "line",
+          headerAlign: "center",
+          fontFamily: "lato",
+          headingFontFamily: "playfair-display",
+          accentOn: "rules",
+          margins: [16, 18, 16, 18],
+          photoSize: 22, // The size of the badge it replaces
+        }),
+      },
+      // Geometric colour blocks framing the page, high-contrast headings
+      {
+        id: "color-block",
+        name: "Color Block",
+        fullBleed: true,
+        defaults: foundationDefaults("color-block", {
+          dividerStyle: "line",
+          fontFamily: "ibm-plex-sans",
+          accentOn: "rules",
+          margins: [16, 18, 16, 18],
+        }),
+      },
+      // Swiss grid with oversized drawn section numbers and lots of white space
+      {
+        id: "minimal-grid",
+        name: "Minimal Grid",
+        defaults: foundationDefaults("minimal-grid", {
+          dividerStyle: "line",
+          fontFamily: "inter",
+          accentOn: "rules",
+          margins: [18, 18, 18, 18],
         }),
       },
     ],
-    themes: PREMIUM_THEMES,
+    themes: FOUNDATION_THEMES,
   },
 ];
 
@@ -271,7 +298,7 @@ const TIER_CONFIG = [
 // e.g. { id: "classic-navy", name: "Classic Navy", tier: "basic", layout: "classic", theme: {...}, atsFriendly: true }
 export const TEMPLATES = TIER_CONFIG.flatMap(({ tier, atsFriendly, layouts, themes }) =>
   layouts.flatMap((layout) =>
-    (layout.themes ?? themes).map((theme) => ({
+    themes.map((theme) => ({
       id: `${layout.id}-${theme.id}`,
       name: `${layout.name} ${theme.name}`,
       tier,
@@ -315,16 +342,20 @@ const RETIRED_ADVANCED_IDS = Object.fromEntries(
   )
 );
 
+// Old Premium layouts and themes -> the closest new ones (Executive kept its layout)
+const RETIRED_PREMIUM_LAYOUTS = { executive: "executive", creative: "color-block", "split-modern": "editorial" };
+const RETIRED_PREMIUM_THEMES = { "royal-gold": "navy", emerald: "forest", midnight: "navy", rose: "burgundy", "indigo-gradient": "slate-blue" };
+const RETIRED_PREMIUM_IDS = Object.fromEntries(
+  Object.entries(RETIRED_PREMIUM_LAYOUTS).flatMap(([oldLayout, newLayout]) =>
+    Object.entries(RETIRED_PREMIUM_THEMES).map(([oldTheme, newTheme]) => [`${oldLayout}-${oldTheme}`, `${newLayout}-${newTheme}`])
+  )
+);
+
 const LEGACY_IDS = {
   classic: "classic-navy",
   ...RETIRED_BASIC_IDS,
   ...RETIRED_ADVANCED_IDS,
-  // Executive moved to the foundation palettes
-  "executive-royal-gold": "executive-navy",
-  "executive-emerald": "executive-forest",
-  "executive-midnight": "executive-navy",
-  "executive-rose": "executive-burgundy",
-  "executive-indigo-gradient": "executive-slate-blue",
+  ...RETIRED_PREMIUM_IDS,
 };
 
 // Finds a template by id. Old or unknown ids fall back to the default,

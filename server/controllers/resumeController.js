@@ -16,6 +16,7 @@ const EDITABLE_FIELDS = [
   "experience",
   "education",
   "skills",
+  "skillLevels",
   "projects",
   "additional",
   "design",

@@ -14,8 +14,11 @@ import SplitAccentLayout from "./layouts/SplitAccentLayout";
 import CardSectionsLayout from "./layouts/CardSectionsLayout";
 import TimelinePlusLayout from "./layouts/TimelinePlusLayout";
 import ExecutiveLayout from "./layouts/ExecutiveLayout";
-import CreativeLayout from "./layouts/CreativeLayout";
-import SplitModernLayout from "./layouts/SplitModernLayout";
+import EditorialLayout from "./layouts/EditorialLayout";
+import InfographicLayout from "./layouts/InfographicLayout";
+import MonogramLayout from "./layouts/MonogramLayout";
+import ColorBlockLayout from "./layouts/ColorBlockLayout";
+import MinimalGridLayout from "./layouts/MinimalGridLayout";
 
 // Maps a template's "layout" id to the component that draws it
 const LAYOUT_COMPONENTS = {
@@ -30,8 +33,11 @@ const LAYOUT_COMPONENTS = {
   "card-sections": CardSectionsLayout,
   "timeline-plus": TimelinePlusLayout,
   executive: ExecutiveLayout,
-  creative: CreativeLayout,
-  "split-modern": SplitModernLayout,
+  editorial: EditorialLayout,
+  infographic: InfographicLayout,
+  monogram: MonogramLayout,
+  "color-block": ColorBlockLayout,
+  "minimal-grid": MinimalGridLayout,
 };
 
 // Renders a resume with any template.

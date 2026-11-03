@@ -13,6 +13,7 @@ export default function ResumeSheet({ ref, pages = 1, pageSize = "A4", backgroun
       ref={ref}
       style={{
         "--sheet-height": `calc(${pages} * ${page.heightMm}mm)`,
+        "--page-height": `${page.heightMm}mm`, // For decorations repeated on every page
         width: `${page.widthMm}mm`,
         backgroundColor: background,
       }}

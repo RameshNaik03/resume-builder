@@ -19,11 +19,14 @@ const FEATURED_IDS = [
   "split-accent-navy",
   "card-sections-forest",
   "elegant-serif-forest",
-  "creative-rose",
+  "monogram-navy",
+  "infographic-teal",
   "soft-header-teal",
   "compact-pro-graphite",
   "timeline-plus-graphite",
-  "split-modern-emerald",
+  "editorial-burgundy",
+  "color-block-slate-blue",
+  "minimal-grid-graphite",
 ];
 const FEATURED = FEATURED_IDS.map((id) => TEMPLATES.find((template) => template.id === id)).filter(Boolean);
 

@@ -22,10 +22,21 @@ import { APP, OUT_DIR, logIn, sleep, startStack } from "./helpers.js";
 
 const ONLY = process.env.ROUNDTRIP_ONLY;
 
-// Extra checks with design settings that change how a layout orders its text
+// Extra checks with settings or content that change how a layout draws its text
 const DESIGN_CASES = [
   // Two columns: Timeline Plus puts the dates above each job title instead of beside it
   { id: "timeline-plus-navy", name: "timeline-plus-navy (two columns)", design: { columns: 2 } },
+  // Rated skills: Infographic draws their levels as dots (nothing of them may reach the text)
+  {
+    id: "infographic-navy",
+    name: "infographic-navy (skill levels)",
+    design: {},
+    skillLevels: [
+      { name: "React", level: 5 },
+      { name: "Node.js", level: 4 },
+      { name: "MongoDB", level: 3 },
+    ],
+  },
 ];
 const PDF_DIR = path.join(OUT_DIR, "roundtrip");
 
@@ -116,12 +127,12 @@ test("PDF round trip: every template exports a PDF an ATS can read", async (t) =
 
   // Every template as designed, plus layouts whose text order changes with a design setting
   const cases = [
-    ...ids.map((id) => ({ id, name: id, design: {} })),
+    ...ids.map((id) => ({ id, name: id, design: {}, skillLevels: [] })),
     ...DESIGN_CASES.filter(({ id }) => ids.includes(id)),
   ];
-  for (const { id, name, design } of cases) {
+  for (const { id, name, design, skillLevels } of cases) {
     await t.test(name, async () => {
-      await api("PUT", `/resumes/${resumeId}`, token, { template: id, design });
+      await api("PUT", `/resumes/${resumeId}`, token, { template: id, design, skillLevels });
       await editor.goto(`${APP}/editor/${resumeId}`, { waitUntil: "networkidle0" });
       await editor.waitForSelector("div.invisible > div");
       await sleep(300); // Page breaks are worked out after the first layout
@@ -158,6 +169,10 @@ test("PDF round trip: every template exports a PDF an ATS can read", async (t) =
 
       const stray = lines.filter((line) => /^[\s·•|–—,/-]+$/.test(line) || /^[·•|]\s|\s[·|]$/.test(line));
       assert.deepEqual(stray, [], "stray separator characters");
+
+      // Every skill is still there as text (levels and other graphics are drawn, never text)
+      const missingSkills = SAMPLE.skills.filter((skill) => !text.includes(skill));
+      assert.deepEqual(missingSkills, [], "skills missing from the text");
 
       const spaced = lines.filter((line) => /\b(\p{L} ){3,}\p{L}\b/u.test(line));
       assert.deepEqual(spaced, [], "spaced-out letters (letter-spacing)");

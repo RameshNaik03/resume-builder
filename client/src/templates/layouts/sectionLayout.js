@@ -3,6 +3,19 @@
 // Header alignment from the design (left / center / right)
 export const HEADER_ALIGN = { textAlign: "var(--header-align)" };
 
+// Two-digit numbers ("01", "02"...) for the sections in the order they're drawn; each extra
+// ("additional") section gets its own. Keys: the section id, or "additional:<key>".
+export function sectionNumbers(data) {
+  const numbers = {};
+  let count = 0;
+  const next = () => String(++count).padStart(2, "0");
+  for (const section of data.sections) {
+    if (section.id === "additional") for (const extra of data.additional) numbers[`additional:${extra.key}`] = next();
+    else numbers[section.id] = next();
+  }
+  return numbers;
+}
+
 // Splits data.sections (already ordered and filtered by prepareResume) into columns.
 // Two columns only when both columns have something in them; otherwise everything is "main".
 // lead: with two columns, a Summary at the very top spans both columns above them.

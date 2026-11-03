@@ -4,8 +4,9 @@
 // Returns the same shape as inspectFile().
 
 // Layouts with two columns by default (see client/src/templates/registry.js), matched by id
-// prefix: "sidebar" covers Sidebar Pro ("sidebar-pro-navy") and old ids like "sidebar-ocean"
-const TWO_COLUMN_LAYOUTS = ["sidebar", "split-modern"];
+// prefix: "sidebar" covers Sidebar Pro ("sidebar-pro-navy") and old ids like "sidebar-ocean";
+// "split-modern" is the old id of what is now Editorial
+const TWO_COLUMN_LAYOUTS = ["sidebar", "editorial", "split-modern"];
 const WORDS_PER_PAGE = 550; // Roughly one full page in our templates
 
 export default function savedResumeLayout(resume, text) {

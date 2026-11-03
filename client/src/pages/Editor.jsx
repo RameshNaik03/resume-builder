@@ -385,7 +385,11 @@ export default function Editor() {
               </CollapsibleSection>
 
               <CollapsibleSection title="Skills" description="Tools, languages and technologies">
-                <SkillsForm skills={resume.skills} onChange={(skills) => updateResume({ skills })} />
+                <SkillsForm
+                  skills={resume.skills}
+                  skillLevels={resume.skillLevels ?? []}
+                  onChange={(changes) => updateResume(changes)}
+                />
               </CollapsibleSection>
 
               <CollapsibleSection title="Experience" description={withCount("Jobs and internships", resume.experience)}>
