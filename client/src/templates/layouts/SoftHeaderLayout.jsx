@@ -9,7 +9,7 @@ import { HEADER_ALIGN } from "./sectionLayout";
 // Full bleed: the band reaches the page edges, so this layout applies the page margins itself
 // (pages 2, 3... get their top margin from templates/pagination.js).
 
-const VARS = foundationVars({ name: 28, headline: 11.5, heading: 11.5, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.15 });
+const VARS = foundationVars({ headline: 11.5, heading: 11.5, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.15 });
 
 export default function SoftHeaderLayout({ data }) {
   return (

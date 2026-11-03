@@ -33,11 +33,12 @@ A full stack resume builder: create professional, ATS-friendly resumes with a li
 - **Editor with live preview**: every keystroke updates a paged preview; Edit/Preview tabs on phones
 - **All resume sections**: personal info, summary, skills, experience (bullets, "currently working here"), education, projects and additional sections (certifications, languages, awards...), with add, remove, reorder and collapse
 - **Rich text**: bold, italic, underline and links in the summary, bullets and project descriptions (sanitized on the server)
-- **45 templates** in 10 layouts (classic, modern, sidebar, timeline, two-column...), with a template picker
+- **16 layouts in 3 tiers** (Basic, Advanced, Premium), each in 6 corporate color palettes, all built on a shared design foundation: one print type scale, a 4pt spacing scale, consistent rhythm, tabular dates, hanging-indent bullets and drawn (never typed) separators, icons and decorations. The template picker shows one card per layout with color swatches, and marks which layouts are ATS-friendly
+- **Optional skill levels** (1 to 5 per skill): layouts such as Infographic draw rated skills as dots; unrated skills stay plain tags, and a level is never guessed
 - **Design panel**: fonts (Google Fonts), sizes, spacing and margins, colors and dividers, columns and header layout, bullet style, date format, section order (drag and drop), hidden sections and renamed headings, A4 or US Letter
 - **Profile photo** (optional): upload, crop, and choose its shape, size and border; stored on Cloudinary
 - **Autosave**: 2 seconds after you stop typing, with a "Saving… / Saved / Unsaved changes" indicator, Ctrl+S, and a warning before leaving with unsaved changes
-- **PDF download**: selectable, ATS-readable text with clickable links and the template's fonts; entries don't split across pages
+- **PDF download**: selectable, ATS-readable text with clickable links and the template's fonts. Entries don't split across pages, a heading never ends a page, a job title stays with its first two bullets, and a list never leaves a single item alone at the top or bottom of a page
 - **Import an existing resume** (PDF or DOCX): read with the Claude API when a key is set, otherwise with a rule-based parser, into an editable resume
 
 **ATS tools**
@@ -88,7 +89,7 @@ resume-builder/
 │       ├── context/AuthContext.jsx
 │       ├── hooks/               # useResume (load + autosave), usePageTitle, ...
 │       ├── pages/               # Landing, auth pages, Dashboard, Editor, AtsChecker, AtsReview, NotFound
-│       ├── templates/           # Template registry, layouts, design settings, fonts, pagination
+│       ├── templates/           # Template registry, layouts, design foundation, design settings, fonts, pagination
 │       └── utils/               # Rich text, placeholders, image cropping, errors, ...
 │
 └── server/                      # Express backend
@@ -209,7 +210,7 @@ All server tests use Node's built-in test runner. Run them in `server/`:
 ```bash
 npm test                  # all fast suites (~15 s)
 npm run test:e2e          # browser tests of the ATS checker and review screen (~1 min)
-npm run test:roundtrip    # PDF round trip for all 45 templates (~2 min)
+npm run test:roundtrip    # PDF round trip for all 96 templates (~3 min)
 ```
 
 **Fast suites** (`npm test`, files in `server/tests/`). Each one starts the real app on a free port with its own throwaway database:
@@ -233,7 +234,7 @@ npm run test:roundtrip    # PDF round trip for all 45 templates (~2 min)
 | Suite | Command | What it checks |
 | --- | --- | --- |
 | ATS checker + review | `npm run test:e2e` | The ATS checker page as a guest and logged in: upload, progress steps, results, "What the ATS sees", generating the optimized version, the import banner note, phone width and dark mode. Then the review screen: scores, side-by-side previews with highlights, accept / reject (surviving a refresh), the skills checklist, re-score, placeholders highlighted in the review and the editor (never in the PDF), the editor banner, the read-only review after an editor edit, the dashboard's ATS badge and Re-check |
-| PDF round trip | `npm run test:roundtrip` | Every template: renders a sample resume, prints it to PDF the way the app does, extracts the text with the ATS checker's extractor, and checks that the headings are recognised, the name comes first, each job title is right above its bullets, and there are no stray separators or spaced-out letters. `ROUNDTRIP_ONLY=classic` checks only the templates whose id starts with "classic" |
+| PDF round trip | `npm run test:roundtrip` | Every template: renders a sample resume, prints it to PDF the way the app does, extracts the text with the ATS checker's extractor, and checks that the headings are recognised, the name comes first, each job title is right above its bullets, every skill is there as text, and there are no stray separators or spaced-out letters. Extra cases cover settings that change a layout's text order (Timeline Plus with two columns, Infographic with skill levels). It also fails if any layout steps outside the design foundation's scales. `ROUNDTRIP_ONLY=classic` checks only the templates whose id starts with "classic" |
 
 **Client** (in `client/`): `npm run lint` (oxlint) and `npm run build` (the production build compiles).
 
@@ -257,7 +258,9 @@ CI installs packages with `npm ci` from `package-lock.json`, so commit that file
 
 ## Challenges and Solutions
 
-**PDFs that looked right but read wrong.** Some templates exported PDFs that an ATS read as `S U M M A R Y`, with stray `· · ·` separators, or with job titles separated from their bullets. They looked fine on screen, so the bug was invisible. *Solution:* a round-trip test that prints every template to PDF the way the app does, extracts the text with the ATS checker's own extractor, and checks the headings, the order and the separators. The templates were then fixed until all 45 passed.
+**PDFs that looked right but read wrong.** Some templates exported PDFs that an ATS read as `S U M M A R Y`, with stray `· · ·` separators, or with job titles separated from their bullets. They looked fine on screen, so the bug was invisible. *Solution:* a round-trip test that prints every template to PDF the way the app does, extracts the text with the ATS checker's own extractor, and checks the headings, the order and the separators. Its lessons became rules for every layout: no letter-spacing, no faded or positioned text, and every separator, icon, section number or monogram drawn as a shape so it never turns up in the text.
+
+**Page breaks for a web page that has to print as paper.** The preview is one long HTML page, but the PDF has fixed pages, and the browser's own page breaking split job entries, left headings stranded at the bottom of a page and couldn't keep a layout's decorations tidy. *Solution:* the app paginates itself. Every piece that must stay whole is marked as a block; the hidden full-length sheet is measured, and any block that would cross a page's bottom margin gets padding that moves it to the next page, the same way on screen and in the PDF. Headings and job titles keep with what follows, and lists have orphan/widow control (at least two items on each side of a break, so a title always keeps its first two bullets). Decorations that span a break, like card tints, a timeline's line and the rule between two columns, are drawn page by page from the blocks' measured positions, so they never cross the page margins, never leave an empty stub behind and never run beside an empty column. A dotted rule is drawn as a pattern of gaps laid over the line.
 
 **Importing real-world resumes.** PDFs store text in drawing order, not reading order. Real CVs also wrap long lines, put dates in odd places and use brackets that split across lines. The parser worked on tidy test files and broke on real ones. *Solution:* fixes for each failure, plus a regression test on an anonymised real CV's text, in both the PDF's own order and in reading order.
 

@@ -9,7 +9,7 @@ import { HEADER_ALIGN } from "./sectionLayout";
 // Full bleed: the strip is drawn down the whole sheet by the page root, so this layout applies
 // the page margins itself.
 
-const VARS = foundationVars({ name: 28, headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 });
+const VARS = foundationVars({ headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 });
 const STRIP = "5mm";
 
 export default function SplitAccentLayout({ data }) {

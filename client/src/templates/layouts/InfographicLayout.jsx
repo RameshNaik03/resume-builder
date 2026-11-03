@@ -8,7 +8,7 @@ import { HEADER_ALIGN } from "./sectionLayout";
 // under the header spanning the first job's start to the last job's end. Every graphic is
 // drawn (no text in it), and the accent is used only for the graphics.
 
-const VARS = foundationVars({ name: 28, headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 });
+const VARS = foundationVars({ headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 });
 
 export default function InfographicLayout({ data }) {
   const showStrip = data.sections.some((section) => section.id === "experience");

@@ -55,8 +55,8 @@ export default function ResumePreview({ resume, printRef, highlightPlaceholders 
   useLayoutEffect(() => {
     const { gaps, pageCount: pagesNeeded } = paginate(printRef.current, { heightPx, marginTopPx, marginBottomPx });
     applyGaps(printRef.current, gaps);
-    // Page-aware decorations (column dividers, card tints...) are measured once the gaps are in
-    const decorations = pageDecorations(printRef.current, { heightPx, marginBottomPx });
+    // Page-aware decorations (column rules, card tints...) are measured once the gaps are in
+    const decorations = pageDecorations(printRef.current, { heightPx });
     applyDecorations(printRef.current, decorations);
     for (const page of pagesRef.current.querySelectorAll("[data-page]")) {
       applyGaps(page, gaps);

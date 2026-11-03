@@ -8,9 +8,9 @@
 
 // ---------- Typography ----------
 
-// Allowed range and default (pt) for each text role
+// Allowed range and default (pt) for each text role. The name's range depends on the tier
+// (NAME_SIZES); a layout sets its name size in registry.js (nameSize).
 export const TYPE_SCALE = {
-  name: { min: 24, max: 30, default: 26 },
   headline: { min: 11, max: 12, default: 11.5 }, // Title under the name
   heading: { min: 10.5, max: 11.5, default: 11 }, // Section headings
   jobTitle: { min: 10.5, max: 11, default: 10.5 },
@@ -18,6 +18,13 @@ export const TYPE_SCALE = {
   body: { min: 9.5, max: 10.5, default: 10 }, // The layout's baseFontSize
 };
 export const SMALL_TEXT = 8.5; // Tags, captions
+
+// Name sizes by tier: Premium layouts may use a display size
+export const NAME_SIZES = {
+  basic: { min: 24, max: 30 },
+  advanced: { min: 24, max: 30 },
+  premium: { min: 24, max: 40 },
+};
 
 export const LINE_HEIGHTS = {
   body: { min: 1.35, max: 1.45 },
@@ -93,9 +100,10 @@ function checkSpace(label, value) {
   if (value !== 0 && !SPACE.includes(value)) report(`${label} must be one of ${SPACE.join(", ")}pt, got ${value}`);
 }
 
-// Checks a foundation layout's registry defaults (see registry.js)
-export function checkLayoutDefaults(id, defaults) {
+// Checks a foundation layout's registry defaults (see registry.js) for its tier
+export function checkLayoutDefaults(id, defaults, tier) {
   if (!CHECKS_ON) return defaults;
+  checkRange(`${id} nameSize (${tier})`, defaults.nameSize, NAME_SIZES[tier] ?? NAME_SIZES.basic);
   checkRange(`${id} baseFontSize`, defaults.baseFontSize, TYPE_SCALE.body);
   checkRange(`${id} lineHeight`, defaults.lineHeight, LINE_HEIGHTS.body);
   defaults.margins.forEach((margin, index) => checkRange(`${id} margin ${index + 1}`, margin, PAGE_MARGIN_MM));
@@ -114,11 +122,13 @@ const textSize = (pt) => `calc(${pt}pt * var(--fs-scale, 1))`;
 const headingSize = (pt) => `calc(${pt}pt * var(--fs-scale, 1) * var(--hs-scale, 1))`;
 
 // The CSS variables foundation.css reads, for a layout's chosen sizes and rhythm.
-//   type   - { name, headline, heading, jobTitle, meta, nameLineHeight } (defaults above)
+//   type   - { headline, heading, jobTitle, meta, nameLineHeight } (defaults above); the name's
+//            size comes from the registry (nameSize -> --name-size, see design.js)
 //   rhythm - { section, heading, item, bullet } from SPACE
 export function foundationVars(type = {}, rhythm = {}) {
+  if (CHECKS_ON && "name" in type) report("set the name size in registry.js (nameSize), not in foundationVars");
   const t = Object.fromEntries(
-    ["name", "headline", "heading", "jobTitle", "meta"].map((key) => {
+    ["headline", "heading", "jobTitle", "meta"].map((key) => {
       const value = type[key] ?? TYPE_SCALE[key].default;
       if (CHECKS_ON) checkRange(`type.${key}`, value, TYPE_SCALE[key]);
       return [key, value];
@@ -132,7 +142,7 @@ export function foundationVars(type = {}, rhythm = {}) {
   }
 
   return {
-    "--f-name": headingSize(t.name),
+    "--f-name": "calc(var(--name-size, 26pt) * var(--fs-scale, 1) * var(--hs-scale, 1))",
     "--f-name-lh": nameLineHeight,
     "--f-headline": textSize(t.headline),
     "--f-heading": headingSize(t.heading),

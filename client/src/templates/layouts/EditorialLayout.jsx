@@ -12,7 +12,7 @@ import { HEADER_ALIGN, splitSections } from "./sectionLayout";
 // isn't marked ATS-friendly, but the text still reads in order.
 
 const VARS = foundationVars(
-  { name: 30, headline: 12, heading: 11.5, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 },
+  { headline: 12, heading: 11.5, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 },
   { section: 24, heading: 8, item: 16, bullet: 4 }
 );
 
@@ -42,13 +42,17 @@ export default function EditorialLayout({ data }) {
 
       {twoColumns ? (
         // The section gap sits above the columns (not inside them), so the column rule starts
-        // level with the first headings' rules
-        <div className="mt-(--f-section-gap) grid" style={{ gridTemplateColumns: `${100 - data.sideRatio}fr ${data.sideRatio}fr` }}>
+        // level with the first headings' rules. The rule is drawn page by page (see SectionColumns).
+        <div
+          className="f-col-rule mt-(--f-section-gap) grid"
+          style={{ gridTemplateColumns: `${100 - data.sideRatio}fr ${data.sideRatio}fr`, "--rule-x": `${100 - data.sideRatio}%` }}
+          data-segmented
+          data-seg-columns
+        >
           <div className="min-w-0 pr-[8mm] [&>.f-section:first-child]:mt-0" data-column="main">
             <FoundationSectionList data={data} sections={main} options={OPTIONS} />
           </div>
-          {/* The column rule is the side column's left border (it ends with the column's content) */}
-          <div className="divider-l min-w-0 self-start pl-[8mm] [&>.f-section:first-child]:mt-0" data-column="side" data-fill-page>
+          <div className="min-w-0 pl-[8mm] [&>.f-section:first-child]:mt-0" data-column="side">
             <FoundationSectionList data={data} sections={side} options={OPTIONS} />
           </div>
         </div>

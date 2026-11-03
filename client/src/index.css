@@ -95,12 +95,6 @@
   border-bottom: var(--divider-w, 0.75pt) var(--divider-style, solid) var(--line);
   padding-bottom: var(--divider-pad, 2pt);
 }
-@utility divider-l {
-  border-left: var(--divider-w, 0.75pt) var(--divider-style, solid) var(--line);
-}
-@utility divider-r {
-  border-right: var(--divider-w, 0.75pt) var(--divider-style, solid) var(--line);
-}
 /* A free-standing rule (e.g. the lines either side of a centred heading) */
 @utility divider-rule {
   height: 0;

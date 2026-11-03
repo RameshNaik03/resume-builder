@@ -6,7 +6,7 @@ import { HEADER_ALIGN } from "./sectionLayout";
 // Modern Line (design foundation): a crisp left-aligned header and section headings marked
 // by a solid accent bar on their left. The accent is used only for the bars.
 
-const VARS = foundationVars({ name: 28, headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 });
+const VARS = foundationVars({ headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 });
 
 export default function ModernLineLayout({ data }) {
   return (

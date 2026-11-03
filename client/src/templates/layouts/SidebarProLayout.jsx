@@ -13,7 +13,7 @@ import { HEADER_ALIGN, splitSections } from "./sectionLayout";
 // Full bleed: the sidebar colour runs to the page edges on every page (drawn down the whole
 // sheet by the page root), so this layout applies the page margins itself.
 
-const VARS = foundationVars({ name: 28, headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 });
+const VARS = foundationVars({ headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 });
 const PAD = "8mm"; // Inner padding of the sidebar and the gap to the main column
 
 export default function SidebarProLayout({ data }) {

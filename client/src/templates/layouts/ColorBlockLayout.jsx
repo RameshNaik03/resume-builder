@@ -11,7 +11,7 @@ import { HEADER_ALIGN } from "./sectionLayout";
 // (pages 2, 3... get their top margin from templates/pagination.js).
 
 const VARS = foundationVars(
-  { name: 30, headline: 12, heading: 11.5, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 },
+  { headline: 12, heading: 11.5, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 },
   { section: 24, heading: 8, item: 12, bullet: 4 }
 );
 const BAND = "5mm"; // The accent band at the foot of every page

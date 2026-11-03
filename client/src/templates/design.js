@@ -10,10 +10,10 @@
 //   --para-space / --section-space   spacing multipliers (see foundationVars in foundation/tokens.js)
 //   --bullet-space                   bullet gaps, relative to the template default
 //   --m-top / --m-right / ...        page margins
-//   --divider-w / -style / -pad / -on  divider lines (divider-b, divider-l, divider-rule utilities)
+//   --divider-w / -style / -pad / -on  divider lines (divider-b, divider-rule utilities; column rules, see foundation.css)
 //   --bullet / --header-align        bullet marker and header alignment
 //   --bm-w / -h / -r / -clip / -indent  drawn bullet marker (foundation layouts)
-//   --base-size                      body text size (foundation layouts)
+//   --base-size / --name-size        body text and name size
 // Section order, visibility, headings, columns, skills style and date format don't need CSS:
 // prepareResume() applies them to the data the layouts render.
 //   --accent, --text, --muted, --heading, --line, --bg, --soft, --deep, --gradient, --on-accent,
@@ -302,6 +302,7 @@ export function designCssVars(template, { resolved: d, overrides }) {
     "--font-body": bodyFont ? fontStack(bodyFont) : theme.fontFamily,
     ...(headingFont && { "--font-heading": fontStack(headingFont) }),
     "--base-size": `${d.baseFontSize}pt`,
+    "--name-size": `${layout.nameSize ?? 26}pt`, // The layout's name size (registry.js)
     "--fs-scale": d.baseFontSize / layout.baseFontSize,
     "--hs-scale": d.headingSize / 100,
     "--lh": d.lineHeight,
@@ -317,6 +318,10 @@ export function designCssVars(template, { resolved: d, overrides }) {
     "--divider-style": divider.style,
     "--divider-pad": divider.pad,
     "--divider-on": d.dividerStyle === "none" ? 0 : 1,
+    // Dotted column rules (drawn as backgrounds): page-coloured gaps over the line
+    ...(d.dividerStyle === "dotted" && {
+      "--rule-dots": `repeating-linear-gradient(to bottom, transparent 0 ${divider.width}, ${d.backgroundColor} ${divider.width} calc(2 * ${divider.width}))`,
+    }),
     "--bullet": BULLET_STYLES[d.bulletStyle].css,
     "--bm-w": marker.w,
     "--bm-h": marker.h,

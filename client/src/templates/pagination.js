@@ -4,6 +4,8 @@
 //   1. Layouts mark every piece that must not be split across pages with `data-block`
 //      (a heading, a job's title line, one bullet point, an education entry...).
 //      Headings and job titles also get `data-keep` so they stay with the next block.
+//      Lists get orphan/widow control automatically (see keepsWithNext): a page never starts
+//      or ends with a single item of a list, and a job title stays with its first two bullets.
 //      Two-column layouts add `data-flow="side"` (or "all" for full-width parts above the columns),
 //      either on each block or once on a column wrapper as `data-column="side"`.
 //   2. paginate() measures the blocks on the full-length (hidden) resume.
@@ -20,7 +22,7 @@ function clearGaps(container) {
     el.style.paddingTop = "";
     el.style.removeProperty("--gap");
   }
-  applyDecorations(container, { fills: [], segments: [] });
+  applyDecorations(container, { segments: [] });
 }
 
 // gaps[i] is the extra space (px) before the i-th [data-block] element
@@ -32,6 +34,19 @@ export function applyGaps(container, gaps) {
     if (gap) el.style.setProperty("--gap", `${gap}px`);
     else el.style.removeProperty("--gap");
   });
+}
+
+// Whether a block must stay on the same page as the block after it: headings, job titles and
+// anything else marked data-keep, plus orphan/widow control for lists. In a list of block <li>s,
+// the first item stays with the second and the second-to-last with the last, so a list split
+// across pages always has at least two items on each side (a three-item list stays whole).
+// With the job title's own data-keep, a title also stays with its first two bullets.
+function keepsWithNext(el) {
+  if (el.dataset.keep === "true") return true;
+  if (el.tagName !== "LI") return false;
+  const items = [...el.parentElement.children].filter((item) => item.hasAttribute("data-block"));
+  const position = items.indexOf(el);
+  return items.length >= 2 && (position === 0 || position === items.length - 2);
 }
 
 // Works out the gaps and the number of pages for a rendered resume sheet.
@@ -49,7 +64,7 @@ export function paginate(sheet, { heightPx: PAGE_HEIGHT, marginTopPx: MARGIN_TOP
       index,
       // A block's column: its own data-flow, or the data-column it sits in
       flow: el.dataset.flow ?? el.closest("[data-column]")?.dataset.column ?? "main",
-      keepWithNext: el.dataset.keep === "true",
+      keepWithNext: keepsWithNext(el),
       top: rect.top - sheetTop,
       bottom: rect.bottom - sheetTop,
     };
@@ -105,60 +120,57 @@ export function paginate(sheet, { heightPx: PAGE_HEIGHT, marginTopPx: MARGIN_TOP
 
 // ---------- Decorations that respect page breaks ----------
 //
-// data-fill-page: an element (e.g. the side column of two columns, which carries the column
-//   divider) that grows to the bottom margin of the last page its own content reaches, and
-//   no further, so its divider never runs on past the content into an empty next page.
-//   It must not stretch by itself (use align-self: start in a grid).
-//
-// data-segmented: an element whose background (a card's tint, a timeline's line) would
-//   otherwise run straight through the page margins at a page break. Per page, its
+// data-segmented: an element whose background (a card's tint, a timeline's line, a column rule)
+//   would otherwise run straight through the page margins at a page break. Per page, its
 //   background is drawn from its first block's top to its last block's bottom on that page,
 //   plus data-seg-pad points of padding. The result is set as the --seg-image variable (a
 //   vertical gradient in var(--seg-color)); the element's CSS uses it as its background
 //   image, falling back to a solid background when it isn't paginated (thumbnails).
+//   data-seg-columns: only pages where at least two of the element's columns ([data-column])
+//   have content get a segment (a column rule never runs beside an empty column).
 //   An element inside marked data-seg-start (e.g. a timeline's first dot) makes the first
 //   segment start at its vertical centre. With a background image set, --seg-y / --seg-h are
 //   set to 0 / 100% so the element's CSS can position its unpaginated fallback differently.
 
 const PT_TO_PX = 96 / 72;
+const NOTHING = "linear-gradient(transparent, transparent)";
 
 // Measures the decorations on a sheet whose gaps are already applied
-export function pageDecorations(sheet, { heightPx: PAGE_HEIGHT, marginBottomPx: MARGIN_BOTTOM }) {
-  applyDecorations(sheet, { fills: [], segments: [] });
+export function pageDecorations(sheet, { heightPx: PAGE_HEIGHT }) {
+  applyDecorations(sheet, { segments: [] });
   const sheetTop = sheet.getBoundingClientRect().top;
   const pageOf = (y) => Math.floor(y / PAGE_HEIGHT);
-
-  const fills = [...sheet.querySelectorAll("[data-fill-page]")].map((el) => {
-    const rect = el.getBoundingClientRect();
-    const top = rect.top - sheetTop;
-    const lastPage = pageOf(rect.bottom - sheetTop - 1);
-    return Math.max(0, (lastPage + 1) * PAGE_HEIGHT - MARGIN_BOTTOM - top);
-  });
 
   const segments = [...sheet.querySelectorAll("[data-segmented]")].map((el) => {
     const rect = el.getBoundingClientRect();
     const top = rect.top - sheetTop;
     const bottom = rect.bottom - sheetTop;
     const pad = Number(el.dataset.segPad ?? 0) * PT_TO_PX;
+    const needsColumns = "segColumns" in el.dataset;
 
-    // The top (below any gap padding) and bottom of each block inside, grouped by page
+    // The top (below any gap padding) and bottom of the blocks inside, and their columns, by page
     const pages = new Map();
     for (const block of el.querySelectorAll("[data-block]")) {
       const blockRect = block.getBoundingClientRect();
       const blockTop = blockRect.top - sheetTop + (parseFloat(block.style.paddingTop) || 0);
-      const blockBottom = blockRect.bottom - sheetTop;
       const page = pageOf(blockTop);
-      const range = pages.get(page) ?? { start: Infinity, end: -Infinity };
-      pages.set(page, { start: Math.min(range.start, blockTop), end: Math.max(range.end, blockBottom) });
+      const range = pages.get(page) ?? { start: Infinity, end: -Infinity, columns: new Set() };
+      range.start = Math.min(range.start, blockTop);
+      range.end = Math.max(range.end, blockRect.bottom - sheetTop);
+      range.columns.add(block.closest("[data-column]")?.dataset.column);
+      pages.set(page, range);
     }
+    const kept = [...pages.values()].filter((range) => !needsColumns || range.columns.size >= 2);
+    if (kept.length === 0) return NOTHING;
+
     const startMark = el.querySelector("[data-seg-start]");
     // Entirely on one page (and no start mark), the element's own background is already right.
     // An element whose blocks all moved to the next page still starts on the page before, so
     // it needs a segment too (otherwise an empty tinted stub is left behind).
     const onePage = pages.size === 1 && pageOf(top) === pageOf(bottom - 1);
-    if (pages.size === 0 || (onePage && !startMark)) return "";
+    if (onePage && !startMark) return "";
 
-    const ranges = [...pages.values()].map(({ start, end }) => [Math.max(top, start - pad) - top, Math.min(bottom, end + pad) - top]);
+    const ranges = kept.map(({ start, end }) => [Math.max(top, start - pad) - top, Math.min(bottom, end + pad) - top]);
     if (startMark) {
       const markRect = startMark.getBoundingClientRect();
       ranges[0][0] = Math.max(ranges[0][0], (markRect.top + markRect.bottom) / 2 - sheetTop - top);
@@ -170,14 +182,11 @@ export function pageDecorations(sheet, { heightPx: PAGE_HEIGHT, marginBottomPx: 
     return `linear-gradient(to bottom, ${stops.join(", ")}, transparent ${ranges.at(-1)[1]}px)`;
   });
 
-  return { fills, segments };
+  return { segments };
 }
 
 // Applies measured decorations (in the same order) to the sheet or a visible page copy
-export function applyDecorations(container, { fills, segments }) {
-  container.querySelectorAll("[data-fill-page]").forEach((el, index) => {
-    el.style.minHeight = fills[index] ? `${fills[index]}px` : "";
-  });
+export function applyDecorations(container, { segments }) {
   container.querySelectorAll("[data-segmented]").forEach((el, index) => {
     for (const [name, value] of [["--seg-image", segments[index]], ["--seg-y", "0px"], ["--seg-h", "100%"]]) {
       if (segments[index]) el.style.setProperty(name, value);

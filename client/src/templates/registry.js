@@ -45,12 +45,13 @@ const layoutDefaults = ({ sectionTitles, ...overrides } = {}) => ({
   photoPosition: "left",
   ...overrides,
 });
-// Defaults for a layout built on the design foundation (templates/foundation), checked
-// against its type scale, line heights, margins and fonts. Extra settings:
+// Defaults for a layout built on the design foundation (templates/foundation). They're checked
+// against its type scale, line heights, margins and fonts, for the layout's tier (see TEMPLATES).
+// Extra settings:
+//   nameSize - the name's size in pt (24-30; Premium layouts may go up to 40)
 //   fontFamily / headingFontFamily - font ids (body and headings; headings default to the body font)
 //   accentOn - where the one accent colour goes: "name", "headings" or "rules"
-const foundationDefaults = (id, overrides) =>
-  checkLayoutDefaults(id, layoutDefaults({ margins: [16, 16, 16, 16], headingFontFamily: null, ...overrides }));
+const foundationDefaults = (overrides) => layoutDefaults({ margins: [16, 16, 16, 16], headingFontFamily: null, ...overrides });
 
 
 // Which layouts and themes make up each tier.
@@ -67,7 +68,8 @@ const TIER_CONFIG = [
       {
         id: "classic",
         name: "Classic",
-        defaults: foundationDefaults("classic", {
+        defaults: foundationDefaults({
+          nameSize: 26,
           dividerStyle: "line",
           headerAlign: "center",
           fontFamily: "inter",
@@ -79,7 +81,8 @@ const TIER_CONFIG = [
       {
         id: "modern-line",
         name: "Modern Line",
-        defaults: foundationDefaults("modern-line", {
+        defaults: foundationDefaults({
+          nameSize: 28,
           dividerStyle: "line",
           fontFamily: "ibm-plex-sans",
           accentOn: "rules",
@@ -91,7 +94,8 @@ const TIER_CONFIG = [
         id: "soft-header",
         name: "Soft Header",
         fullBleed: true,
-        defaults: foundationDefaults("soft-header", {
+        defaults: foundationDefaults({
+          nameSize: 28,
           dividerStyle: "line",
           fontFamily: "lato",
           accentOn: "name",
@@ -102,7 +106,8 @@ const TIER_CONFIG = [
       {
         id: "compact-pro",
         name: "Compact Pro",
-        defaults: foundationDefaults("compact-pro", {
+        defaults: foundationDefaults({
+          nameSize: 24,
           baseFontSize: 9.5,
           lineHeight: 1.35,
           dividerStyle: "line",
@@ -116,7 +121,8 @@ const TIER_CONFIG = [
       {
         id: "elegant-serif",
         name: "Elegant Serif",
-        defaults: foundationDefaults("elegant-serif", {
+        defaults: foundationDefaults({
+          nameSize: 30,
           lineHeight: 1.45,
           dividerStyle: "line",
           headerAlign: "center",
@@ -140,7 +146,8 @@ const TIER_CONFIG = [
         name: "Sidebar Pro",
         fullBleed: true,
         atsFriendly: false,
-        defaults: foundationDefaults("sidebar-pro", {
+        defaults: foundationDefaults({
+          nameSize: 28,
           dividerStyle: "line",
           fontFamily: "lato",
           accentOn: "rules",
@@ -158,7 +165,8 @@ const TIER_CONFIG = [
         id: "bold-header",
         name: "Bold Header",
         fullBleed: true,
-        defaults: foundationDefaults("bold-header", {
+        defaults: foundationDefaults({
+          nameSize: 30,
           dividerStyle: "line",
           fontFamily: "inter",
           accentOn: "name",
@@ -170,7 +178,8 @@ const TIER_CONFIG = [
         id: "split-accent",
         name: "Split Accent",
         fullBleed: true,
-        defaults: foundationDefaults("split-accent", {
+        defaults: foundationDefaults({
+          nameSize: 28,
           dividerStyle: "line",
           fontFamily: "ibm-plex-sans",
           accentOn: "rules",
@@ -181,7 +190,8 @@ const TIER_CONFIG = [
       {
         id: "card-sections",
         name: "Card Sections",
-        defaults: foundationDefaults("card-sections", {
+        defaults: foundationDefaults({
+          nameSize: 28,
           dividerStyle: "line",
           fontFamily: "source-sans-3",
           accentOn: "headings",
@@ -194,7 +204,8 @@ const TIER_CONFIG = [
         id: "timeline-plus",
         name: "Timeline Plus",
         atsFriendly: false,
-        defaults: foundationDefaults("timeline-plus", {
+        defaults: foundationDefaults({
+          nameSize: 28,
           dividerStyle: "line",
           fontFamily: "source-sans-3",
           accentOn: "rules",
@@ -211,7 +222,8 @@ const TIER_CONFIG = [
       {
         id: "executive",
         name: "Executive",
-        defaults: foundationDefaults("executive", {
+        defaults: foundationDefaults({
+          nameSize: 28,
           lineHeight: 1.4,
           dividerStyle: "line",
           headerAlign: "center",
@@ -228,7 +240,8 @@ const TIER_CONFIG = [
         id: "editorial",
         name: "Editorial",
         atsFriendly: false, // Two columns
-        defaults: foundationDefaults("editorial", {
+        defaults: foundationDefaults({
+          nameSize: 38,
           dividerStyle: "line",
           fontFamily: "source-sans-3",
           headingFontFamily: "fraunces",
@@ -243,7 +256,8 @@ const TIER_CONFIG = [
       {
         id: "infographic",
         name: "Infographic",
-        defaults: foundationDefaults("infographic", {
+        defaults: foundationDefaults({
+          nameSize: 28,
           dividerStyle: "line",
           fontFamily: "inter",
           accentOn: "rules",
@@ -255,7 +269,8 @@ const TIER_CONFIG = [
         id: "monogram",
         name: "Monogram",
         fullBleed: true,
-        defaults: foundationDefaults("monogram", {
+        defaults: foundationDefaults({
+          nameSize: 34,
           lineHeight: 1.45,
           dividerStyle: "line",
           headerAlign: "center",
@@ -271,7 +286,8 @@ const TIER_CONFIG = [
         id: "color-block",
         name: "Color Block",
         fullBleed: true,
-        defaults: foundationDefaults("color-block", {
+        defaults: foundationDefaults({
+          nameSize: 30,
           dividerStyle: "line",
           fontFamily: "ibm-plex-sans",
           accentOn: "rules",
@@ -282,7 +298,8 @@ const TIER_CONFIG = [
       {
         id: "minimal-grid",
         name: "Minimal Grid",
-        defaults: foundationDefaults("minimal-grid", {
+        defaults: foundationDefaults({
+          nameSize: 30,
           dividerStyle: "line",
           fontFamily: "inter",
           accentOn: "rules",
@@ -297,8 +314,9 @@ const TIER_CONFIG = [
 // Every layout × theme combination becomes a template,
 // e.g. { id: "classic-navy", name: "Classic Navy", tier: "basic", layout: "classic", theme: {...}, atsFriendly: true }
 export const TEMPLATES = TIER_CONFIG.flatMap(({ tier, atsFriendly, layouts, themes }) =>
-  layouts.flatMap((layout) =>
-    themes.map((theme) => ({
+  layouts.flatMap((layout) => {
+    checkLayoutDefaults(layout.id, layout.defaults, tier);
+    return themes.map((theme) => ({
       id: `${layout.id}-${theme.id}`,
       name: `${layout.name} ${theme.name}`,
       tier,
@@ -308,8 +326,8 @@ export const TEMPLATES = TIER_CONFIG.flatMap(({ tier, atsFriendly, layouts, them
       atsFriendly: layout.atsFriendly ?? atsFriendly,
       fullBleed: layout.fullBleed ?? false,
       layoutDefaults: layout.defaults,
-    }))
-  )
+    }));
+  })
 );
 
 // One entry per layout, with its templates (one per palette), for the template picker:

@@ -9,7 +9,7 @@ import { HEADER_ALIGN } from "./sectionLayout";
 // Full bleed: the block reaches the page edges, so this layout applies the page margins itself
 // (pages 2, 3... get their top margin from templates/pagination.js).
 
-const VARS = foundationVars({ name: 30, headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 });
+const VARS = foundationVars({ headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 });
 
 export default function BoldHeaderLayout({ data }) {
   return (

@@ -8,7 +8,7 @@ import { HEADER_ALIGN } from "./sectionLayout";
 // them, and generous spacing throughout. Body text stays sans-serif for easy reading.
 
 const VARS = foundationVars(
-  { name: 30, headline: 12, heading: 11.5, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 },
+  { headline: 12, heading: 11.5, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 },
   { section: 24, heading: 8, item: 16, bullet: 4 }
 );
 

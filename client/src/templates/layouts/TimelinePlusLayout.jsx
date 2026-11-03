@@ -9,7 +9,7 @@ import { HEADER_ALIGN, splitSections } from "./sectionLayout";
 // With two columns (Design tab) the columns are too narrow for a date column, so the dates
 // move above each title. The dots and line are the layout's one use of the accent.
 
-const VARS = foundationVars({ name: 28, headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 });
+const VARS = foundationVars({ headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 });
 
 const optionsFor = (stacked) => ({
   heading: { variant: "underline" },

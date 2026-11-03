@@ -13,7 +13,7 @@ import { HEADER_ALIGN, sectionNumbers, splitSections } from "./sectionLayout";
 // right before each heading, and the header is a plain one.
 
 const VARS = foundationVars(
-  { name: 30, headline: 12, heading: 11.5, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 },
+  { headline: 12, heading: 11.5, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 },
   { section: 24, heading: 12, item: 12, bullet: 4 }
 );
 const GUTTER = "30mm";

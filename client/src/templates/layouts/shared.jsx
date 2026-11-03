@@ -73,8 +73,9 @@ export function WithPhoto({ photo, align, defaultBorderColor, children }) {
 // (side column first, at the design's width ratio) when the design asks for them.
 //   render(section, column) - draws one section; column is "main", "side" or "all" (spans both)
 // data-column tells pagination which column a block is in, so each one breaks independently.
-// The column divider is drawn by the side column (data-fill-page: it reaches the bottom of the
-// last page its content is on, never an empty page after it, see templates/pagination.js).
+// The column rule is the grid's background, drawn page by page and only where both columns
+// have content (data-segmented + data-seg-columns, see templates/pagination.js), so it never
+// crosses the page margins or runs beside an empty column.
 export function SectionColumns({ data, render }) {
   const { twoColumns, lead, main, side } = splitSections(data);
   if (!twoColumns) return main.map((section) => render(section, "main"));
@@ -82,8 +83,13 @@ export function SectionColumns({ data, render }) {
   return (
     <>
       {lead && <div data-column="all">{render(lead, "all")}</div>}
-      <div className="grid" style={{ gridTemplateColumns: `${data.sideRatio}fr ${100 - data.sideRatio}fr` }}>
-        <div className="divider-r min-w-0 self-start pr-[6mm]" data-column="side" data-fill-page>
+      <div
+        className="f-col-rule grid"
+        style={{ gridTemplateColumns: `${data.sideRatio}fr ${100 - data.sideRatio}fr`, "--rule-x": `${data.sideRatio}%` }}
+        data-segmented
+        data-seg-columns
+      >
+        <div className="min-w-0 pr-[6mm]" data-column="side">
           {side.map((section) => render(section, "side"))}
         </div>
         <div className="min-w-0 pl-[6mm]" data-column="main">

@@ -7,7 +7,7 @@ import { HEADER_ALIGN } from "./sectionLayout";
 // the same 16pt padding, headings in the accent colour. A section that runs onto the next
 // page continues in a new card segment there (the tint is cut at the page break).
 
-const VARS = foundationVars({ name: 28, headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 }, { section: 12 });
+const VARS = foundationVars({ headline: 12, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 }, { section: 12 });
 
 export default function CardSectionsLayout({ data }) {
   return (

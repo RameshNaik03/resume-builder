@@ -9,7 +9,7 @@ import { HEADER_ALIGN } from "./sectionLayout";
 // Body text is sans-serif; one column, so it stays ATS-friendly.
 
 const VARS = foundationVars(
-  { name: 28, headline: 11.5, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 },
+  { headline: 11.5, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 },
   { section: 24, heading: 12, item: 12, bullet: 4 }
 );
 

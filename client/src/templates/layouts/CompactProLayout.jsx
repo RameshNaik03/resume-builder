@@ -8,7 +8,7 @@ import { HEADER_ALIGN } from "./sectionLayout";
 // hairline rule. The accent is used only for the rules.
 
 const VARS = foundationVars(
-  { name: 24, headline: 11, heading: 10.5, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.15 },
+  { headline: 11, heading: 10.5, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.15 },
   { section: 12, heading: 4, item: 8, bullet: 0 }
 );
 

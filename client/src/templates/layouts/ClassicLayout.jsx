@@ -6,7 +6,7 @@ import { HEADER_ALIGN } from "./sectionLayout";
 // Classic (design foundation): centred sans-serif header, accent-coloured section headings
 // with a hairline underneath, title and dates on one line with the company below.
 
-const VARS = foundationVars({ name: 26, headline: 11.5, heading: 10.5, jobTitle: 10.5, meta: 9.5 });
+const VARS = foundationVars({ headline: 11.5, heading: 10.5, jobTitle: 10.5, meta: 9.5 });
 
 export default function ClassicLayout({ data }) {
   return (

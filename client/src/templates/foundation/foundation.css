@@ -239,6 +239,18 @@
     color: var(--icon-color, var(--line));
   }
 
+  /* ---------- Column rule ----------
+     The rule between two columns, drawn as the grid's background at --rule-x (the column
+     boundary) and cut page by page by data-segmented. The design's dotted divider style lays a
+     pattern of page-coloured gaps over it (--rule-dots, set by design.js). */
+  .f-col-rule {
+    --seg-color: var(--line);
+    background-image: var(--rule-dots, none), var(--seg-image, linear-gradient(var(--line), var(--line)));
+    background-repeat: no-repeat;
+    background-size: var(--divider-w, 0.75pt) 100%;
+    background-position: calc(var(--rule-x, 50%) - var(--divider-w, 0.75pt) / 2) 0;
+  }
+
   /* ---------- Cards ----------
      A softly tinted section. data-segmented (pagination.js) cuts the tint at page breaks. */
   .f-card {
