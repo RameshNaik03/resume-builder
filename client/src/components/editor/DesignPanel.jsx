@@ -23,6 +23,7 @@ import {
   sameValue,
 } from "../../templates/design";
 import { loadAllFonts } from "../../templates/fonts";
+import { BODY_FONTS, SERIF_HEADING_FONTS } from "../../templates/foundation/tokens";
 import SectionOrderList from "./SectionOrderList";
 
 // Segmented-control id for "no override" (null can't be an option id)
@@ -198,6 +199,7 @@ export default function DesignPanel({ resume, onChange }) {
           value={overrides.fontFamily ?? null}
           defaultLabel="Template font"
           defaultStack={getFont(defaults.fontFamily) ? fontStack(getFont(defaults.fontFamily)) : template.theme.fontFamily}
+          recommended={BODY_FONTS}
           onChange={(fontFamily) => update({ fontFamily })}
         />
         <FontPicker
@@ -205,6 +207,7 @@ export default function DesignPanel({ resume, onChange }) {
           value={overrides.headingFontFamily ?? null}
           defaultLabel={defaults.headingFontFamily ? "Template font" : "Same as body"}
           defaultStack={getFont(defaults.headingFontFamily) ? fontStack(getFont(defaults.headingFontFamily)) : "inherit"}
+          recommended={[...SERIF_HEADING_FONTS, ...BODY_FONTS]}
           onChange={(headingFontFamily) => update({ headingFontFamily })}
         />
         <Slider
@@ -425,38 +428,58 @@ function Group({ title, changed, onReset, children }) {
 }
 
 // Grid of fonts, each name drawn in its own font. value null = the template's choice.
-function FontPicker({ label, value, defaultLabel, defaultStack, onChange }) {
-  const options = [{ id: null, name: defaultLabel, category: "Default", stack: defaultStack }].concat(
-    FONT_OPTIONS.map((font) => ({ ...font, stack: fontStack(font) }))
-  );
+// The template's choice and the recommended fonts (the design foundation's pairings, in that
+// order) come first, then every other font under "More fonts".
+function FontPicker({ label, value, defaultLabel, defaultStack, recommended, onChange }) {
+  const withStack = (font) => ({ ...font, stack: fontStack(font) });
+  const groups = [
+    {
+      title: "Recommended",
+      fonts: [{ id: null, name: defaultLabel, category: "Default", stack: defaultStack }].concat(
+        recommended.map((id) => withStack(getFont(id)))
+      ),
+    },
+    { title: "More fonts", fonts: FONT_OPTIONS.filter((font) => !recommended.includes(font.id)).map(withStack) },
+  ];
 
   return (
     <fieldset>
       <legend className="label">{label}</legend>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {options.map((font) => {
-          const selected = value === font.id;
-          return (
-            <button
-              key={font.id ?? "default"}
-              type="button"
-              onClick={() => onChange(font.id)}
-              aria-pressed={selected}
-              className={`rounded-lg px-3 py-2 text-left transition ${
-                selected
-                  ? "bg-indigo-50 ring-2 ring-indigo-600 dark:bg-indigo-950/60"
-                  : "ring-1 ring-slate-200 hover:ring-indigo-300 dark:ring-slate-700"
-              }`}
-            >
-              <span className="block truncate text-base text-slate-900 dark:text-white" style={{ fontFamily: font.stack }}>
-                {font.name}
-              </span>
-              <span className="block text-[11px] text-slate-500 dark:text-slate-400">{font.category}</span>
-            </button>
-          );
-        })}
-      </div>
+      {groups.map((group) => (
+        <div key={group.title} className="mt-2 first-of-type:mt-0">
+          <p className="mb-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">{group.title}</p>
+          <FontGrid fonts={group.fonts} value={value} onChange={onChange} />
+        </div>
+      ))}
     </fieldset>
+  );
+}
+
+function FontGrid({ fonts, value, onChange }) {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {fonts.map((font) => {
+        const selected = value === font.id;
+        return (
+          <button
+            key={font.id ?? "default"}
+            type="button"
+            onClick={() => onChange(font.id)}
+            aria-pressed={selected}
+            className={`rounded-lg px-3 py-2 text-left transition ${
+              selected
+                ? "bg-indigo-50 ring-2 ring-indigo-600 dark:bg-indigo-950/60"
+                : "ring-1 ring-slate-200 hover:ring-indigo-300 dark:ring-slate-700"
+            }`}
+          >
+            <span className="block truncate text-base text-slate-900 dark:text-white" style={{ fontFamily: font.stack }}>
+              {font.name}
+            </span>
+            <span className="block text-[11px] text-slate-500 dark:text-slate-400">{font.category}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

@@ -184,11 +184,21 @@ export const TEMPLATES = TIER_CONFIG.flatMap(({ tier, atsFriendly, layouts, them
       tier,
       layout: layout.id,
       theme,
+      layoutName: layout.name,
       atsFriendly: layout.atsFriendly ?? atsFriendly,
       fullBleed: layout.fullBleed ?? false,
       layoutDefaults: layout.defaults,
     }))
   )
+);
+
+// One entry per layout, with its templates (one per palette), for the template picker:
+// { id: "classic", name: "Classic", tier: "basic", atsFriendly: true, templates: [...] }
+export const LAYOUTS = TIER_CONFIG.flatMap(({ tier, layouts }) =>
+  layouts.map((layout) => {
+    const templates = TEMPLATES.filter((template) => template.layout === layout.id);
+    return { id: layout.id, name: layout.name, tier, atsFriendly: templates[0].atsFriendly, templates };
+  })
 );
 
 export const DEFAULT_TEMPLATE_ID = "classic-navy";

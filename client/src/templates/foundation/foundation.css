@@ -71,18 +71,28 @@
   .f-section-body {
     margin-top: var(--f-heading-gap);
   }
-  /* Centred heading between two drawn rules */
-  .f-heading-centered {
+  /* Heading with drawn rules beside it, following the header alignment: rules on both
+     sides when centred, after the text when left-aligned, before it when right-aligned */
+  .f-heading-ruled {
     display: flex;
     align-items: center;
-    gap: 12pt;
   }
-  .f-heading-centered::before,
-  .f-heading-centered::after {
+  .f-heading-ruled::before,
+  .f-heading-ruled::after {
     content: "";
-    flex: 1;
+    flex-basis: 0;
     height: 0;
     border-top: var(--divider-w, 0.75pt) var(--divider-style, solid) var(--line);
+  }
+  .f-heading-ruled::before {
+    flex-grow: var(--rule-start, 1);
+    margin-right: calc(12pt * var(--rule-start, 1));
+    border-top-width: calc(var(--divider-w, 0.75pt) * var(--rule-start, 1));
+  }
+  .f-heading-ruled::after {
+    flex-grow: var(--rule-end, 1);
+    margin-left: calc(12pt * var(--rule-end, 1));
+    border-top-width: calc(var(--divider-w, 0.75pt) * var(--rule-end, 1));
   }
 
   /* ---------- Entries (jobs, schools, projects) ---------- */

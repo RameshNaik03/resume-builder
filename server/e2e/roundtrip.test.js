@@ -7,6 +7,7 @@
 //   - the name comes first
 //   - each job title sits directly above its bullet points
 //   - no stray separator characters ("· · · ·") and no spaced-out letters
+// It also checks that every layout stays within the design foundation's scales.
 // Optional: ROUNDTRIP_ONLY=classic checks only templates whose id starts with "classic".
 // The PDFs and their text are saved in <temp>/resume-builder-e2e/roundtrip.
 //
@@ -96,6 +97,16 @@ test("PDF round trip: every template exports a PDF an ATS can read", async (t) =
     (id) => !ONLY || id.startsWith(ONLY)
   );
   assert.ok(ids.length > 0, "no templates found");
+
+  // Layouts built on the design foundation must stay within its scales (the checks in
+  // client/src/templates/foundation/tokens.js only log in the browser; here they fail)
+  await t.test("layouts stay within the design foundation", async () => {
+    const problems = await editor.evaluate(async () => {
+      await import("/src/templates/TemplateRenderer.jsx"); // Loads every layout (and the registry)
+      return (await import("/src/templates/foundation/tokens.js")).FOUNDATION_PROBLEMS;
+    });
+    assert.deepEqual(problems, []);
+  });
 
   for (const id of ids) {
     await t.test(id, async () => {

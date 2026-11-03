@@ -1,6 +1,6 @@
 // The design foundation every redesigned template is built on: type scale, spacing, colours
 // and fonts. Layouts never pick raw sizes or gaps; they pick values from these scales, and
-// the checks below throw at load time if a layout steps outside them.
+// the checks below report any layout that steps outside them (see "Checks").
 //
 // All sizes are print points. They still follow the Design tab: text sizes are multiplied by
 // --fs-scale (font size) and, for the name and headings, --hs-scale (heading size); gaps by
@@ -71,28 +71,39 @@ export const FOUNDATION_THEMES = PALETTES.map((palette) => ({
 }));
 
 // ---------- Checks ----------
+// Development only (production builds leave them out and never stop the app):
+// each problem is logged with console.error and kept in FOUNDATION_PROBLEMS, which the
+// round-trip test reads, so a layout outside the foundation fails the tests.
 
-function assertRange(label, value, { min, max }) {
-  if (typeof value !== "number" || value < min || value > max) {
-    throw new Error(`Template foundation: ${label} must be ${min}–${max}, got ${value}`);
-  }
+export const FOUNDATION_PROBLEMS = [];
+const CHECKS_ON = Boolean(import.meta.env?.DEV);
+
+function report(message) {
+  const text = `Template foundation: ${message}`;
+  FOUNDATION_PROBLEMS.push(text);
+  console.error(text);
 }
 
-function assertSpace(label, value) {
-  if (!SPACE.includes(value)) throw new Error(`Template foundation: ${label} must be one of ${SPACE.join(", ")}pt, got ${value}`);
+function checkRange(label, value, { min, max }) {
+  if (typeof value !== "number" || value < min || value > max) report(`${label} must be ${min}–${max}, got ${value}`);
+}
+
+function checkSpace(label, value) {
+  if (!SPACE.includes(value)) report(`${label} must be one of ${SPACE.join(", ")}pt, got ${value}`);
 }
 
 // Checks a foundation layout's registry defaults (see registry.js)
 export function checkLayoutDefaults(id, defaults) {
-  assertRange(`${id} baseFontSize`, defaults.baseFontSize, TYPE_SCALE.body);
-  assertRange(`${id} lineHeight`, defaults.lineHeight, LINE_HEIGHTS.body);
-  defaults.margins.forEach((margin, index) => assertRange(`${id} margin ${index + 1}`, margin, PAGE_MARGIN_MM));
-  if (!BODY_FONTS.includes(defaults.fontFamily)) throw new Error(`Template foundation: ${id} body font must be one of ${BODY_FONTS.join(", ")}`);
+  if (!CHECKS_ON) return defaults;
+  checkRange(`${id} baseFontSize`, defaults.baseFontSize, TYPE_SCALE.body);
+  checkRange(`${id} lineHeight`, defaults.lineHeight, LINE_HEIGHTS.body);
+  defaults.margins.forEach((margin, index) => checkRange(`${id} margin ${index + 1}`, margin, PAGE_MARGIN_MM));
+  if (!BODY_FONTS.includes(defaults.fontFamily)) report(`${id} body font must be one of ${BODY_FONTS.join(", ")}`);
   const heading = defaults.headingFontFamily;
   if (heading && !SERIF_HEADING_FONTS.includes(heading) && !BODY_FONTS.includes(heading)) {
-    throw new Error(`Template foundation: ${id} heading font must be one of ${[...SERIF_HEADING_FONTS, ...BODY_FONTS].join(", ")}`);
+    report(`${id} heading font must be one of ${[...SERIF_HEADING_FONTS, ...BODY_FONTS].join(", ")}`);
   }
-  if (!["name", "headings", "rules"].includes(defaults.accentOn)) throw new Error(`Template foundation: ${id} accentOn must be name, headings or rules`);
+  if (!["name", "headings", "rules"].includes(defaults.accentOn)) report(`${id} accentOn must be name, headings or rules`);
   return defaults;
 }
 
@@ -108,15 +119,16 @@ export function foundationVars(type = {}, rhythm = {}) {
   const t = Object.fromEntries(
     ["name", "headline", "heading", "jobTitle", "meta"].map((key) => {
       const value = type[key] ?? TYPE_SCALE[key].default;
-      assertRange(`type.${key}`, value, TYPE_SCALE[key]);
+      if (CHECKS_ON) checkRange(`type.${key}`, value, TYPE_SCALE[key]);
       return [key, value];
     })
   );
   const nameLineHeight = type.nameLineHeight ?? LINE_HEIGHTS.name.default;
-  assertRange("type.nameLineHeight", nameLineHeight, LINE_HEIGHTS.name);
-
   const r = { ...RHYTHM, ...rhythm };
-  for (const key of Object.keys(RHYTHM)) assertSpace(`rhythm.${key}`, r[key]);
+  if (CHECKS_ON) {
+    checkRange("type.nameLineHeight", nameLineHeight, LINE_HEIGHTS.name);
+    for (const key of Object.keys(RHYTHM)) checkSpace(`rhythm.${key}`, r[key]);
+  }
 
   return {
     "--f-name": headingSize(t.name),

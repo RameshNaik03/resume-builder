@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import Modal from "../Modal";
-import TemplateThumbnail from "./TemplateThumbnail";
-import { TEMPLATES, TIERS, getTemplate } from "../../templates/registry";
+import LayoutCard from "./LayoutCard";
+import { LAYOUTS, TIERS, getTemplate } from "../../templates/registry";
 import withSampleContent from "../../templates/sampleResume";
 
-// Modal with Basic / Advanced / Premium tabs and a live thumbnail of every template.
+// Modal with Basic / Advanced / Premium tabs and a live thumbnail of every layout, each with
+// swatches for its colour palettes (see LayoutCard).
 // Render it only while open: {isOpen && <TemplatePicker ... />}
 //   fullScreen  - fill the whole window (used for the "choose a template" step after an import)
 //   title, description - override the header text
@@ -16,20 +17,20 @@ export default function TemplatePicker({
   onClose,
   fullScreen = false,
   title = "Choose a template",
-  description = "Previews use your resume, with sample text for sections you haven't filled in yet. Click one to apply it.",
+  description = "Previews use your resume, with sample text for sections you haven't filled in yet. Use the swatches to try its colours, then click a template to apply it.",
   closeLabel,
   savingId = null,
 }) {
   // A resume without a template yet (just imported) has nothing selected
-  const selectedId = resume.template ? getTemplate(resume.template).id : null; // Handles old ids like "classic"
+  const current = resume.template ? getTemplate(resume.template) : null; // Handles old ids like "classic"
   // Open on the tab of the template currently in use (Basic if there isn't one)
-  const [activeTier, setActiveTier] = useState(() => (resume.template ? getTemplate(resume.template).tier : "basic"));
+  const [activeTier, setActiveTier] = useState(() => current?.tier ?? "basic");
 
   // The user's data, with sample text in any empty sections so thumbnails aren't blank
   const previewResume = useMemo(() => withSampleContent(resume), [resume]);
 
   const tier = TIERS.find((t) => t.id === activeTier);
-  const templates = TEMPLATES.filter((template) => template.tier === activeTier);
+  const layouts = LAYOUTS.filter((layout) => layout.tier === activeTier);
   const isSaving = savingId !== null;
 
   return (
@@ -68,7 +69,7 @@ export default function TemplatePicker({
       {/* Tabs */}
       <div className="flex gap-1 border-b border-slate-200 dark:border-slate-800 px-5 sm:px-6" role="tablist">
         {TIERS.map((t) => {
-          const count = TEMPLATES.filter((template) => template.tier === t.id).length;
+          const count = LAYOUTS.filter((layout) => layout.tier === t.id).length;
           const isActive = t.id === activeTier;
           return (
             <button
@@ -93,17 +94,18 @@ export default function TemplatePicker({
         <div className={fullScreen ? "mx-auto max-w-7xl" : ""}>
           <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">{tier.description}</p>
 
-          {templates.length > 0 ? (
+          {layouts.length > 0 ? (
             <div className={`grid grid-cols-2 gap-4 sm:gap-5 md:grid-cols-3 ${fullScreen ? "xl:grid-cols-4" : ""}`}>
-              {templates.map((template) => (
-                <TemplateThumbnail
-                  key={template.id}
-                  template={template}
+              {layouts.map((layout) => (
+                <LayoutCard
+                  key={layout.id}
+                  layout={layout}
                   resume={previewResume}
-                  selected={template.id === selectedId}
+                  selectedId={current?.id ?? null}
+                  paletteId={current?.theme.id}
                   onSelect={onSelect}
                   disabled={isSaving}
-                  saving={template.id === savingId}
+                  savingId={savingId}
                 />
               ))}
             </div>

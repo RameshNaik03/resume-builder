@@ -4,8 +4,9 @@ import { WithPhoto } from "./shared";
 import { HEADER_ALIGN } from "./sectionLayout";
 
 // Executive (design foundation): understated and formal. A large serif name in the accent
-// colour, a hairline rule under the header, and serif section headings centred between
-// two rules. Body text is sans-serif; one column, so it stays ATS-friendly.
+// colour, a hairline rule under the header, and serif section headings with rules beside
+// them (centred between two rules by default; they follow the header alignment).
+// Body text is sans-serif; one column, so it stays ATS-friendly.
 
 const VARS = foundationVars(
   { name: 28, headline: 11.5, heading: 11, jobTitle: 10.5, meta: 9.5, nameLineHeight: 1.1 },
@@ -24,7 +25,7 @@ export default function ExecutiveLayout({ data }) {
         <div className="divider-rule mt-[16pt]" aria-hidden="true" />
       </header>
 
-      <FoundationSections data={data} heading={{ variant: "centered" }} />
+      <FoundationSections data={data} heading={{ variant: "ruled" }} />
     </FoundationPage>
   );
 }

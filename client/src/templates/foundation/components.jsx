@@ -45,10 +45,11 @@ export function ContactLine({ contacts, separator = "dot", className = "" }) {
 }
 
 // A section heading.
-//   variant - "plain", "underline" (the design's divider below) or "centered" (between two rules)
+//   variant - "plain", "underline" (the design's divider below) or "ruled" (rules beside it,
+//             placed by the header alignment)
 //   caps    - uppercase (no letter-spacing either way, so an ATS reads it as one word)
 export function SectionHeading({ variant = "plain", caps = true, className = "", children }) {
-  const variantClass = { plain: "", underline: "divider-b", centered: "f-heading-centered" }[variant];
+  const variantClass = { plain: "", underline: "divider-b", ruled: "f-heading-ruled" }[variant];
   return (
     <h2 className={`f-heading ${caps ? "f-caps" : ""} ${variantClass} ${className}`} data-block data-keep>
       {children}

@@ -329,6 +329,9 @@ export function designCssVars(template, { resolved: d, overrides }) {
     // Margins that line up fixed-width header pieces (e.g. a short rule) with the text
     "--header-ml": d.headerAlign === "left" ? "0" : "auto",
     "--header-mr": d.headerAlign === "right" ? "0" : "auto",
+    // Rules beside a heading (foundation "ruled" headings): 1 = a rule on that side, 0 = none
+    "--rule-start": d.headerAlign === "left" ? 0 : 1,
+    "--rule-end": d.headerAlign === "right" ? 0 : 1,
 
     "--accent": d.accentColor,
     "--soft": accentChanged ? mix(d.accentColor, d.backgroundColor, 0.88) : (theme.soft ?? "#f1f5f9"),
