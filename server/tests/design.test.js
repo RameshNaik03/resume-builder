@@ -27,6 +27,7 @@ test("design settings", async (t) => {
     skillsDisplay: "tags",
     dateFormat: "numeric",
     bulletStyle: "arrow",
+    fitOnePage: true,
   };
   r = await call("PUT", `/resumes/${id}`, { design: full });
   await check("full layout design saves", r.status === 200 && JSON.stringify(r.body.design) === JSON.stringify(full), r.body.design ?? r.body.message);

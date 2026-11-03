@@ -112,6 +112,7 @@ const designSchema = new mongoose.Schema(
     skillsDisplay: { type: String, enum: ["comma", "tags", "bullets"] },
     dateFormat: { type: String, enum: ["short", "numeric", "year"] }, // "Jan 2024" | "01/2024" | "2024"
     bulletStyle: { type: String, enum: ["disc", "dash", "arrow", "none"] },
+    fitOnePage: { type: Boolean }, // Shrink the design (within limits) to fit one page; the fitted values aren't stored
 
     // Profile photo
     showPhoto: { type: Boolean },

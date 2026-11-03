@@ -7,7 +7,8 @@
 //   - the name comes first
 //   - each job title sits directly above its bullet points
 //   - no stray separator characters ("· · · ·") and no spaced-out letters
-// It also checks that every layout stays within the design foundation's scales.
+// It also checks that every layout stays within the design foundation's scales, and that
+// "Fit to one page" turns a slightly long resume into a PDF of exactly one page.
 // Optional: ROUNDTRIP_ONLY=classic checks only templates whose id starts with "classic".
 // The PDFs and their text are saved in <temp>/resume-builder-e2e/roundtrip.
 //
@@ -18,7 +19,9 @@ import fs from "node:fs";
 import path from "node:path";
 import extractText from "../services/import/extractText.js";
 import parseWithRules, { headingOf } from "../services/import/parseWithRules.js";
+import inspectFile from "../services/ats/inspectFile.js";
 import { APP, OUT_DIR, logIn, sleep, startStack } from "./helpers.js";
+import { SLIGHTLY_LONG } from "./fitSamples.js";
 
 const ONLY = process.env.ROUNDTRIP_ONLY;
 
@@ -176,6 +179,38 @@ test("PDF round trip: every template exports a PDF an ATS can read", async (t) =
 
       const spaced = lines.filter((line) => /\b(\p{L} ){3,}\p{L}\b/u.test(line));
       assert.deepEqual(spaced, [], "spaced-out letters (letter-spacing)");
+    });
+  }
+
+  // Fit to one page: a resume a little over one page prints on two pages as designed, and on
+  // exactly one page with the option on (the PDF is printed from the fitted preview)
+  if (!ONLY || "classic-navy".startsWith(ONLY)) {
+    await t.test("fit to one page: the PDF is exactly one page", async () => {
+      const longId = (await api("POST", "/resumes", token, { ...SLIGHTLY_LONG, template: "classic-navy" })).body._id;
+      const printPages = async (name) => {
+        const pdf = await printToPdf(editor, printPage);
+        fs.writeFileSync(path.join(PDF_DIR, `${name}.pdf`), pdf);
+        return { pdf, pages: (await inspectFile({ buffer: pdf, mimetype: "application/pdf", originalname: `${name}.pdf` })).pages };
+      };
+
+      await editor.goto(`${APP}/editor/${longId}`, { waitUntil: "networkidle0" });
+      await editor.waitForSelector('[data-fit-status="off"]');
+      await sleep(300);
+      assert.equal((await printPages("fit-off")).pages, 2, "the sample should be over one page without fitting");
+
+      await api("PUT", `/resumes/${longId}`, token, { design: { fitOnePage: true } });
+      await editor.goto(`${APP}/editor/${longId}`, { waitUntil: "networkidle0" });
+      await editor.waitForSelector('[data-fit-status="fitted"]', { timeout: 20000 });
+      await sleep(300);
+      const { pdf, pages } = await printPages("fit-on");
+      assert.equal(pages, 1, "a fitted resume should print on exactly one page");
+
+      const text = await extractText({ buffer: pdf, mimetype: "application/pdf", originalname: "fit-on.pdf" });
+      const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+      assert.equal(lines[0], SLIGHTLY_LONG.personalInfo.fullName, "the name should still come first");
+      const flat = text.replace(/\s+/g, " ");
+      const missing = SLIGHTLY_LONG.experience.flatMap((job) => job.bullets).filter((bullet) => !flat.includes(bullet));
+      assert.deepEqual(missing, [], "fitting must never drop content");
     });
   }
 });

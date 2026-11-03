@@ -131,7 +131,7 @@ export const PHOTO_POSITIONS = { left: "Left of name", right: "Right of name", s
 export const DESIGN_GROUPS = {
   typography: ["fontFamily", "headingFontFamily", "baseFontSize", "headingSize", "lineHeight"],
   spacing: ["paragraphSpacing", "sectionSpacing", "marginTop", "marginRight", "marginBottom", "marginLeft"],
-  page: ["pageSize"],
+  page: ["pageSize", "fitOnePage"],
   colors: ["accentColor", "textColor", "headingColor", "backgroundColor", "dividerColor", "dividerStyle"],
   sections: ["sectionOrder", "hiddenSections", "sectionHeadings"],
   layout: ["columns", "sideSections", "sideRatio", "headerAlign", "skillsDisplay", "dateFormat", "bulletStyle"],
@@ -181,6 +181,7 @@ export function getDesignDefaults(template) {
     paragraphSpacing: theme.spacing,
     sectionSpacing: theme.spacing,
     pageSize: "A4",
+    fitOnePage: false, // Shrink the design to fit one page (see fit.js; the fitted values aren't saved)
     marginTop,
     marginRight,
     marginBottom,
@@ -236,6 +237,7 @@ export function cleanDesign(design = {}) {
   number("sectionSpacing", LIMITS.sectionSpacing);
   for (const key of ["marginTop", "marginRight", "marginBottom", "marginLeft"]) number(key, LIMITS.margin);
   if (design.pageSize in PAGE_SIZES) clean.pageSize = design.pageSize;
+  if (typeof design.fitOnePage === "boolean") clean.fitOnePage = design.fitOnePage;
   if (design.dividerStyle in DIVIDER_STYLES) clean.dividerStyle = design.dividerStyle;
   for (const key of ["accentColor", "textColor", "headingColor", "backgroundColor", "dividerColor"]) {
     if (HEX.test(design[key] ?? "")) clean[key] = design[key].toLowerCase();

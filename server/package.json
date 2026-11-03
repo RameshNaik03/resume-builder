@@ -12,7 +12,7 @@
     "test": "node --test \"tests/*.test.js\"",
     "test:import-regression": "node --test tests/import-regression.test.js",
     "test:roundtrip": "node --test e2e/roundtrip.test.js",
-    "test:e2e": "node --test --test-concurrency=1 e2e/ats-checker.test.js e2e/ats-review.test.js"
+    "test:e2e": "node --test --test-concurrency=1 e2e/ats-checker.test.js e2e/ats-review.test.js e2e/fit-one-page.test.js"
   },
   "author": "Ramesh Naik",
   "license": "MIT",

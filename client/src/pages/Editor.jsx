@@ -20,6 +20,8 @@ import ProjectsForm from "../components/editor/ProjectsForm";
 import AdditionalForm from "../components/editor/AdditionalForm";
 import TemplatePicker from "../components/editor/TemplatePicker";
 import DesignPanel from "../components/editor/DesignPanel";
+import Switch from "../components/Switch";
+import { fitSuggestions } from "../templates/fit";
 
 // Text and dot colour for each save status
 const STATUS_STYLES = {
@@ -73,6 +75,22 @@ export default function Editor() {
 
   // "[X%]"-style placeholders (from the ATS optimizer) that still need real numbers
   const placeholders = useMemo(() => (resume ? placeholdersIn(resume) : []), [resume]);
+
+  // Page count and "Fit to one page" progress, reported by ResumePreview
+  const [previewStatus, setPreviewStatus] = useState({ pageCount: 1, fitStatus: null });
+  const fitOn = Boolean(resume?.design?.fitOnePage);
+  // On: saved in the design. Off: the setting is removed, so the design is exactly as before.
+  const setFitOnePage = (on) => {
+    const { fitOnePage: _previous, ...rest } = resume.design ?? {};
+    updateResume({ design: on ? { ...rest, fitOnePage: true } : rest });
+  };
+  const fitStatus = previewStatus.fitStatus;
+  const tooLong = fitOn && fitStatus && !fitStatus.pending && !fitStatus.fits;
+  const suggestions = useMemo(() => (tooLong && resume ? fitSuggestions(resume, fitStatus) : []), [tooLong, resume, fitStatus]);
+  const showHideSections = () => {
+    setFormPanel("design");
+    setActiveTab("edit");
+  };
 
   // The A4 sheet inside ResumePreview; react-to-print turns it into the PDF.
   // The PDF file name comes from documentTitle.
@@ -157,7 +175,7 @@ export default function Editor() {
   return (
     <div>
       {/* Top bar (sits just below the 4rem-tall Navbar) */}
-      <div className="sticky top-16 z-5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <div className="sticky top-16 z-5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900" data-testid="editor-toolbar">
         <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
           <button
             type="button"
@@ -200,6 +218,23 @@ export default function Editor() {
             </svg>
             <span className="hidden md:inline">Templates</span>
           </button>
+
+          {/* Fit to one page, with the page count always shown */}
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="hidden text-sm text-slate-600 dark:text-slate-300 xl:inline">Fit to one page</span>
+            <Switch checked={fitOn} onChange={setFitOnePage} label="Fit to one page" />
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-medium tabular-nums ${
+                previewStatus.pageCount > 1
+                  ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                  : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+              }`}
+              aria-live="polite"
+              data-testid="page-count"
+            >
+              {fitOn && fitStatus?.pending ? "Fitting…" : `${previewStatus.pageCount} ${previewStatus.pageCount === 1 ? "page" : "pages"}`}
+            </span>
+          </div>
 
           <button
             type="button"
@@ -428,7 +463,25 @@ export default function Editor() {
                 {getTemplate(resume.template).name} · Change
               </button>
             </div>
-            <ResumePreview resume={resume} printRef={printRef} highlightPlaceholders />
+            {tooLong && (
+              <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200" role="status" data-testid="fit-too-long">
+                <p className="font-semibold">
+                  Your resume is still {fitStatus.overflowLines} {fitStatus.overflowLines === 1 ? "line" : "lines"} too long for one page.
+                </p>
+                <p className="mt-1">Everything is already at the smallest readable size, so some content has to go. A few ideas:</p>
+                {suggestions.length > 0 && (
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {suggestions.map((suggestion) => (
+                      <li key={suggestion}>{suggestion}</li>
+                    ))}
+                  </ul>
+                )}
+                <button type="button" onClick={showHideSections} className="mt-3 font-medium text-amber-900 underline underline-offset-2 dark:text-amber-100">
+                  Hide sections in the Design tab
+                </button>
+              </div>
+            )}
+            <ResumePreview resume={resume} printRef={printRef} highlightPlaceholders onStatus={setPreviewStatus} />
           </div>
         </div>
       </div>

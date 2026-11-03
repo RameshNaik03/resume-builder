@@ -25,6 +25,7 @@ import {
 import { loadAllFonts } from "../../templates/fonts";
 import { BODY_FONTS, SERIF_HEADING_FONTS } from "../../templates/foundation/tokens";
 import SectionOrderList from "./SectionOrderList";
+import Switch from "../Switch";
 
 // Segmented-control id for "no override" (null can't be an option id)
 const DEFAULT = "default";
@@ -269,6 +270,13 @@ export default function DesignPanel({ resume, onChange }) {
           options={Object.entries(PAGE_SIZES).map(([id, page]) => ({ id, label: page.label, detail: page.detail }))}
           onChange={(pageSize) => update({ pageSize: pageSize === defaults.pageSize ? null : pageSize })}
         />
+        <div>
+          <Toggle label="Fit to one page" checked={resolved.fitOnePage} onChange={(fitOnePage) => update({ fitOnePage: fitOnePage || null })} />
+          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+            Shrinks spacing, then margins, then line height, then text size, only as far as needed and never below readable
+            limits. Your own settings come back when you turn it off.
+          </p>
+        </div>
       </Group>
 
       {/* ---------- Colors ---------- */}
@@ -389,18 +397,7 @@ function Toggle({ label, checked, onChange }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        onClick={() => onChange(!checked)}
-        className={`relative h-6 w-11 shrink-0 rounded-full transition ${checked ? "bg-indigo-600" : "bg-slate-300 dark:bg-slate-700"}`}
-      >
-        <span
-          className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : ""}`}
-        />
-      </button>
+      <Switch checked={checked} onChange={onChange} label={label} />
     </div>
   );
 }

@@ -36,6 +36,7 @@ A full stack resume builder: create professional, ATS-friendly resumes with a li
 - **16 layouts in 3 tiers** (Basic, Advanced, Premium), each in 6 corporate color palettes, all built on a shared design foundation: one print type scale, a 4pt spacing scale, consistent rhythm, tabular dates, hanging-indent bullets and drawn (never typed) separators, icons and decorations. The template picker shows one card per layout with color swatches, and marks which layouts are ATS-friendly
 - **Optional skill levels** (1 to 5 per skill): layouts such as Infographic draw rated skills as dots; unrated skills stay plain tags, and a level is never guessed
 - **Design panel**: fonts (Google Fonts), sizes, spacing and margins, colors and dividers, columns and header layout, bullet style, date format, section order (drag and drop), hidden sections and renamed headings, A4 or US Letter
+- **Fit to one page**: one switch (in the top bar and the Design tab) shrinks spacing, then margins, then line height, then text size, only as far as needed and never below readable limits (12 mm margins, 1.25 line height, 9 pt text). A search finds the largest settings that fit, the preview and the PDF use the same values, and turning it off brings back your own settings exactly. The page count is always shown; if the resume still doesn't fit, it says how many lines too long it is and suggests what to cut (the longest sections, roles older than 10 years, long bullets)
 - **Profile photo** (optional): upload, crop, and choose its shape, size and border; stored on Cloudinary
 - **Autosave**: 2 seconds after you stop typing, with a "Saving… / Saved / Unsaved changes" indicator, Ctrl+S, and a warning before leaving with unsaved changes
 - **PDF download**: selectable, ATS-readable text with clickable links and the template's fonts. Entries don't split across pages, a heading never ends a page, a job title stays with its first two bullets, and a list never leaves a single item alone at the top or bottom of a page
@@ -209,7 +210,7 @@ All server tests use Node's built-in test runner. Run them in `server/`:
 
 ```bash
 npm test                  # all fast suites (~15 s)
-npm run test:e2e          # browser tests of the ATS checker and review screen (~1 min)
+npm run test:e2e          # browser tests of the ATS checker, review screen and Fit to one page (~2 min)
 npm run test:roundtrip    # PDF round trip for all 96 templates (~3 min)
 ```
 
@@ -234,7 +235,8 @@ npm run test:roundtrip    # PDF round trip for all 96 templates (~3 min)
 | Suite | Command | What it checks |
 | --- | --- | --- |
 | ATS checker + review | `npm run test:e2e` | The ATS checker page as a guest and logged in: upload, progress steps, results, "What the ATS sees", generating the optimized version, the import banner note, phone width and dark mode. Then the review screen: scores, side-by-side previews with highlights, accept / reject (surviving a refresh), the skills checklist, re-score, placeholders highlighted in the review and the editor (never in the PDF), the editor banner, the read-only review after an editor edit, the dashboard's ATS badge and Re-check |
-| PDF round trip | `npm run test:roundtrip` | Every template: renders a sample resume, prints it to PDF the way the app does, extracts the text with the ATS checker's extractor, and checks that the headings are recognised, the name comes first, each job title is right above its bullets, every skill is there as text, and there are no stray separators or spaced-out letters. Extra cases cover settings that change a layout's text order (Timeline Plus with two columns, Infographic with skill levels). It also fails if any layout steps outside the design foundation's scales. `ROUNDTRIP_ONLY=classic` checks only the templates whose id starts with "classic" |
+| Fit to one page | `npm run test:e2e` (`fit-one-page.test.js`) | In the editor: a resume a little over one page fits when the switch is turned on and only the switch is saved; turning it off restores the saved design and the preview's settings exactly; a very long resume shows "still N lines too long" with suggestions, never goes below the minimums and never hides content |
+| PDF round trip | `npm run test:roundtrip` | Every template: renders a sample resume, prints it to PDF the way the app does, extracts the text with the ATS checker's extractor, and checks that the headings are recognised, the name comes first, each job title is right above its bullets, every skill is there as text, and there are no stray separators or spaced-out letters. Extra cases cover settings that change a layout's text order (Timeline Plus with two columns, Infographic with skill levels), and a resume a little over one page that prints on exactly one page with Fit to one page on. It also fails if any layout steps outside the design foundation's scales. `ROUNDTRIP_ONLY=classic` checks only the templates whose id starts with "classic" |
 
 **Client** (in `client/`): `npm run lint` (oxlint) and `npm run build` (the production build compiles).
 
