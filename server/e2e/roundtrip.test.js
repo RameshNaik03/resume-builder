@@ -21,6 +21,12 @@ import parseWithRules, { headingOf } from "../services/import/parseWithRules.js"
 import { APP, OUT_DIR, logIn, sleep, startStack } from "./helpers.js";
 
 const ONLY = process.env.ROUNDTRIP_ONLY;
+
+// Extra checks with design settings that change how a layout orders its text
+const DESIGN_CASES = [
+  // Two columns: Timeline Plus puts the dates above each job title instead of beside it
+  { id: "timeline-plus-navy", name: "timeline-plus-navy (two columns)", design: { columns: 2 } },
+];
 const PDF_DIR = path.join(OUT_DIR, "roundtrip");
 
 // A fictional sample resume shaped like a real two-job, two-project, two-degree CV
@@ -108,22 +114,27 @@ test("PDF round trip: every template exports a PDF an ATS can read", async (t) =
     assert.deepEqual(problems, []);
   });
 
-  for (const id of ids) {
-    await t.test(id, async () => {
-      await api("PUT", `/resumes/${resumeId}`, token, { template: id });
+  // Every template as designed, plus layouts whose text order changes with a design setting
+  const cases = [
+    ...ids.map((id) => ({ id, name: id, design: {} })),
+    ...DESIGN_CASES.filter(({ id }) => ids.includes(id)),
+  ];
+  for (const { id, name, design } of cases) {
+    await t.test(name, async () => {
+      await api("PUT", `/resumes/${resumeId}`, token, { template: id, design });
       await editor.goto(`${APP}/editor/${resumeId}`, { waitUntil: "networkidle0" });
       await editor.waitForSelector("div.invisible > div");
       await sleep(300); // Page breaks are worked out after the first layout
 
       const pdf = await printToPdf(editor, printPage);
       const text = await extractText({ buffer: pdf, mimetype: "application/pdf", originalname: `${id}.pdf` });
-      fs.writeFileSync(path.join(PDF_DIR, `${id}.pdf`), pdf);
-      fs.writeFileSync(path.join(PDF_DIR, `${id}.txt`), text);
+      fs.writeFileSync(path.join(PDF_DIR, `${name}.pdf`), pdf);
+      fs.writeFileSync(path.join(PDF_DIR, `${name}.txt`), text);
       const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
 
       const found = new Set(lines.map(headingOf).filter(Boolean));
       const missing = ["summary", "experience", "education", "skills", "projects"].filter((section) => !found.has(section));
-      assert.deepEqual(missing, [], `headings an ATS can't find (see ${id}.txt in ${PDF_DIR})`);
+      assert.deepEqual(missing, [], `headings an ATS can't find (see ${name}.txt in ${PDF_DIR})`);
 
       const { fullName, headline } = SAMPLE.personalInfo;
       assert.ok(lines[0] === fullName || lines[0] === `${fullName} | ${headline}`, `the first line should be the name, got "${lines[0]}"`);

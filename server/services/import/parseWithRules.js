@@ -200,9 +200,14 @@ function parseExperience(lines) {
     // A line right under a job title often holds the company and/or dates:
     //   "Software Engineer"            <- job title
     //   "Acme Corp | Jan 2023 – Now"   <- company + dates for the same job
+    // A job started by a dates-only line has no title yet, so the next line is its title:
+    //   "Jan 2023 – Present"           <- dates above the title (e.g. a narrow timeline)
+    //   "Software Engineer"            <- job title
+    //   "Acme Corp"                    <- company
     const canAddToJob = job && job.bullets.length === 0;
     if (canAddToJob && !job.company && restParts.length === 1 && wordCount <= 6) {
-      job.company = restParts[0];
+      if (job.role) job.company = restParts[0];
+      else job.role = restParts[0];
       if (dateMatch && !job.startDate) setDates(job, dateMatch);
       continue;
     }

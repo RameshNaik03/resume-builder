@@ -162,14 +162,17 @@ export function ExperienceList({ jobs, orgInline = false }) {
 // Experience on a timeline: dates in the left column, a drawn dot on a vertical line, the job
 // to the right. Needs .f-tl-root on the page (the column widths). In the page source the title
 // comes first, then the dates (on the same line), then the company, so the text reads in order.
-export function TimelineList({ jobs }) {
+//   stacked - for narrow columns: no date column, the dates sit above the title (and come
+//             before it in the page source, so the text still reads top to bottom)
+export function TimelineList({ jobs, stacked = false }) {
   return (
-    <div className="f-entries f-timeline" data-segmented>
+    <div className={`f-entries f-timeline ${stacked ? "f-tl-stacked" : ""}`} data-segmented>
       {jobs.map((job) => (
         <div key={job.key}>
           <div className="f-tl-head" data-block data-keep={job.bullets.length > 0 || Boolean(job.subtitle)}>
+            {stacked && job.dates && <p className="f-tl-date f-meta f-date">{job.dates}</p>}
             <p className="f-tl-main f-job-title">{job.role || job.company}</p>
-            {job.dates && <p className="f-tl-date f-meta f-date">{job.dates}</p>}
+            {!stacked && job.dates && <p className="f-tl-date f-meta f-date">{job.dates}</p>}
             <span className="f-tl-dot" aria-hidden="true" data-seg-start />
             {job.role && job.company && <p className="f-tl-org f-meta">{job.company}</p>}
           </div>
@@ -188,13 +191,15 @@ export function TimelineList({ jobs }) {
 }
 
 // Education with the year in the timeline's date column (no dots or line)
-export function DatedEducationList({ entries }) {
+//   stacked - the year above the degree, as in a stacked TimelineList
+export function DatedEducationList({ entries, stacked = false }) {
   return (
-    <div className="f-entries">
+    <div className={`f-entries ${stacked ? "f-tl-stacked f-tl-no-rail" : ""}`}>
       {entries.map((entry) => (
         <div key={entry.key} className="f-tl-head" data-block>
+          {stacked && entry.year && <p className="f-tl-date f-meta f-date">{entry.year}</p>}
           <p className="f-tl-main f-job-title">{entry.degree || entry.school}</p>
-          {entry.year && <p className="f-tl-date f-meta f-date">{entry.year}</p>}
+          {!stacked && entry.year && <p className="f-tl-date f-meta f-date">{entry.year}</p>}
           {entry.degree && entry.school && <p className="f-tl-org f-meta">{entry.school}</p>}
         </div>
       ))}

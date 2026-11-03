@@ -254,7 +254,8 @@
      line is the list's background (cut at page breaks by data-segmented), through the
      centre of the dot column. .f-timeline-plain lists use the columns without dots or line. */
   .f-tl-root {
-    --tl-date: 31mm;
+    /* Fits "Mar 2022 – Present" at the default size, and grows with the font size */
+    --tl-date: calc(31mm * var(--fs-scale, 1));
     --tl-rail: 24pt;
   }
   .f-timeline {
@@ -300,6 +301,37 @@
   .f-tl-body {
     margin-left: calc(var(--tl-date) + var(--tl-rail));
   }
+  /* Stacked (narrow columns): no date column; the date sits above the title, the dot beside
+     the title, and the line runs down the dot column at the left */
+  .f-tl-stacked {
+    --tl-date: 0px;
+    --tl-rail: 16pt;
+  }
+  /* Stacked lists without dots (education) don't reserve the dot column */
+  .f-tl-stacked.f-tl-no-rail {
+    --tl-rail: 0px;
+  }
+  .f-tl-stacked .f-tl-head {
+    grid-template-columns: var(--tl-rail) minmax(0, 1fr);
+  }
+  .f-tl-stacked .f-tl-date {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: left;
+  }
+  .f-tl-stacked .f-tl-main {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .f-tl-stacked .f-tl-dot {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  .f-tl-stacked .f-tl-org {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
   /* Section bodies lined up with the timeline's text column */
   .f-indent {
     margin-left: calc(var(--tl-date) + var(--tl-rail));
