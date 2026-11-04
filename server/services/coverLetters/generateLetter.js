@@ -32,6 +32,13 @@ import { findBannedPhrase } from "./bannedPhrases.js";
 const MODEL = "claude-opus-5-5";
 const EVIDENCE_PER_PARAGRAPH = { short: 1, standard: 2, detailed: 3 };
 export const TARGET_WORDS = { short: 150, standard: 250, detailed: 350 };
+// Word ranges per length (the strength check): pass inside `pass`; between `warn` and the lower
+// limit is a warning; below `warn` or above the upper limit fails
+export const LENGTH_RANGES = {
+  short: { warn: 80, pass: [110, 200] },
+  standard: { warn: 120, pass: [190, 320] },
+  detailed: { warn: 190, pass: [270, 430] },
+};
 export const SALUTATIONS = ["Frau", "Herr"];
 const MONTH_START = /^(\d|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|januar|februar|märz|mai|juni|juli|august|september|oktober|november|dezember)/i;
 
@@ -262,6 +269,8 @@ export function templateParts(facts, { tone = "professional", length = "standard
   const close = [facts.availability && t.availability(facts.availability), language === "de" && facts.salary && t.salary(facts.salary), t.invitation[tone](role, company)]
     .filter(Boolean)
     .join(" ");
+  // Every piece of matching evidence is in the letter: a longer length can't add more (it's never padded)
+  const used = Math.min(facts.evidence.length, 1) + groupA.length + (facts.achievement ? 0 : groupB.length);
   return {
     greeting: t.greeting(facts),
     openings: t.openings(facts, role, company, facts.evidence.slice(0, 2)),
@@ -269,6 +278,7 @@ export function templateParts(facts, { tone = "professional", length = "standard
     motivation: t.motivation(facts, company),
     close,
     signOff: `${t.signOff}\n${facts.name || "[Your name]"}`,
+    evidenceExhausted: used >= facts.evidence.length,
   };
 }
 
@@ -358,7 +368,9 @@ async function aiParts(facts, { tone, length, language }) {
 }
 
 // Returns { body (HTML), openings: [3 plain texts; the first is in the body], placeholders, words,
-// generatedWith, aiRejected }
+// evidenceWords, generatedWith, aiRejected }
+//   evidenceWords - the letter's length (rounded to 10) when it's below the requested length's
+//                   range because the resume has no more matching evidence, else null
 export default async function generateLetter(facts, { tone = "professional", length = "standard", language = "en", useAI = false } = {}) {
   const template = templateParts(facts, { tone, length, language });
   let parts = template;
@@ -383,11 +395,14 @@ export default async function generateLetter(facts, { tone = "professional", len
 
   const paragraphs = assemble(parts, parts.openings[0]);
   const text = paragraphs.join("\n");
+  const words = wordCount(text);
+  const short = words < (LENGTH_RANGES[length] ?? LENGTH_RANGES.standard).pass[0];
   return {
     body: toHtml(paragraphs),
     openings: [...new Set(parts.openings)],
     placeholders: [...new Set(text.match(/\[[^\]]+\]/g) ?? [])],
-    words: wordCount(text),
+    words,
+    evidenceWords: short && template.evidenceExhausted ? Math.max(10, Math.round(words / 10) * 10) : null,
     generatedWith,
     aiRejected,
   };

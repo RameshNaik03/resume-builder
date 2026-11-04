@@ -26,6 +26,7 @@ const coverLetterSchema = new mongoose.Schema(
     availability: { type: String, trim: true, maxlength: 120, default: "" }, // Earliest start date
     salary: { type: String, trim: true, maxlength: 80, default: "" }, // Salary expectation (German letters)
     openingOptions: { type: [String], default: [] }, // Three openings to choose from (the first is in the body)
+    evidenceWords: { type: Number, default: null }, // Set when the requested length couldn't be reached (no more evidence)
     body: { type: String, default: "", set: richBlock, maxlength: 20000 },
     bodyEdited: { type: Boolean, default: false }, // The body was changed by hand since it was generated
     tone: { type: String, enum: TONES, default: "professional" },

@@ -1,23 +1,23 @@
 import { htmlToText } from "../../utils/richText.js";
 import { skillMatcher } from "../jobs/matchReport.js";
 import { findBannedPhrase } from "./bannedPhrases.js";
-import { TARGET_WORDS } from "./generateLetter.js";
+import { LENGTH_RANGES, TARGET_WORDS } from "./generateLetter.js";
 
 // The editor's letter strength check (a mini ATS check for cover letters). Works on the letter as
-// it is now, including the user's own edits. Returns { checks: [{ id, label, passed, tip }],
-// passed, total }:
+// it is now, including the user's own edits. Returns { checks: [{ id, label, status ("pass" /
+// "warn" / "fail"), passed (status is "pass"), tip }], passed, warnings, total, words }:
 //   opening      - specific: names the role or company and a top skill or a result; no cliché opener
 //   evidence     - the job's top two must-haves are answered in the body
 //   motivation   - a "why this company" paragraph from the user's own answers (no placeholder)
 //   cliches      - no banned phrase
-//   length       - close to the target for its length setting
+//   length       - inside its length setting's range; a warning when a little short, fails when
+//                  well below (see LENGTH_RANGES) or above it
 //   placeholders - none left unfilled
 
 const PLACEHOLDER = /\[[^\]\d<>]{1,120}\]/g; // For finding them all
 const HAS_PLACEHOLDER = /\[[^\]\d<>]{1,120}\]/; // For yes/no tests (no global state)
 const MOTIVATION_PLACEHOLDER = /\[(Why this company\?|Warum dieses Unternehmen\?)/;
 const CLICHE_OPENER = /^(I am writing to|I'm writing to|Hiermit bewerbe ich mich|To whom it may concern)/i;
-const LENGTH_RANGES = { short: [110, 200], standard: [190, 320], detailed: [270, 430] };
 
 // The body's paragraphs as plain text (greeting first, sign-off last)
 const paragraphsOf = (html) => (String(html ?? "").match(/<p[^>]*>[\s\S]*?<\/p>/g) ?? []).map((p) => htmlToText(p).replace(/\s+/g, " ").trim()).filter(Boolean);
@@ -34,7 +34,11 @@ export default function letterStrength(letter, analysis = {}) {
   const top = (analysis.mustHave ?? []).slice(0, 2);
   const mentions = (value, haystack) => Boolean(value) && haystack.toLowerCase().includes(value.toLowerCase());
   const checks = [];
-  const add = (id, label, passed, tip) => checks.push({ id, label, passed, tip: passed ? "" : tip });
+  // result: true / false, or a status ("pass" / "warn" / "fail"); a tip for anything but a pass
+  const add = (id, label, result, tip) => {
+    const status = typeof result === "string" ? result : result ? "pass" : "fail";
+    checks.push({ id, label, status, passed: status === "pass", tip: status === "pass" ? "" : tip });
+  };
 
   const namesJob = mentions(role, opening) || mentions(company, opening);
   const concrete = top.some((skill) => skillMatcher(skill)(opening)) || /\d/.test(opening.replace(PLACEHOLDER, ""));
@@ -63,19 +67,28 @@ export default function letterStrength(letter, analysis = {}) {
   const cliche = findBannedPhrase(text);
   add("cliches", "No clichés", !cliche, `Replace "${cliche}" with something specific you did.`);
 
+  // Length: a warning (not a fail) when a little short; fails only well below or above the range
   const words = text.split(/\s+/).filter(Boolean).length;
-  const [low, high] = LENGTH_RANGES[letter.length] ?? LENGTH_RANGES.standard;
+  const { warn, pass: [low, high] } = LENGTH_RANGES[letter.length] ?? LENGTH_RANGES.standard;
+  const target = TARGET_WORDS[letter.length] ?? 250;
+  const lengthStatus = words > high || words < warn ? "fail" : words < low ? "warn" : "pass";
   add(
     "length",
     "Length",
-    words >= low && words <= high,
+    lengthStatus,
     words < low
-      ? `${words} words: a little short for a "${letter.length}" letter (about ${TARGET_WORDS[letter.length] ?? 250}). Your achievement story adds the most.`
-      : `${words} words: long for a "${letter.length}" letter (about ${TARGET_WORDS[letter.length] ?? 250}). Trim to the strongest examples.`
+      ? `${words} words: ${lengthStatus === "fail" ? "too short" : "a little short"} for a "${letter.length}" letter (about ${target}). Your achievement story adds the most.`
+      : `${words} words: long for a "${letter.length}" letter (about ${target}). Trim to the strongest examples.`
   );
 
   const left = [...new Set([...`${letter.subject ?? ""}\n${text}`.matchAll(PLACEHOLDER)].map((match) => match[0]))];
   add("placeholders", "No unfilled placeholders", left.length === 0, `Fill in or remove: ${left.join(", ")}`);
 
-  return { checks, passed: checks.filter((check) => check.passed).length, total: checks.length, words };
+  return {
+    checks,
+    passed: checks.filter((check) => check.status === "pass").length,
+    warnings: checks.filter((check) => check.status === "warn").length,
+    total: checks.length,
+    words,
+  };
 }

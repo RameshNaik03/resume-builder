@@ -133,10 +133,11 @@ async function writeLetter(resume, job, options) {
       body: result.body,
       bodyEdited: false,
       openingOptions: result.openings,
+      evidenceWords: result.evidenceWords,
       companyName: job.analysis?.company ?? "",
       subject: letterSubject(job.analysis?.title, options.language),
     },
-    meta: { placeholders: result.placeholders, words: result.words, generatedWith: result.generatedWith, aiRejected: result.aiRejected },
+    meta: { placeholders: result.placeholders, words: result.words, evidenceWords: result.evidenceWords, generatedWith: result.generatedWith, aiRejected: result.aiRejected },
   };
 }
 

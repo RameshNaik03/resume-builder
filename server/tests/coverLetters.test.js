@@ -111,6 +111,22 @@ test("letter strength check", async (t) => {
   await check("too long for its length setting", !long.passed && /long for a "short" letter/.test(long.tip), long);
   const short = letterStrength({ ...good, length: "detailed" }, analysis).checks.find((c) => c.id === "length");
   await check("too short for its length setting", !short.passed && /short for a "detailed" letter/.test(short.tip), short);
+
+  // Standard: passes at 190-320 words, a warning from 120 to 189, fails below 120 or above 320
+  const sized = (words) => ({ ...good, length: "standard", body: html(["Dear Ms. Schmidt,", Array(words - 7).fill("word").join(" "), "Kind regards,<br>Meera Iyer"]) });
+  for (const [words, status] of [[119, "fail"], [120, "warn"], [189, "warn"], [190, "pass"], [320, "pass"], [321, "fail"]]) {
+    const sizedResult = letterStrength(sized(words), analysis);
+    const length = sizedResult.checks.find((c) => c.id === "length");
+    await check(
+      `standard, ${words} words: ${status}`,
+      sizedResult.words === words && length.status === status && length.passed === (status === "pass") && sizedResult.warnings === (status === "warn" ? 1 : 0),
+      { words: sizedResult.words, length }
+    );
+  }
+  const warned = letterStrength(sized(150), analysis).checks.find((c) => c.id === "length");
+  await check("  the warning keeps the achievement-story tip", /a little short for a "standard" letter.*achievement story/.test(warned.tip), warned.tip);
+  const failed = letterStrength(sized(100), analysis).checks.find((c) => c.id === "length");
+  await check("  below 120: too short, with the same tip", /too short for a "standard" letter.*achievement story/.test(failed.tip), failed.tip);
   const left = letterStrength({ ...good, subject: "Application for [Job title]", body: good.body.replace("Ms. Schmidt", "[Hiring Manager]") }, analysis).checks.find((c) => c.id === "placeholders");
   await check("unfilled placeholders are listed (subject too)", !left.passed && left.tip.includes("[Hiring Manager]") && left.tip.includes("[Job title]"), left);
 });
@@ -203,11 +219,19 @@ test("cover letters", async (t) => {
   await check("detailed: uses the confirmed note in the user's words", detailed.includes(`I also ${NOTE[0].toLowerCase()}${NOTE.slice(1)}.`), detailed);
   const detailedIssues = honest(detailed);
   await check("  still nothing invented", detailedIssues.skills.length === 0 && detailedIssues.numbers.length === 0, detailedIssues);
+  // Every matching skill is used and it's still short of the range: noted, never padded
+  await check(
+    "  out of evidence: evidenceWords says how far the resume goes (the letter isn't padded)",
+    r.body.evidenceWords === Math.round(detailedWords / 10) * 10 && r.body.coverLetter.evidenceWords === r.body.evidenceWords && detailedWords < 270,
+    { evidenceWords: r.body.evidenceWords, words: detailedWords }
+  );
+  await check("  standard too, when all the evidence is used", letter.evidenceWords === Math.round(letter.words / 10) * 10 && letter.coverLetter.evidenceWords === letter.evidenceWords, letter.evidenceWords);
 
   r = await call("POST", "/cover-letters/generate", token, { jobId, length: "short" });
   const short = r.body;
   // (a detailed letter is only longer when there is more real evidence to use)
   await check("short < standard, and short < detailed", short.words < letter.words && short.words < detailedWords, { short: short.words, standard: letter.words, detailed: detailedWords });
+  await check("  a short letter in its range: no evidence note", short.words >= 110 && short.evidenceWords === null, short.evidenceWords);
 
   // The user's answers are used as given
   r = await call("POST", "/cover-letters/generate", token, {
@@ -247,6 +271,7 @@ test("cover letters", async (t) => {
     r.body.coverLetter.achievement === ACHIEVEMENT && r.body.coverLetter.availability === "1 March 2027" && r.body.coverLetter.salary === "" && !guided.includes("75k"),
     r.body.coverLetter
   );
+  await check("  evidence left unused (the story took its place): no evidence note", r.body.evidenceWords === null, r.body.evidenceWords);
   const guidedIssues = honest(guided);
   await check("  still nothing invented", guidedIssues.skills.length === 0 && guidedIssues.numbers.length === 0, guidedIssues);
   r = await call("POST", "/cover-letters/generate", token, { jobId, language: "de", achievement: "Ich habe unsere Abrechnung auf Kafka umgestellt", availability: "1. April 2027", salary: "75.000 Euro brutto im Jahr" });

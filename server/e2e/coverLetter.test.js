@@ -94,6 +94,16 @@ test("Cover letters", async (t) => {
     assert.deepEqual(checks.map(([id]) => id), ["opening", "evidence", "motivation", "cliches", "length", "placeholders"]);
     assert.ok(checks.find(([id]) => id === "opening")[1] === "true", "the generated opening is specific");
     assert.ok(checks.find(([id]) => id === "motivation")[1] === "false" && /Why this company/.test(panel), "no reason given yet: fails with a tip");
+    // The resume's evidence is all used and the letter is short of "standard": a warning (amber) or
+    // fail, and a note saying how far the evidence goes (the letter isn't padded)
+    const saved = (await api("GET", `/cover-letters/${letterId}`, token)).body;
+    const lengthStatus = await page.$eval('[data-testid="letter-strength"] [data-check="length"]', (li) => li.dataset.status);
+    assert.equal(lengthStatus, saved.strength.checks.find((c) => c.id === "length").status);
+    assert.ok(["warn", "fail"].includes(lengthStatus) && saved.evidenceWords > 0, `${lengthStatus}, ${saved.evidenceWords}`);
+    assert.equal(
+      await page.$eval('[data-testid="length-note"]', (el) => el.innerText),
+      `Your resume has evidence for about ${saved.evidenceWords} words. Add an achievement story or a company detail to make it longer.`
+    );
   });
 
   await t.test("three openings: choosing another replaces only the opening", async () => {

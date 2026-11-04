@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
-import { ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../api/axios";
 import usePageTitle from "../hooks/usePageTitle";
@@ -162,8 +162,15 @@ function GuidedAnswers({ values, language, onChange, idPrefix }) {
 }
 
 // The letter strength check from the server (opening, evidence, motivation, clichés, length,
-// placeholders): pass or fail, with a tip for each failed check
-function StrengthCheck({ strength }) {
+// placeholders): pass, warning (amber) or fail, with a tip for each one that isn't a pass.
+//   evidenceWords - set when the requested length couldn't be reached because the resume has no
+//                   more matching evidence (the letter is never padded): a note under the length
+const STATUS_ICONS = {
+  pass: [CheckCircle2, "text-emerald-600 dark:text-emerald-400", "Passed"],
+  warn: [AlertTriangle, "text-amber-500 dark:text-amber-400", "Warning"],
+  fail: [XCircle, "text-rose-600 dark:text-rose-400", "Needs work"],
+};
+function StrengthCheck({ strength, evidenceWords }) {
   if (!strength) return null;
   return (
     <section className="card p-5" aria-labelledby="letter-strength" data-testid="letter-strength">
@@ -173,22 +180,28 @@ function StrengthCheck({ strength }) {
         </h2>
         <span className="text-sm font-medium text-slate-600 tabular-nums dark:text-slate-300">
           {strength.passed} of {strength.total} checks passed
+          {strength.warnings > 0 && ` · ${strength.warnings} ${strength.warnings === 1 ? "warning" : "warnings"}`}
         </span>
       </div>
       <ul className="mt-3 space-y-2.5">
-        {strength.checks.map((check) => (
-          <li key={check.id} className="flex gap-2.5 text-sm" data-check={check.id} data-passed={check.passed}>
-            {check.passed ? (
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label="Passed" />
-            ) : (
-              <XCircle className="mt-0.5 size-4 shrink-0 text-rose-600 dark:text-rose-400" aria-label="Needs work" />
-            )}
-            <div>
-              <p className="font-medium text-slate-800 dark:text-slate-200">{check.label}</p>
-              {check.tip && <p className="mt-0.5 text-slate-500 dark:text-slate-400">{check.tip}</p>}
-            </div>
-          </li>
-        ))}
+        {strength.checks.map((check) => {
+          const status = check.status ?? (check.passed ? "pass" : "fail");
+          const [Icon, color, label] = STATUS_ICONS[status];
+          return (
+            <li key={check.id} className="flex gap-2.5 text-sm" data-check={check.id} data-passed={check.passed} data-status={status}>
+              <Icon className={`mt-0.5 size-4 shrink-0 ${color}`} aria-label={label} />
+              <div>
+                <p className="font-medium text-slate-800 dark:text-slate-200">{check.label}</p>
+                {check.tip && <p className="mt-0.5 text-slate-500 dark:text-slate-400">{check.tip}</p>}
+                {check.id === "length" && status !== "pass" && evidenceWords > 0 && (
+                  <p className="mt-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200" data-testid="length-note">
+                    Your resume has evidence for about {evidenceWords} words. Add an achievement story or a company detail to make it longer.
+                  </p>
+                )}
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -499,7 +512,7 @@ function LetterEditor({ id }) {
             </section>
           )}
 
-          <StrengthCheck strength={letter.strength} />
+          <StrengthCheck strength={letter.strength} evidenceWords={letter.evidenceWords} />
           <OpeningPicker options={letter.openingOptions} current={currentOpening} busy={busy} onChoose={pickOpening} />
 
           <section className="card space-y-4 p-5" aria-labelledby="letter-recipient">
