@@ -5,6 +5,7 @@ import authRoutes from "./routes/authRoutes.js";
 import resumeRoutes from "./routes/resumeRoutes.js";
 import atsRoutes from "./routes/atsRoutes.js";
 import jobRoutes from "./routes/jobRoutes.js";
+import coverLetterRoutes from "./routes/coverLetterRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorHandler.js";
 
 // The Express app: middleware and routes. server.js loads .env, connects to the database and
@@ -40,6 +41,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/resumes", resumeRoutes);
 app.use("/api/ats", atsRoutes);
 app.use("/api/jobs", jobRoutes);
+app.use("/api/cover-letters", coverLetterRoutes);
 
 // Error handling (must come after all routes)
 app.use(notFound);

@@ -79,6 +79,17 @@ export const tailorLimiter = rateLimit({
   message: { message: "You've reached the limit of 10 tailored resumes per hour. Please try again later." },
 });
 
+// Limits generated cover letters per logged-in user (each one may call the AI)
+// Must run after the protect middleware, which sets req.user.
+export const coverLetterLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 20,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user._id.toString(),
+  message: { message: "You've generated a lot of cover letters in the last hour. Please try again later." },
+});
+
 // Limits photo uploads per logged-in user (each one is stored on Cloudinary's free tier).
 // Must run after the protect middleware, which sets req.user.
 export const photoLimiter = rateLimit({

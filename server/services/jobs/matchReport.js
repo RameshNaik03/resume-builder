@@ -48,11 +48,12 @@ export function skillMatcher(name) {
 }
 
 // The first resume line showing the skill (work first: experience and projects, then the rest)
-export function findEvidence(lines, name) {
+//   max - longest quote in characters (longer lines are cut with "…"); Infinity for the whole line
+export function findEvidence(lines, name, { max = MAX_EVIDENCE } = {}) {
   const matches = skillMatcher(name);
   const rank = (line) => (line.section.startsWith("experience") ? 0 : line.section.startsWith("projects") ? 1 : 2);
   const found = lines.filter((line) => matches(line.text)).sort((a, b) => rank(a) - rank(b))[0];
-  return found ? { section: found.section, text: found.text.length > MAX_EVIDENCE ? `${found.text.slice(0, MAX_EVIDENCE - 1)}…` : found.text } : null;
+  return found ? { section: found.section, text: found.text.length > max ? `${found.text.slice(0, max - 1)}…` : found.text } : null;
 }
 
 export default function matchReport(analysis, resume, confirmedSkills = []) {
