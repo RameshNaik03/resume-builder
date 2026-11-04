@@ -50,6 +50,10 @@ const termPattern = (term) =>
 export const containsAnyTerm = (text, terms, caseSensitive) =>
   new RegExp(terms.map(termPattern).join("|"), caseSensitive ? "u" : "iu").test(text);
 
+// The first spelling of the terms in a text, as written there ("Postgres"), or null
+export const matchTerm = (text, terms, caseSensitive) =>
+  text.match(new RegExp(terms.map(termPattern).join("|"), caseSensitive ? "u" : "iu"))?.[0] ?? null;
+
 // Known skills (from skills.js) that appear in a text, e.g. ["React", "Node.js"]
 export const findKnownSkills = (text) =>
   SKILLS.filter((skill) => containsAnyTerm(text, skill.terms, skill.caseSensitive)).map((skill) => skill.name);

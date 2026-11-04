@@ -20,11 +20,28 @@ import { htmlToText } from "../../utils/richText.js";
 //   addSkill       { value }                 add a skill (if it isn't there yet)
 //   layout         { template }              ATS-friendly template; keep only page size, hidden
 //                                            sections, accent color (and the headings, handled above)
+// Also used by job tailoring (services/jobs/tailorResume.js):
+//   summary        { value }                 replace the summary
+//   bulletOrder    { jobId, bullets }        put a job's bullets in this order (matched by text)
+//   projectOrder   { names }                 put the projects in this order (matched by name)
+//   skillOrder     { skills }                put the skills in this order (others keep their place after)
+//   design         { key, value }            set one design setting (e.g. fitOnePage)
+//   addBullet      { jobId, value }          add a bullet to a job (a skill the user confirmed)
 
 // Design settings kept when the layout is changed (none of them affect ATS parsing)
 export const KEPT_DESIGN = ["pageSize", "hiddenSections", "accentColor"];
 
 const findJob = (content, jobId) => content.experience.find((job) => String(job._id) === String(jobId));
+
+// The items in the order given by `order` (matched with `same`); items it doesn't list keep
+// their relative order after them, so a reorder never drops anything
+function reorder(items, order, same) {
+  const rank = (item) => {
+    const index = order.findIndex((key) => same(item, key));
+    return index < 0 ? Infinity : index;
+  };
+  return [...items].sort((a, b) => rank(a) - rank(b));
+}
 const sameBullet = (a, b) => a === b || htmlToText(a).trim() === htmlToText(b).trim();
 
 export function applyOp(content, op) {
@@ -77,6 +94,28 @@ export function applyOp(content, op) {
     case "addSkill":
       if (!content.skills.some((skill) => skill.toLowerCase() === op.value.toLowerCase())) content.skills.push(op.value);
       break;
+    case "summary":
+      content.summary = op.value;
+      break;
+    case "bulletOrder": {
+      const job = findJob(content, op.jobId);
+      if (job) job.bullets = reorder(job.bullets, op.bullets, sameBullet);
+      break;
+    }
+    case "projectOrder":
+      content.projects = reorder(content.projects, op.names, (project, name) => project.name === name);
+      break;
+    case "skillOrder":
+      content.skills = reorder(content.skills, op.skills, (skill, name) => skill.toLowerCase() === name.toLowerCase());
+      break;
+    case "design":
+      content.design[op.key] = op.value;
+      break;
+    case "addBullet": {
+      const job = findJob(content, op.jobId);
+      if (job && !job.bullets.some((bullet) => sameBullet(bullet, op.value))) job.bullets.push(op.value);
+      break;
+    }
     case "layout": {
       const headings = content.design.sectionHeadings;
       content.template = op.template;

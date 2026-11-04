@@ -7,6 +7,7 @@ import savedResumeLayout from "../services/ats/savedResumeLayout.js";
 import scoreResume, { totals } from "../services/ats/scoreResume.js";
 import aiReview, { isAIEnabled } from "../services/ats/aiReview.js";
 import buildOptimizedResume from "../services/ats/optimizeResume.js";
+import scoreContent from "../services/ats/scoreContent.js";
 import { buildContent } from "../services/ats/optimizationOps.js";
 import parseWithRules from "../services/import/parseWithRules.js";
 import sanitizeResume from "../services/import/sanitizeResume.js";
@@ -150,15 +151,6 @@ export const analyzeResume = async (req, res) => {
     analyzedWith: ai ? "rules+ai" : "rules",
   });
 };
-
-// Rule-based { score, grade } of resume content as it would look in a template (the same
-// way saved resumes are scored by /analyze)
-function scoreContent(content, { template, design }, { jobDescription, jobTitle }) {
-  const text = resumeToText(content);
-  const inspection = savedResumeLayout({ template, design }, text);
-  const { score, grade } = scoreResume({ text, inspection, parsed: sanitizeResume(parseWithRules(text)), jobDescription, jobTitle });
-  return { score, grade };
-}
 
 // Saves the dashboard's ATS badge without counting as an edit (updatedAt stays the same)
 const saveAtsScore = (resumeId, { score, grade }, jobDescription = "", extra = {}) =>

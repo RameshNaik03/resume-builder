@@ -57,6 +57,28 @@ export const rescoreLimiter = rateLimit({
   message: { message: "You've re-checked a lot in the last hour. Please try again later." },
 });
 
+// Limits job analyses per logged-in user (each one may call the AI)
+// Must run after the protect middleware, which sets req.user.
+export const jobAnalyzeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 30,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user._id.toString(),
+  message: { message: "You've analyzed a lot of job descriptions in the last hour. Please try again later." },
+});
+
+// Limits tailored resumes per logged-in user (each one saves a new resume and may call the AI)
+// Must run after the protect middleware, which sets req.user.
+export const tailorLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user._id.toString(),
+  message: { message: "You've reached the limit of 10 tailored resumes per hour. Please try again later." },
+});
+
 // Limits photo uploads per logged-in user (each one is stored on Cloudinary's free tier).
 // Must run after the protect middleware, which sets req.user.
 export const photoLimiter = rateLimit({
