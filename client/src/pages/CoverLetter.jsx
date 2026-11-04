@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../api/axios";
 import usePageTitle from "../hooks/usePageTitle";
@@ -19,12 +19,15 @@ import RichTextEditor from "../components/editor/RichTextEditor";
 
 // Cover letters (/cover-letters/new?job=<jobId> and /cover-letters/:id), via /api/cover-letters:
 //   new    - generate a letter for a tailored job: tone, length, language, the recipient (name and
-//            salutation) and the optional "Why this company?" answer
+//            salutation) and the guided answers, all optional: why this company, the user's
+//            strongest achievement for the job, what interests them about the company, their
+//            earliest start date and (German letters) a salary expectation
 //   editor - the same layout as the resume editor: the letter's fields and rich text body on the
 //            left, a live preview on the right drawn by the linked resume's template and palette
-//            (so they look like a matching set), always fitted to one page. Regenerate (with a
-//            warning before replacing hand edits), highlighted placeholders, and a PDF download
-//            that warns while placeholders are still unfilled.
+//            (so they look like a matching set), always fitted to one page. A strength check
+//            (like a mini ATS check), three openings to choose from, regenerate (with a warning
+//            before replacing hand edits), highlighted placeholders, and a PDF download that warns
+//            while placeholders are still unfilled.
 
 const TONES = [
   ["professional", "Professional"],
@@ -48,7 +51,13 @@ const SALUTATIONS = [
 const SAVE_DELAY_MS = 1000;
 const STATUS_TEXT = { saved: "Saved", unsaved: "Unsaved changes", saving: "Saving...", error: "Couldn't save" };
 
+const ANSWER_FIELDS = ["whyCompany", "achievement", "companyInterest", "availability", "salary"];
+const answersOf = (letter) => Object.fromEntries(ANSWER_FIELDS.map((field) => [field, letter?.[field] ?? ""]));
+
 const wordCount = (html) => toPlainText(html ?? "").split(/\s+/).filter(Boolean).length;
+const normalize = (text) => text.replace(/\s+/g, " ").trim();
+// The letter's opening as plain text: the paragraph after the greeting
+const openingOf = (html) => normalize(toPlainText((html ?? "").match(/<p[^>]*>[\s\S]*?<\/p>/g)?.[1] ?? ""));
 const toDateInput = (value) => (value ? new Date(value).toISOString().slice(0, 10) : "");
 
 export default function CoverLetter() {
@@ -105,14 +114,120 @@ function RecipientFields({ name, salutation, onName, onSalutation, idPrefix }) {
   );
 }
 
-function WhyCompany({ value, onChange, id }) {
+// The guided answers: short, optional, in the user's own words. Only these (and the resume) go
+// into the letter; empty ones become marked spots, never invented text.
+function GuidedAnswers({ values, language, onChange, idPrefix }) {
+  const field = (name) => ({ id: `${idPrefix}-${name}`, className: "input", value: values[name], onChange: (event) => onChange(name, event.target.value) });
+  const optional = <span className="font-normal text-slate-400">(optional)</span>;
   return (
-    <div>
-      <label htmlFor={id} className="label">
-        Why this company? <span className="font-normal text-slate-400">(optional)</span>
-      </label>
-      <textarea id={id} rows={3} maxLength={600} className="input" value={value} onChange={(event) => onChange(event.target.value)} placeholder="One or two sentences in your own words. If you leave it empty, the letter marks the spot for you to fill in." />
-    </div>
+    <fieldset className="space-y-4">
+      <legend className="label">In your own words</legend>
+      <p className="-mt-1 text-sm text-slate-500 dark:text-slate-400">All optional, but they make the letter yours. Anything you leave empty is marked for you to fill in, never made up.</p>
+      <div>
+        <label htmlFor={`${idPrefix}-achievement`} className="label">
+          Your strongest achievement for this job {optional}
+        </label>
+        <textarea {...field("achievement")} rows={3} maxLength={600} placeholder="A short story: the situation, what you did, the result. E.g. “Our nightly billing job kept timing out, so I rewrote it as a stream; it now finishes in 4 minutes.”" />
+      </div>
+      <div>
+        <label htmlFor={`${idPrefix}-why`} className="label">
+          Why this company? {optional}
+        </label>
+        <textarea {...field("whyCompany")} id={`${idPrefix}-why`} rows={2} maxLength={600} placeholder="One or two sentences in your own words." />
+      </div>
+      <div>
+        <label htmlFor={`${idPrefix}-interest`} className="label">
+          Anything specific about the company that interests you? {optional}
+        </label>
+        <input {...field("companyInterest")} id={`${idPrefix}-interest`} maxLength={400} placeholder="A product, a project, a value. E.g. “your open-source ledger library”" />
+      </div>
+      <div className={`grid gap-4 ${language === "de" ? "sm:grid-cols-2" : ""}`}>
+        <div>
+          <label htmlFor={`${idPrefix}-availability`} className="label">
+            Earliest start date {optional}
+          </label>
+          <input {...field("availability")} maxLength={120} placeholder={language === "de" ? "z. B. 1. April 2027 / sofort" : "e.g. 1 March 2027 / immediately"} />
+        </div>
+        {language === "de" && (
+          <div>
+            <label htmlFor={`${idPrefix}-salary`} className="label">
+              Gehaltsvorstellung {optional}
+            </label>
+            <input {...field("salary")} maxLength={80} placeholder="z. B. 75.000 € brutto im Jahr" />
+          </div>
+        )}
+      </div>
+    </fieldset>
+  );
+}
+
+// The letter strength check from the server (opening, evidence, motivation, clichés, length,
+// placeholders): pass or fail, with a tip for each failed check
+function StrengthCheck({ strength }) {
+  if (!strength) return null;
+  return (
+    <section className="card p-5" aria-labelledby="letter-strength" data-testid="letter-strength">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 id="letter-strength" className="font-semibold text-slate-900 dark:text-white">
+          Letter strength
+        </h2>
+        <span className="text-sm font-medium text-slate-600 tabular-nums dark:text-slate-300">
+          {strength.passed} of {strength.total} checks passed
+        </span>
+      </div>
+      <ul className="mt-3 space-y-2.5">
+        {strength.checks.map((check) => (
+          <li key={check.id} className="flex gap-2.5 text-sm" data-check={check.id} data-passed={check.passed}>
+            {check.passed ? (
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-label="Passed" />
+            ) : (
+              <XCircle className="mt-0.5 size-4 shrink-0 text-rose-600 dark:text-rose-400" aria-label="Needs work" />
+            )}
+            <div>
+              <p className="font-medium text-slate-800 dark:text-slate-200">{check.label}</p>
+              {check.tip && <p className="mt-0.5 text-slate-500 dark:text-slate-400">{check.tip}</p>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// The three generated openings: the one in the letter is selected; choosing another replaces only
+// the paragraph after the greeting
+function OpeningPicker({ options, current, busy, onChoose }) {
+  if (!options?.length) return null;
+  const selected = options.findIndex((option) => normalize(option) === current);
+  return (
+    <section className="card space-y-3 p-5" aria-labelledby="letter-openings">
+      <div>
+        <h2 id="letter-openings" className="font-semibold text-slate-900 dark:text-white">
+          Opening
+        </h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          {selected === -1 ? "You've written your own opening. Choosing one of these replaces it." : "Three ways to open, from your real experience. Pick the one that sounds most like you."}
+        </p>
+      </div>
+      <div role="radiogroup" aria-labelledby="letter-openings" className="space-y-2">
+        {options.map((option, index) => (
+          <button
+            key={index}
+            type="button"
+            role="radio"
+            aria-checked={index === selected}
+            disabled={busy}
+            onClick={() => index !== selected && onChoose(index)}
+            data-testid="opening-option"
+            className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm ring-1 transition focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none disabled:opacity-60 ${
+              index === selected ? "bg-indigo-50 text-indigo-900 ring-indigo-500 dark:bg-indigo-950/60 dark:text-indigo-100" : "text-slate-700 ring-slate-200 hover:ring-indigo-300 dark:text-slate-300 dark:ring-slate-700"
+            }`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -125,7 +240,7 @@ function NewLetter() {
   const jobId = searchParams.get("job");
   const [job, setJob] = useState(null);
   const [failed, setFailed] = useState(!jobId);
-  const [options, setOptions] = useState({ tone: "professional", length: "standard", language: "en", recipientName: "", recipientSalutation: "", whyCompany: "" });
+  const [options, setOptions] = useState({ tone: "professional", length: "standard", language: "en", recipientName: "", recipientSalutation: "", ...answersOf(null) });
   const [busy, setBusy] = useState(false);
   const set = (field) => (value) => setOptions((previous) => ({ ...previous, [field]: value }));
 
@@ -144,7 +259,12 @@ function NewLetter() {
     event.preventDefault();
     setBusy(true);
     try {
-      const { data } = await api.post("/cover-letters/generate", { jobId, ...options, recipientSalutation: options.recipientName.trim() ? options.recipientSalutation : "" });
+      const { data } = await api.post("/cover-letters/generate", {
+        jobId,
+        ...options,
+        recipientSalutation: options.recipientName.trim() ? options.recipientSalutation : "",
+        salary: options.language === "de" ? options.salary : "",
+      });
       toast.success(data.placeholders.length ? `Letter written. Fill in ${data.placeholders.length} marked ${data.placeholders.length === 1 ? "spot" : "spots"} before sending.` : "Letter written.");
       navigate(`/cover-letters/${data.coverLetter._id}`);
     } catch (error) {
@@ -182,7 +302,7 @@ function NewLetter() {
         <Choice legend="Length" name="length" options={LENGTHS} value={options.length} onChange={set("length")} />
         <Choice legend="Language" name="language" options={LANGUAGES} value={options.language} onChange={set("language")} />
         <RecipientFields idPrefix="new" name={options.recipientName} salutation={options.recipientSalutation} onName={set("recipientName")} onSalutation={set("recipientSalutation")} />
-        <WhyCompany id="new-why" value={options.whyCompany} onChange={set("whyCompany")} />
+        <GuidedAnswers idPrefix="new" values={options} language={options.language} onChange={(name, value) => set(name)(value)} />
         <div className="flex justify-end">
           <button type="submit" disabled={busy} className="btn-primary">
             {busy ? "Writing..." : "Write cover letter"}
@@ -201,7 +321,7 @@ function LetterEditor({ id }) {
   const [failed, setFailed] = useState(false);
   const [status, setStatus] = useState("saved");
   const [regen, setRegen] = useState(null); // Regenerate options (start from the letter's own)
-  const [confirm, setConfirm] = useState(null); // "regenerate" | "download"
+  const [confirm, setConfirm] = useState(null); // "regenerate" | "download" | { opening: index }
   const [busy, setBusy] = useState(false);
   const [fit, setFit] = useState(null);
   const pending = useRef({});
@@ -214,7 +334,7 @@ function LetterEditor({ id }) {
       try {
         const { data } = await api.get(`/cover-letters/${id}`);
         setLetter(data);
-        setRegen({ tone: data.tone, length: data.length, language: data.language, whyCompany: data.whyCompany ?? "" });
+        setRegen({ tone: data.tone, length: data.length, language: data.language, ...answersOf(data) });
         setResume((await api.get(`/resumes/${data.resumeId}`)).data);
       } catch (error) {
         setFailed(true);
@@ -232,7 +352,7 @@ function LetterEditor({ id }) {
     setStatus("saving");
     try {
       const { data } = await api.put(`/cover-letters/${id}`, fields);
-      setLetter((previous) => ({ ...previous, bodyEdited: data.bodyEdited, updatedAt: data.updatedAt }));
+      setLetter((previous) => ({ ...previous, bodyEdited: data.bodyEdited, updatedAt: data.updatedAt, strength: data.strength }));
       setStatus(Object.keys(pending.current).length ? "unsaved" : "saved");
     } catch (error) {
       pending.current = { ...fields, ...pending.current };
@@ -293,6 +413,7 @@ function LetterEditor({ id }) {
     try {
       const { data } = await api.post(`/cover-letters/${id}/regenerate`, {
         ...regen,
+        salary: regen.language === "de" ? regen.salary : "",
         recipientName: letter.recipientName,
         recipientSalutation: letter.recipientName.trim() ? letter.recipientSalutation : "",
       });
@@ -303,6 +424,27 @@ function LetterEditor({ id }) {
     } finally {
       setBusy(false);
     }
+  };
+
+  // Another of the generated openings (pending edits are saved first, so only the opening changes)
+  const currentOpening = useMemo(() => openingOf(letter?.body), [letter?.body]);
+  const chooseOpening = async (index) => {
+    setConfirm(null);
+    setBusy(true);
+    await save();
+    try {
+      const { data } = await api.post(`/cover-letters/${id}/opening`, { index });
+      setLetter((previous) => ({ ...previous, body: data.body, bodyEdited: data.bodyEdited, strength: data.strength }));
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const pickOpening = (index) => {
+    const ownOpening = !letter.openingOptions.some((option) => normalize(option) === currentOpening);
+    if (ownOpening) setConfirm({ opening: index });
+    else chooseOpening(index);
   };
 
   if (failed) {
@@ -356,6 +498,9 @@ function LetterEditor({ id }) {
               <p className="mt-2 text-xs">They're highlighted in yellow in the preview. Replace each one with your own words, or delete it.</p>
             </section>
           )}
+
+          <StrengthCheck strength={letter.strength} />
+          <OpeningPicker options={letter.openingOptions} current={currentOpening} busy={busy} onChoose={pickOpening} />
 
           <section className="card space-y-4 p-5" aria-labelledby="letter-recipient">
             <h2 id="letter-recipient" className="font-semibold text-slate-900 dark:text-white">
@@ -417,7 +562,7 @@ function LetterEditor({ id }) {
             <Choice legend="Tone" name="regen-tone" options={TONES} value={regen.tone} onChange={(tone) => setRegen((r) => ({ ...r, tone }))} />
             <Choice legend="Length" name="regen-length" options={LENGTHS} value={regen.length} onChange={(length) => setRegen((r) => ({ ...r, length }))} />
             <Choice legend="Language" name="regen-language" options={LANGUAGES} value={regen.language} onChange={(language) => setRegen((r) => ({ ...r, language }))} />
-            <WhyCompany id="regen-why" value={regen.whyCompany} onChange={(whyCompany) => setRegen((r) => ({ ...r, whyCompany }))} />
+            <GuidedAnswers idPrefix="regen" values={regen} language={regen.language} onChange={(name, value) => setRegen((r) => ({ ...r, [name]: value }))} />
             <div className="flex justify-end">
               <button type="button" onClick={() => (letter.bodyEdited || pending.current.body !== undefined ? setConfirm("regenerate") : regenerate())} disabled={busy || !letter.jobId} className="btn-secondary">
                 {busy ? "Rewriting..." : "Regenerate"}
@@ -446,6 +591,14 @@ function LetterEditor({ id }) {
         message="You've changed the text by hand. Regenerating replaces it with a new letter, and your edits will be lost."
         confirmText="Replace my edits"
         onConfirm={regenerate}
+        onCancel={() => setConfirm(null)}
+      />
+      <ConfirmModal
+        open={confirm?.opening !== undefined}
+        title="Replace your opening?"
+        message="You've written your own opening paragraph. Choosing a generated one replaces it; the rest of the letter stays as it is."
+        confirmText="Replace my opening"
+        onConfirm={() => chooseOpening(confirm.opening)}
         onCancel={() => setConfirm(null)}
       />
       <ConfirmModal

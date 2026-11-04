@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  chooseOpening,
   createCoverLetter,
   deleteCoverLetter,
   generateCoverLetter,
@@ -18,6 +19,7 @@ router.use(protect);
 
 router.post("/generate", coverLetterLimiter, generateCoverLetter); // Write one for a job
 router.post("/:id/regenerate", coverLetterLimiter, regenerateCoverLetter); // Rewrite its body
+router.post("/:id/opening", chooseOpening); // Use another of its openings
 router.route("/").get(listCoverLetters).post(createCoverLetter);
 router.route("/:id").get(getCoverLetter).put(updateCoverLetter).delete(deleteCoverLetter);
 

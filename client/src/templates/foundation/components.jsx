@@ -180,8 +180,9 @@ export function ExperienceList({ jobs, orgInline = false }) {
 }
 
 // A cover letter in place of the resume's sections (data.letter, see templates/prepareLetter.js):
-// the date, the recipient, the subject line, then the body's paragraphs (greeting to sign-off).
-// In the page source in that order, so the text reads like the letter. One block per part.
+// the date, the recipient, the subject line, the greeting, the body's paragraphs, then the
+// sign-off and the name with room to sign. In the page source in that order, so the text reads
+// like the letter. One block per part (the sign-off and name stay together).
 export function LetterBlock({ letter }) {
   return (
     <section className="f-section f-letter">
@@ -199,10 +200,18 @@ export function LetterBlock({ letter }) {
       )}
       {letter.subject && <p className="f-letter-subject" data-block dangerouslySetInnerHTML={{ __html: letter.subject }} />}
       <div className="f-letter-body">
+        {letter.greeting && <RichText html={letter.greeting} className="f-letter-greeting" data-block />}
         {letter.paragraphs.map((html, index) => (
           <RichText key={index} html={html} data-block />
         ))}
       </div>
+      {letter.closing && (
+        <div className="f-letter-closing" data-block>
+          <p dangerouslySetInnerHTML={{ __html: letter.closing.signOff }} />
+          {/* Room to sign, then a drawn line above the name */}
+          <p className="f-letter-signature" dangerouslySetInnerHTML={{ __html: letter.closing.name }} />
+        </div>
+      )}
     </section>
   );
 }

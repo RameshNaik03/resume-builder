@@ -217,12 +217,18 @@ test("PDF round trip: every template exports a PDF an ATS can read", async (t) =
   }
 
   // Cover letters: printed from the letter editor's preview (the resume's template, fitted to one
-  // page). One page; the name first; then the subject, the greeting, the body and the sign-off in
-  // that order; no stray separators or spaced-out letters. Checked in three different layouts.
+  // page). One page; the name first; then the subject, the greeting, the opening, the achievement
+  // story, the close and the sign-off in that order (the name last, below the signature space); no stray separators or spaced-out letters. Checked in three different layouts.
   const LETTER_TEMPLATES = ["classic-navy", "sidebar-pro-navy", "color-block-navy"].filter((id) => !ONLY || id.startsWith(ONLY));
   if (LETTER_TEMPLATES.length) {
     const job = (await api("POST", "/jobs/tailor", token, { resumeId, job: { description: JOB_DESCRIPTION } })).body;
-    const letter = (await api("POST", "/cover-letters/generate", token, { jobId: job.jobId, recipientName: "Anna Schmidt", recipientSalutation: "Frau" })).body.coverLetter;
+    const letter = (await api("POST", "/cover-letters/generate", token, {
+      jobId: job.jobId,
+      recipientName: "Anna Schmidt",
+      recipientSalutation: "Frau",
+      achievement: "When our nightly billing job kept timing out, I rewrote it as a stream and it now finishes in minutes",
+      availability: "1 March 2027",
+    })).body.coverLetter;
     for (const template of LETTER_TEMPLATES) {
       await t.test(`cover letter (${template})`, async () => {
         await api("PUT", `/resumes/${job.resume._id}`, token, { template });
@@ -239,9 +245,16 @@ test("PDF round trip: every template exports a PDF an ATS can read", async (t) =
         const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
         assert.equal(lines[0], SAMPLE.personalInfo.fullName, "the name should come first");
         const at = (pattern) => lines.findIndex((line) => pattern.test(line));
-        const order = [/^Application for Senior Backend Engineer$/, /^Dear Ms\. Schmidt,$/, /^The Senior Backend Engineer role at Northbeam/, /^Kind regards,$/].map(at);
-        assert.ok(order.every((index) => index > 0), `subject, greeting, body and sign-off should all be there: ${order}`);
-        assert.deepEqual([...order].sort((a, b) => a - b), order, "subject, greeting, body, sign-off in that order");
+        const order = [
+          /^Application for Senior Backend Engineer$/,
+          /^Dear Ms\. Schmidt,$/,
+          /^(Your|The) Senior Backend Engineer role/,
+          /^One result I.m particularly proud of/,
+          /^I can start from 1 March 2027/,
+          /^Kind regards,$/,
+        ].map(at);
+        assert.ok(order.every((index) => index > 0), `subject, greeting, opening, achievement, close and sign-off should all be there: ${order}`);
+        assert.deepEqual([...order].sort((a, b) => a - b), order, "subject, greeting, opening, achievement, close, sign-off in that order");
         assert.equal(lines.at(-1), SAMPLE.personalInfo.fullName, "the letter ends with the name");
         assert.ok(at(/Frau Anna Schmidt|Anna Schmidt/) > 0 && at(/Frau Anna Schmidt|Anna Schmidt/) < order[0], "the recipient comes before the subject");
 

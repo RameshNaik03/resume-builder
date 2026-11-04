@@ -470,24 +470,43 @@
   }
 
   /* ---------- Cover letters (LetterBlock) ----------
-     A standard letter: the date on the right, the recipient, a bold subject line, then the body
-     with the same gap between its paragraphs */
+     A standard business letter: inset a little more than the resume's text (generous margins);
+     the date on the right, the recipient, a bold subject line, the greeting, the paragraphs with
+     an even gap, then the sign-off, room to sign and a drawn line above the name. The gaps are in
+     em so they shrink with the text when the letter is fitted to one page. */
+  .f-letter {
+    padding-inline: clamp(0pt, 4%, 24pt);
+  }
   .f-letter-date {
     text-align: right;
     font-variant-numeric: tabular-nums;
   }
   .f-letter-recipient {
-    margin-top: var(--f-heading-gap);
+    margin-top: 1.4em;
   }
   .f-letter-subject {
-    margin-top: calc(var(--f-section-gap) * 1.5);
+    margin-top: 2.2em;
     font-weight: 700;
   }
   .f-letter-body > * {
-    margin-top: var(--f-item-gap);
+    margin-top: 0.85em;
   }
   .f-letter-body > :first-child {
-    margin-top: var(--f-section-gap);
+    margin-top: 1.6em;
+  }
+  .f-letter-body > .f-letter-greeting + * {
+    margin-top: 1em;
+  }
+  .f-letter-closing {
+    margin-top: 1.4em;
+  }
+  .f-letter-signature {
+    width: max-content;
+    min-width: 14em;
+    max-width: 100%;
+    margin-top: 2.6em;
+    padding-top: 0.3em;
+    border-top: 0.75pt solid currentColor;
   }
 
   /* ---------- Skills ---------- */

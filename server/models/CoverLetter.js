@@ -19,7 +19,13 @@ const coverLetterSchema = new mongoose.Schema(
     companyName: { type: String, trim: true, maxlength: 120, default: "" },
     subject: { type: String, trim: true, maxlength: 200, default: "" }, // "Application for ..." / "Bewerbung als ..."
     date: { type: Date, default: Date.now }, // The date printed on the letter
-    whyCompany: { type: String, trim: true, maxlength: 600, default: "" }, // The user's answer, reused when regenerating
+    // The user's guided answers (their own words), reused when regenerating
+    whyCompany: { type: String, trim: true, maxlength: 600, default: "" },
+    achievement: { type: String, trim: true, maxlength: 600, default: "" }, // Their strongest achievement for this job
+    companyInterest: { type: String, trim: true, maxlength: 400, default: "" }, // Something specific about the company
+    availability: { type: String, trim: true, maxlength: 120, default: "" }, // Earliest start date
+    salary: { type: String, trim: true, maxlength: 80, default: "" }, // Salary expectation (German letters)
+    openingOptions: { type: [String], default: [] }, // Three openings to choose from (the first is in the body)
     body: { type: String, default: "", set: richBlock, maxlength: 20000 },
     bodyEdited: { type: Boolean, default: false }, // The body was changed by hand since it was generated
     tone: { type: String, enum: TONES, default: "professional" },
