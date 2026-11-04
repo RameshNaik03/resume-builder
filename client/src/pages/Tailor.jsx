@@ -8,6 +8,7 @@ import getErrorMessage from "../utils/getErrorMessage";
 import timeAgo from "../utils/timeAgo";
 import Loader from "../components/Loader";
 import ScoreRing from "../components/ats/ScoreRing";
+import { fitTone } from "../components/ats/atsHelpers";
 
 // "Tailor to a job" (/tailor, /tailor/jobs/:jobId). Uses the /api/jobs routes:
 //   1. Paste a job description (or reuse a saved job) and pick the base resume
@@ -23,7 +24,6 @@ const TAILOR_STEPS = ["Reading your resume", "Matching it to the job", "Writing 
 const STEP_TIMES = [600, 1500]; // When each progress step starts (ms); the last one waits for the server
 
 const jobTitleOf = (job) => [job.title ?? job.analysis?.title, job.company ?? job.analysis?.company].filter(Boolean).join(" – ") || "Untitled job";
-const matchLabel = (score) => (score >= 75 ? "Strong match" : score >= 50 ? "Good match" : score >= 25 ? "Partial match" : "Weak match");
 
 export default function Tailor() {
   const { jobId } = useParams();
@@ -135,7 +135,7 @@ function TailorFlow() {
                 <option value="">Paste a new job description below</option>
                 {jobs.map((job) => (
                   <option key={job._id} value={job._id}>
-                    {jobTitleOf(job)} · {job.score}% match
+                    {jobTitleOf(job)} · {job.score}% · {fitTone(job.score).label}
                   </option>
                 ))}
               </select>
@@ -369,7 +369,9 @@ function SavedJobs({ jobs }) {
                   {job.company || "Company not stated"} · {timeAgo(job.createdAt)}
                 </span>
               </span>
-              <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-sm font-semibold tabular-nums text-slate-700 dark:bg-slate-800 dark:text-slate-200">{job.score}%</span>
+              <span className={`shrink-0 rounded-full px-2.5 py-1 text-sm font-semibold tabular-nums ${fitTone(job.score).badge}`}>
+                {job.score}% · {fitTone(job.score).label}
+              </span>
             </Link>
           </li>
         ))}
@@ -439,7 +441,7 @@ function JobReport({ jobId }) {
       <div className="mt-6 grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <section className="card p-6" aria-label="Match">
           <div data-testid="match-score" data-score={report.score}>
-            <ScoreRing key={report.score} score={report.score} grade={matchLabel(report.score)} label="Match" unit="% match" />
+            <ScoreRing key={report.score} score={report.score} grade={fitTone(report.score).label} label="Match" unit="% match" toneFor={fitTone} />
           </div>
           <Breakdown report={report} />
         </section>

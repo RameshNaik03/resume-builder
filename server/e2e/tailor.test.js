@@ -63,6 +63,8 @@ test("Tailor to a job", async (t) => {
     );
   const textOf = (selector) => page.$eval(selector, (el) => el.innerText);
   const score = () => page.$eval('[data-testid="match-score"]', (el) => Number(el.dataset.score));
+  // The match's own scale (not the ATS score's)
+  const fitLabel = (value) => (value >= 75 ? "Strong fit" : value >= 50 ? "Good fit" : "Stretch role");
   let jobUrl;
 
   await t.test("from the dashboard: paste a job, pick a resume, analyze", async () => {
@@ -95,6 +97,12 @@ test("Tailor to a job", async (t) => {
     jobUrl = page.url();
     await page.waitForSelector('[data-testid="match-score"]');
     assert.ok((await score()) > 0 && (await score()) < 100);
+    const ring = await textOf('[data-testid="match-score"]');
+    assert.ok(ring.includes(fitLabel(await score())), `the ring should say "${fitLabel(await score())}": ${ring}`);
+    assert.ok(!/match$|Partial|Weak/m.test(ring.replace("% match", "")), "no ATS-style labels");
+    // Neutral blue/indigo tones, not the ATS red/orange/green
+    const stroke = await page.$eval('[data-testid="match-score"] circle:last-of-type', (el) => el.getAttribute("class"));
+    assert.match(stroke, /stroke-(indigo|sky)-/);
     assert.match(await textOf('[data-testid="breakdown"]'), /Must-haves\s*3 of 4/); // Node.js, Kafka, PostgreSQL of 4 (Docker moved, REST APIs removed)
 
     // The evidence quote shows on hover
@@ -160,7 +168,8 @@ test("Tailor to a job", async (t) => {
     const saved = await textOf('[data-testid="saved-jobs"]');
     assert.match(saved, /Senior Backend Engineer/);
     assert.match(saved, /Northbeam/);
-    assert.match(saved, /\d+%/);
+    const listed = saved.match(/(\d+)% · (Strong fit|Good fit|Stretch role)/);
+    assert.ok(listed && listed[2] === fitLabel(Number(listed[1])), `the saved job shows its % and fit label: ${saved}`);
 
     await page.goto(`${APP}/dashboard`, { waitUntil: "networkidle0" });
     await page.click(`a[aria-label="Tailor ${RESUME.title} to a job"]`);

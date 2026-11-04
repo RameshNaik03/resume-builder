@@ -7,7 +7,8 @@ const ANIMATION_MS = 1200;
 // Large ring that fills up to the score while the number counts up.
 // compact: smaller on phones (for two rings side by side)
 // label / unit: what the number is, for screen readers and under the number (an ATS score by default)
-export default function ScoreRing({ score, grade, compact = false, label = "ATS score", unit = "out of 100" }) {
+// toneFor: the colours for a score (the ATS scale by default; job matches use fitTone)
+export default function ScoreRing({ score, grade, compact = false, label = "ATS score", unit = "out of 100", toneFor = scoreTone }) {
   const reducedMotion = usePrefersReducedMotion();
   const [animated, setAnimated] = useState(0);
   const shown = reducedMotion ? score : animated;
@@ -27,7 +28,7 @@ export default function ScoreRing({ score, grade, compact = false, label = "ATS 
 
   const radius = 52;
   const circumference = 2 * Math.PI * radius;
-  const tone = scoreTone(score);
+  const tone = toneFor(score);
 
   return (
     <div className="flex flex-col items-center">
