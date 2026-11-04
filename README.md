@@ -300,16 +300,13 @@ CI installs packages with `npm ci` from `package-lock.json`, so commit that file
 
 ## What I Learned
 
-<!-- TODO: edit these in your own words -->
-
-- Designing a REST API with Express and protecting routes with JWT middleware
-- Making sure users can only access their own data, and returning 404 instead of revealing that other users' data exists
-- Modelling nested data (experience, bullets, projects) with Mongoose sub-schemas
-- Managing global auth state in React with Context, plus protected and public routes
-- Building a debounced autosave that never loses changes, even when the user keeps typing during a save
-- Building reusable components (one `ListEditor` powers three form sections)
-- Print CSS for real A4 PDFs: `@page`, page-break control and scaling a preview with `transform`
-- Production basics: rate limiting, hiding internal errors and environment variables
+- **Test with real data early.** My own CV exposed bugs that sample data never did: the import lost job titles, and my templates weren't ATS-safe.
+- **PDFs don't store text in reading order.** CSS letter-spacing, opacity and positioning changed how text was extracted. An automated round-trip test across every template took the pass rate from 4/45 to 100%.
+- **Professional design is mostly rules, not decoration.** A shared foundation (type scale, spacing rhythm, palettes) enforced by tests made 16 layouts look consistently polished.
+- **Print is harder than screens.** Page breaks needed orphan and widow control, and backgrounds had to be drawn page by page so nothing crosses the margins.
+- **AI needs guardrails.** Every AI rewrite, tailored resume and cover letter passes a safety check: no invented numbers, skills, companies or titles. Missing skills are only added when the user confirms them.
+- **Design for undo from the start.** Rebuilding the resume from the original plus accepted changes made accept/reject reliable, even when changes depend on each other.
+- **Fail fast in production.** The server refuses to start with missing settings instead of failing on every request.
 
 ## Future Improvements
 
