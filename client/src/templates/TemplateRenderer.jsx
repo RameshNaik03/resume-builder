@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { getTemplate } from "./registry";
 import prepareResume from "./prepareResume";
+import prepareLetter from "./prepareLetter";
 import { designCssVars, resolveDesign, usedFontIds } from "./design";
 import { loadFonts } from "./fonts";
 import ClassicLayout from "./layouts/ClassicLayout";
@@ -47,7 +48,9 @@ const LAYOUT_COMPONENTS = {
 //                show the template as designed (thumbnails, landing page).
 //   highlightPlaceholders - mark "[X%]"-style placeholders in yellow (on-screen previews only,
 //                never the printed sheet)
-export default function TemplateRenderer({ resume, templateId, withLinks = true, design, highlightPlaceholders = false }) {
+//   letter     - a cover letter to draw instead of the resume's sections: the layout's own header
+//                (name, contact, photo, colours) with the letter below it (see prepareLetter.js)
+export default function TemplateRenderer({ resume, templateId, withLinks = true, design, highlightPlaceholders = false, letter }) {
   const template = getTemplate(templateId ?? resume.template);
   const Layout = LAYOUT_COMPONENTS[template.layout];
   const { theme } = template;
@@ -66,10 +69,12 @@ export default function TemplateRenderer({ resume, templateId, withLinks = true,
   }, [fontIds]);
 
   // Only re-clean the data when the resume or its design actually changes
-  const data = useMemo(
-    () => prepareResume(resume, withLinks, resolvedDesign.resolved, resolvedDesign.overrides, { highlightPlaceholders }),
-    [resume, withLinks, resolvedDesign, highlightPlaceholders]
-  );
+  const data = useMemo(() => {
+    const prepared = prepareResume(resume, withLinks, resolvedDesign.resolved, resolvedDesign.overrides, { highlightPlaceholders });
+    if (!letter) return prepared;
+    // A letter: one "letter" section in the main column (FoundationSection draws it)
+    return { ...prepared, columns: 1, sections: [{ id: "letter", key: "letter", title: "", column: "main" }], letter: prepareLetter(letter, { highlightPlaceholders }) };
+  }, [resume, withLinks, resolvedDesign, highlightPlaceholders, letter]);
 
   return (
     <div style={style}>

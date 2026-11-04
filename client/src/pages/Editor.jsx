@@ -3,8 +3,9 @@ import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import toast from "react-hot-toast";
 import { getTemplate } from "../templates/registry";
-import { PAGE_SIZES, resolveDesign, usedFontIds } from "../templates/design";
+import { resolveDesign, usedFontIds } from "../templates/design";
 import { getPrintFonts } from "../templates/fonts";
+import printPageStyle from "../utils/printPageStyle";
 import useResume from "../hooks/useResume";
 import usePageTitle from "../hooks/usePageTitle";
 import { placeholdersIn } from "../utils/placeholders";
@@ -31,16 +32,6 @@ const STATUS_STYLES = {
   error: { text: "Couldn't save", dot: "bg-red-500" },
 };
 
-// Print settings for the PDF: the design's paper size (A4 or US Letter) and no page margins
-// (the resume draws its own margins, and pagination adds them to every page).
-// Zero margins also stop the browser from adding its date/URL headers and footers.
-const printPageStyle = (pageSize) => `
-  @page { size: ${PAGE_SIZES[pageSize].css}; margin: 0; }
-  @media print {
-    html, body { margin: 0; padding: 0; }
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  }
-`;
 
 // e.g. "Jobs and internships · 2 added"
 const withCount = (text, list) => (list.length > 0 ? `${text} · ${list.length} added` : text);

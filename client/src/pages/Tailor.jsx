@@ -361,8 +361,8 @@ function SavedJobs({ jobs }) {
       </h2>
       <ul className="mt-3 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900" data-testid="saved-jobs">
         {jobs.map((job) => (
-          <li key={job._id}>
-            <Link to={`/tailor/jobs/${job._id}`} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60">
+          <li key={job._id} className="flex items-center hover:bg-slate-50 dark:hover:bg-slate-800/60">
+            <Link to={`/tailor/jobs/${job._id}`} className="flex min-w-0 flex-1 items-center justify-between gap-4 px-4 py-3">
               <span className="min-w-0">
                 <span className="block truncate font-medium text-slate-900 dark:text-white">{job.title || "Untitled job"}</span>
                 <span className="block truncate text-sm text-slate-500 dark:text-slate-400">
@@ -372,6 +372,12 @@ function SavedJobs({ jobs }) {
               <span className={`shrink-0 rounded-full px-2.5 py-1 text-sm font-semibold tabular-nums ${fitTone(job.score).badge}`}>
                 {job.score}% · {fitTone(job.score).label}
               </span>
+            </Link>
+            <Link
+              to={job.coverLetterId ? `/cover-letters/${job.coverLetterId}` : `/cover-letters/new?job=${job._id}`}
+              className="mr-4 shrink-0 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
+            >
+              {job.coverLetterId ? "Cover letter" : "Write cover letter"}
             </Link>
           </li>
         ))}
@@ -427,6 +433,9 @@ function JobReport({ jobId }) {
         </div>
         {job.tailoredResume && (
           <div className="flex flex-wrap gap-2">
+            <Link to={job.coverLetterId ? `/cover-letters/${job.coverLetterId}` : `/cover-letters/new?job=${job._id}`} className="btn-secondary">
+              {job.coverLetterId ? "Open cover letter" : "Write cover letter"}
+            </Link>
             <Link to={`/ats/review/${job.tailoredResumeId}`} className="btn-secondary">
               Review changes
             </Link>
@@ -451,6 +460,11 @@ function JobReport({ jobId }) {
           <MissingSkills job={job} onReport={setReport} />
         </div>
       </div>
+
+      <details id="job-description" className="card mt-6 p-5" open={window.location.hash === "#job-description"}>
+        <summary className="cursor-pointer font-semibold text-slate-900 dark:text-white">Job description</summary>
+        <p className="mt-3 text-sm whitespace-pre-line text-slate-700 dark:text-slate-300">{job.description}</p>
+      </details>
     </div>
   );
 }

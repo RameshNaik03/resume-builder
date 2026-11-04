@@ -15,6 +15,7 @@ const FIT_DELAY_MS = 250; // "Fit to one page" waits this long after the last ch
 //              the page breaks, and it's what gets printed to PDF.
 //   highlightPlaceholders - mark "[X%]"-style placeholders in yellow on the visible pages
 //              (never on the printed copy)
+//   letter   - a cover letter to show instead of the resume's sections (TemplateRenderer)
 //   onStatus - called with { pageCount, fit } whenever they change. fit is null when "Fit to one
 //              page" is off, else { pending } while re-fitting, then { fits, overflowLines, sections }
 //
@@ -22,7 +23,7 @@ const FIT_DELAY_MS = 250; // "Fit to one page" waits this long after the last ch
 // the user's own design, is measured to find the fitted settings. Those are added to the design
 // used by the visible pages and the printed copy, so the preview and the PDF are identical. They
 // aren't saved: with the option off, the resume's own design is used exactly.
-export default function ResumePreview({ resume, printRef, highlightPlaceholders = false, onStatus }) {
+export default function ResumePreview({ resume, printRef, highlightPlaceholders = false, letter, onStatus }) {
   const containerRef = useRef(null);
   const pagesRef = useRef(null);
   const measureRef = useRef(null);
@@ -61,10 +62,10 @@ export default function ResumePreview({ resume, printRef, highlightPlaceholders 
   useEffect(() => {
     if (!fitOn) return undefined;
     const timer = setTimeout(() => {
-      if (measureRef.current) setFit({ source: resume, ...findFit(measureRef.current, template, resume.design) });
+      if (measureRef.current) setFit({ source: resume, letter, ...findFit(measureRef.current, template, resume.design) });
     }, FIT_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [fitOn, resume, template, fontsLoaded]);
+  }, [fitOn, resume, letter, template, fontsLoaded]);
 
   // Shrink the pages to the width of the panel
   useEffect(() => {
@@ -92,10 +93,10 @@ export default function ResumePreview({ resume, printRef, highlightPlaceholders 
       applyDecorations(page, decorations);
     }
     if (pagesNeeded !== pageCount) setPageCount(pagesNeeded); // Re-runs once with the new page count
-  }, [resume, design, pageCount, printRef, heightPx, marginTopPx, marginBottomPx, fontsLoaded]);
+  }, [resume, letter, design, pageCount, printRef, heightPx, marginTopPx, marginBottomPx, fontsLoaded]);
 
   // Tell the editor the page count and how fitting went
-  const fitStatus = !fitOn ? null : fit?.source === resume ? { pending: false, fits: fit.fits, overflowLines: fit.overflowLines, sections: fit.sections } : { pending: true };
+  const fitStatus = !fitOn ? null : fit?.source === resume && fit?.letter === letter ? { pending: false, fits: fit.fits, overflowLines: fit.overflowLines, sections: fit.sections } : { pending: true };
   const statusKey = JSON.stringify({ pageCount, fitStatus });
   useEffect(() => {
     onStatus?.(JSON.parse(statusKey));
@@ -114,12 +115,12 @@ export default function ResumePreview({ resume, printRef, highlightPlaceholders 
       {/* Hidden full-length resume: measured for page breaks and printed to PDF */}
       <div aria-hidden="true" className="invisible absolute top-0 left-0 h-0 overflow-hidden">
         <ResumeSheet ref={printRef} {...sheetProps}>
-          <TemplateRenderer resume={resume} design={design} />
+          <TemplateRenderer resume={resume} design={design} letter={letter} />
         </ResumeSheet>
         {/* Fit to one page: a copy in the user's own design, measured by findFit */}
         {fitOn && (
           <ResumeSheet ref={measureRef} pageSize={resolved.pageSize} background={resolved.backgroundColor}>
-            <TemplateRenderer resume={resume} design={resume.design} />
+            <TemplateRenderer resume={resume} design={resume.design} letter={letter} />
           </ResumeSheet>
         )}
       </div>
@@ -137,7 +138,7 @@ export default function ResumePreview({ resume, printRef, highlightPlaceholders 
             >
               <div style={{ transform: `translateY(${-index * heightPx}px)` }}>
                 <ResumeSheet {...sheetProps}>
-                  <TemplateRenderer resume={resume} design={design} highlightPlaceholders={highlightPlaceholders} />
+                  <TemplateRenderer resume={resume} design={design} highlightPlaceholders={highlightPlaceholders} letter={letter} />
                 </ResumeSheet>
               </div>
               {pageCount > 1 && (

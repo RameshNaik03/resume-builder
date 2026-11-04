@@ -141,6 +141,49 @@ test("cover letters", async (t) => {
   r = await call("POST", "/cover-letters/generate", token, { jobId, language: "de", recipientName: "Anna Schmidt" });
   await check("German with a name: a formal greeting with the full name", plain(r.body.coverLetter.body).startsWith("Guten Tag Anna Schmidt,"), plain(r.body.coverLetter.body));
 
+  // ---------- Salutations ----------
+  const greetingFor = async (body) => {
+    const response = await call("POST", "/cover-letters/generate", token, { jobId, recipientName: "Anna Schmidt", ...body });
+    return plain(response.body.coverLetter.body).split("\n")[0];
+  };
+  await check("German, Frau: 'Sehr geehrte Frau Schmidt,'", (await greetingFor({ language: "de", recipientSalutation: "Frau" })) === "Sehr geehrte Frau Schmidt,");
+  await check("German, Herr: 'Sehr geehrter Herr Schmidt,'", (await greetingFor({ language: "de", recipientSalutation: "Herr" })) === "Sehr geehrter Herr Schmidt,");
+  await check("German, none: 'Guten Tag Anna Schmidt,'", (await greetingFor({ language: "de", recipientSalutation: "" })) === "Guten Tag Anna Schmidt,");
+  await check("English, Frau: 'Dear Ms. Schmidt,'", (await greetingFor({ recipientSalutation: "Frau" })) === "Dear Ms. Schmidt,");
+  await check("English, Herr: 'Dear Mr. Schmidt,'", (await greetingFor({ recipientSalutation: "Herr" })) === "Dear Mr. Schmidt,");
+  await check("English, none: 'Dear Anna Schmidt,'", (await greetingFor({})) === "Dear Anna Schmidt,");
+  r = await call("POST", "/cover-letters/generate", token, { jobId, language: "de", recipientSalutation: "Frau" });
+  await check(
+    "a salutation without a name: the no-name greeting, and no salutation saved",
+    plain(r.body.coverLetter.body).startsWith("Sehr geehrte Damen und Herren,") && r.body.coverLetter.recipientSalutation === "",
+    r.body.coverLetter.recipientSalutation
+  );
+  r = await call("POST", "/cover-letters/generate", token, { jobId, recipientName: "Anna Schmidt", recipientSalutation: "Dr." });
+  await check("an unknown salutation -> 400", r.status === 400, r.body.message);
+  r = await call("POST", "/cover-letters/generate", token, { jobId, language: "de", recipientName: "Anna Schmidt", recipientSalutation: "Frau" });
+  await check(
+    "the subject line and saved fields follow the language",
+    r.body.coverLetter.subject === "Bewerbung als Senior Backend Engineer" && r.body.coverLetter.recipientSalutation === "Frau" && r.body.coverLetter.bodyEdited === false,
+    r.body.coverLetter
+  );
+
+  // ---------- Regenerate ----------
+  const regenId = r.body.coverLetter._id;
+  r = await call("PUT", `/cover-letters/${regenId}`, token, { body: "<p>My own words</p>" });
+  await check("editing the body by hand marks it edited", r.body.bodyEdited === true, r.body.bodyEdited);
+  r = await call("PUT", `/cover-letters/${regenId}`, token, { title: "Renamed" });
+  await check("  other edits don't change that", r.body.bodyEdited === true);
+  r = await call("POST", `/cover-letters/${regenId}/regenerate`, token, { language: "en", tone: "confident", length: "short", whyCompany: "Your payments work is close to what I do" });
+  await check(
+    "regenerate: a new body for the options, no longer marked edited",
+    r.status === 200 && r.body.coverLetter.bodyEdited === false && r.body.coverLetter.subject === "Application for Senior Backend Engineer" && plain(r.body.coverLetter.body).includes("Your payments work is close to what I do") && !r.body.coverLetter.body.includes("My own words"),
+    r.body
+  );
+  r = await call("POST", `/cover-letters/${regenId}/regenerate`, other, {});
+  await check("  someone else's letter -> 404", r.status === 404, r.status);
+  r = await call("GET", "/jobs", token);
+  await check("saved jobs link to their latest cover letter", r.body[0].coverLetterId === regenId, r.body[0]);
+
   // ---------- CRUD and ownership ----------
   const id = letter.coverLetter._id;
   r = await call("GET", "/cover-letters", token);
@@ -170,6 +213,12 @@ test("cover letters", async (t) => {
   await check("delete -> 200", r.status === 200, r.body);
 
   // ---------- With AI (a local stand-in for the Claude API) ----------
+  // A second account with the same resume and job (generating is rate limited per user)
+  const aiToken = await register(base, "ai@example.com");
+  const aiResume = (await call("POST", "/resumes", aiToken, RESUME)).body;
+  const aiJobId = (await call("POST", "/jobs/tailor", aiToken, { resumeId: aiResume._id, job: { description: JD } })).body.jobId;
+  await call("POST", "/jobs/confirm-skill", aiToken, { jobId: aiJobId, skill: "Kubernetes", note: NOTE, placement: "skills" });
+
   let reply;
   const fake = await startFakeClaude(() => reply);
   t.after(() => fake.close());
@@ -184,7 +233,7 @@ test("cover letters", async (t) => {
       "Kind regards,\nMeera Iyer",
     ],
   };
-  r = await call("POST", "/cover-letters/generate", token, { jobId });
+  r = await call("POST", "/cover-letters/generate", aiToken, { jobId: aiJobId });
   await check("an honest AI letter is used", r.status === 201 && r.body.generatedWith === "ai" && plain(r.body.coverLetter.body).includes("fits the systems I build"), r.body);
 
   for (const [label, line] of [
@@ -194,7 +243,7 @@ test("cover letters", async (t) => {
     ["a generic phrase", "I am a passionate team player."],
   ]) {
     reply = { paragraphs: ["Dear [Hiring Manager],", "The Senior Backend Engineer role at Northbeam fits the systems I build.", line, "Kind regards,\nMeera Iyer"] };
-    r = await call("POST", "/cover-letters/generate", token, { jobId });
+    r = await call("POST", "/cover-letters/generate", aiToken, { jobId: aiJobId });
     await check(`an AI letter with ${label} is dropped for the template`, r.status === 201 && r.body.generatedWith === "rules" && r.body.aiRejected && !plain(r.body.coverLetter.body).includes(line), r.body.aiRejected);
   }
 
@@ -206,6 +255,6 @@ test("cover letters", async (t) => {
       "Mit freundlichen Grüßen\nMeera Iyer",
     ],
   };
-  r = await call("POST", "/cover-letters/generate", token, { jobId, language: "de" });
+  r = await call("POST", "/cover-letters/generate", aiToken, { jobId: aiJobId, language: "de" });
   await check("a German AI letter with an invented employer and title is dropped", r.body.generatedWith === "rules" && /new name/.test(r.body.aiRejected ?? ""), r.body.aiRejected);
 });

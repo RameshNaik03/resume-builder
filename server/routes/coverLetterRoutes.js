@@ -5,6 +5,7 @@ import {
   generateCoverLetter,
   getCoverLetter,
   listCoverLetters,
+  regenerateCoverLetter,
   updateCoverLetter,
 } from "../controllers/coverLetterController.js";
 import { protect } from "../middleware/auth.js";
@@ -16,6 +17,7 @@ const router = express.Router();
 router.use(protect);
 
 router.post("/generate", coverLetterLimiter, generateCoverLetter); // Write one for a job
+router.post("/:id/regenerate", coverLetterLimiter, regenerateCoverLetter); // Rewrite its body
 router.route("/").get(listCoverLetters).post(createCoverLetter);
 router.route("/:id").get(getCoverLetter).put(updateCoverLetter).delete(deleteCoverLetter);
 

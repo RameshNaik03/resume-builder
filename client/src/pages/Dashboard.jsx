@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import getErrorMessage from "../utils/getErrorMessage";
 import usePageTitle from "../hooks/usePageTitle";
 import ResumeCard, { ResumeCardSkeleton } from "../components/ResumeCard";
+import ApplicationCard from "../components/ApplicationCard";
 import ConfirmModal from "../components/ConfirmModal";
 import EmptyState from "../components/EmptyState";
 import ImportResumeModal from "../components/ImportResumeModal";
@@ -24,6 +25,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const [resumes, setResumes] = useState([]);
+  const [jobs, setJobs] = useState([]); // Tailored jobs: shown as applications (resume + job + cover letter)
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [duplicatingId, setDuplicatingId] = useState(null);
@@ -53,8 +55,9 @@ export default function Dashboard() {
       setLoading(true);
       setLoadError(null);
       try {
-        const { data } = await api.get("/resumes");
+        const [{ data }, jobList] = await Promise.all([api.get("/resumes"), api.get("/jobs").catch(() => ({ data: [] }))]);
         setResumes(data);
+        setJobs(jobList.data);
       } catch (error) {
         setLoadError(getErrorMessage(error));
       } finally {
@@ -64,6 +67,11 @@ export default function Dashboard() {
 
     fetchResumes();
   }, [reloadKey]);
+
+  // A tailored resume appears in its application card instead of the resume grid
+  const applications = jobs.filter((job) => resumes.some((resume) => resume._id === job.tailoredResumeId));
+  const tailoredIds = new Set(applications.map((job) => job.tailoredResumeId));
+  const otherResumes = resumes.filter((resume) => !tailoredIds.has(resume._id));
 
   const handleCreate = async () => {
     setCreating(true);
@@ -179,8 +187,25 @@ export default function Dashboard() {
         ) : resumes.length === 0 ? (
           <EmptyState onCreate={handleCreate} onUpload={() => setIsImportOpen(true)} creating={creating} />
         ) : (
+          <>
+            {applications.length > 0 && (
+              <section className="mb-10" aria-labelledby="applications">
+                <h2 id="applications" className="text-lg font-semibold text-slate-900 dark:text-white">
+                  Applications
+                </h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Each tailored resume with its job and cover letter.</p>
+                <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                  {applications.map((job) => (
+                    <ApplicationCard key={job._id} job={job} />
+                  ))}
+                </div>
+              </section>
+            )}
+            {applications.length > 0 && otherResumes.length > 0 && (
+              <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">Resumes</h2>
+            )}
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {resumes.map((resume) => (
+            {otherResumes.map((resume) => (
               <ResumeCard
                 key={resume._id}
                 resume={resume}
@@ -192,6 +217,7 @@ export default function Dashboard() {
               />
             ))}
           </div>
+          </>
         )}
       </div>
 

@@ -20,6 +20,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Editor = lazy(() => import("./pages/Editor"));
 const AtsReview = lazy(() => import("./pages/AtsReview"));
 const Tailor = lazy(() => import("./pages/Tailor"));
+const CoverLetter = lazy(() => import("./pages/CoverLetter"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 // Development-only pages: import.meta.env.DEV is false in production builds, so these
 // routes don't exist there and their code is left out of the bundle
@@ -60,6 +61,7 @@ export default function App() {
               <Route path="/ats/review/:id" element={page(<AtsReview />, "Opening your review...")} />
               <Route path="/tailor" element={page(<Tailor />)} />
               <Route path="/tailor/jobs/:jobId" element={page(<Tailor />, "Opening your match report...")} />
+              <Route path="/cover-letters/:id" element={page(<CoverLetter />, "Opening your cover letter...")} />
             </Route>
 
             {/* Development only: every template side by side (not linked anywhere) */}

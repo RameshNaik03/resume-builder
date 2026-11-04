@@ -179,6 +179,34 @@ export function ExperienceList({ jobs, orgInline = false }) {
   );
 }
 
+// A cover letter in place of the resume's sections (data.letter, see templates/prepareLetter.js):
+// the date, the recipient, the subject line, then the body's paragraphs (greeting to sign-off).
+// In the page source in that order, so the text reads like the letter. One block per part.
+export function LetterBlock({ letter }) {
+  return (
+    <section className="f-section f-letter">
+      {letter.date && (
+        <p className="f-letter-date" data-block>
+          {letter.date}
+        </p>
+      )}
+      {letter.recipient.length > 0 && (
+        <div className="f-letter-recipient" data-block>
+          {letter.recipient.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      )}
+      {letter.subject && <p className="f-letter-subject" data-block dangerouslySetInnerHTML={{ __html: letter.subject }} />}
+      <div className="f-letter-body">
+        {letter.paragraphs.map((html, index) => (
+          <RichText key={index} html={html} data-block />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // Experience on a timeline: dates in the left column, a drawn dot on a vertical line, the job
 // to the right. Needs .f-tl-root on the page (the column widths). In the page source the title
 // comes first, then the dates (on the same line), then the company, so the text reads in order.
@@ -372,6 +400,7 @@ export function CareerStrip({ jobs, className = "" }) {
 //   bodyClassName - classes for the standard bodies (not the replacements)
 //   numbers       - drawn section numbers by key (sectionNumbers() in layouts/sectionLayout.js)
 export function FoundationSection({ data, section, options = {} }) {
+  if (section.id === "letter") return <LetterBlock letter={data.letter} />;
   const { heading, icons = false, card = false, orgInline = false, defaultSkills = "comma", bodies = {}, bodyClassName = "", numbers } =
     options;
   const standard = {

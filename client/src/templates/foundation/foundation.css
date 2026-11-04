@@ -469,6 +469,27 @@
     border-radius: 3pt;
   }
 
+  /* ---------- Cover letters (LetterBlock) ----------
+     A standard letter: the date on the right, the recipient, a bold subject line, then the body
+     with the same gap between its paragraphs */
+  .f-letter-date {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .f-letter-recipient {
+    margin-top: var(--f-heading-gap);
+  }
+  .f-letter-subject {
+    margin-top: calc(var(--f-section-gap) * 1.5);
+    font-weight: 700;
+  }
+  .f-letter-body > * {
+    margin-top: var(--f-item-gap);
+  }
+  .f-letter-body > :first-child {
+    margin-top: var(--f-section-gap);
+  }
+
   /* ---------- Skills ---------- */
   .f-tags {
     display: flex;

@@ -48,8 +48,8 @@ export default function ResumeCard({ resume, onDuplicate, onDelete, onRecheck, i
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Last updated {timeAgo(resume.updatedAt)}</p>
 
         {/* relative z-10 puts the buttons above the stretched link */}
-        {/* Tighter on phones so each label stays on one line */}
-        <div className="relative z-10 mt-4 flex gap-1.5 sm:gap-2">
+        {/* Tighter on phones so each label stays on one line; wraps when the card is narrow */}
+        <div className="relative z-10 mt-4 flex flex-wrap gap-1.5 sm:gap-2">
           <button
             type="button"
             onClick={() => onDuplicate(resume)}

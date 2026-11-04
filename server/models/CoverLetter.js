@@ -6,6 +6,7 @@ import { richBlock } from "../utils/richText.js";
 export const TONES = ["professional", "warm", "confident"];
 export const LENGTHS = ["short", "standard", "detailed"];
 export const LANGUAGES = ["en", "de"];
+export const SALUTATIONS = ["", "Frau", "Herr"]; // "" = none (the full name is used)
 
 const coverLetterSchema = new mongoose.Schema(
   {
@@ -14,8 +15,13 @@ const coverLetterSchema = new mongoose.Schema(
     jobId: { type: mongoose.Schema.Types.ObjectId, ref: "Job", default: null },
     title: { type: String, trim: true, maxlength: 150, default: "Cover letter" },
     recipientName: { type: String, trim: true, maxlength: 120, default: "" },
+    recipientSalutation: { type: String, enum: SALUTATIONS, default: "" },
     companyName: { type: String, trim: true, maxlength: 120, default: "" },
+    subject: { type: String, trim: true, maxlength: 200, default: "" }, // "Application for ..." / "Bewerbung als ..."
+    date: { type: Date, default: Date.now }, // The date printed on the letter
+    whyCompany: { type: String, trim: true, maxlength: 600, default: "" }, // The user's answer, reused when regenerating
     body: { type: String, default: "", set: richBlock, maxlength: 20000 },
+    bodyEdited: { type: Boolean, default: false }, // The body was changed by hand since it was generated
     tone: { type: String, enum: TONES, default: "professional" },
     length: { type: String, enum: LENGTHS, default: "standard" },
     language: { type: String, enum: LANGUAGES, default: "en" },

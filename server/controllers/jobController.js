@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Resume from "../models/Resume.js";
 import Job from "../models/Job.js";
+import CoverLetter from "../models/CoverLetter.js";
 import analyzeJob from "../services/jobs/analyzeJob.js";
 import tailorResume from "../services/jobs/tailorResume.js";
 import matchReport from "../services/jobs/matchReport.js";
@@ -178,6 +179,11 @@ async function findUsersJob(req, res, jobId) {
 // GET /api/jobs (logged-in users): past tailored jobs, newest first
 export const listJobs = async (req, res) => {
   const jobs = await Job.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(50).lean();
+  // Each job's most recent cover letter (an application = tailored resume + job + letter)
+  const letters = await CoverLetter.find({ userId: req.user._id, jobId: { $in: jobs.map((job) => job._id) } }, { jobId: 1, updatedAt: 1 })
+    .sort({ updatedAt: -1 })
+    .lean();
+  const letterFor = (job) => letters.find((letter) => String(letter.jobId) === String(job._id))?._id ?? null;
   res.json(
     jobs.map((job) => ({
       _id: job._id,
@@ -185,6 +191,7 @@ export const listJobs = async (req, res) => {
       company: job.analysis?.company ?? null,
       score: job.matchReport?.score ?? 0,
       tailoredResumeId: job.tailoredResumeId,
+      coverLetterId: letterFor(job),
       createdAt: job.createdAt,
     }))
   );
@@ -194,7 +201,8 @@ export const listJobs = async (req, res) => {
 export const getJob = async (req, res) => {
   const job = await findUsersJob(req, res, req.params.id);
   const resume = await Resume.findOne({ _id: job.tailoredResumeId, userId: req.user._id }, { title: 1, experience: 1, projects: 1 }).lean();
-  res.json(jobView(job, resume));
+  const letter = await CoverLetter.findOne({ userId: req.user._id, jobId: job._id }, { _id: 1 }).sort({ updatedAt: -1 }).lean();
+  res.json({ ...jobView(job, resume), coverLetterId: letter?._id ?? null });
 };
 
 // POST /api/jobs/:id/decline-skill (logged-in users; JSON: skill)
