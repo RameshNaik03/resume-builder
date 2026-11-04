@@ -20,7 +20,7 @@ const jobSchema = new mongoose.Schema(
           {
             skill: { type: String, required: true, trim: true, maxlength: 60 },
             note: { type: String, required: true, trim: true, maxlength: 300 },
-            addedToJob: { type: String, default: "" }, // The job the note's bullet went under ("" if none)
+            addedToJob: { type: String, default: "" }, // The job or project the bullet went under ("" if Skills only)
             confirmedAt: { type: Date, default: Date.now },
           },
           { _id: false }
@@ -28,6 +28,8 @@ const jobSchema = new mongoose.Schema(
       ],
       default: [],
     },
+    // Missing skills the user said they don't have (only remembered; they still count as missing)
+    declinedSkills: { type: [String], default: [] },
   },
   { timestamps: true, versionKey: false }
 );

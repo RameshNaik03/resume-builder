@@ -1,4 +1,5 @@
-// Job tailoring: POST /api/jobs/analyze, /tailor and /confirm-skill. The key guarantees:
+// Job tailoring: POST /api/jobs/analyze, /tailor, /confirm-skill, /:id/decline-skill and
+// GET /api/jobs, /:id. The key guarantees:
 //   - a skill the resume doesn't show is never added without the user confirming it
 //   - the original resume never changes
 //   - the match % never counts a skill the resume doesn't show unless the user confirmed it
@@ -140,17 +141,29 @@ test("job tailoring", async (t) => {
   await check("the original resume is unchanged", JSON.stringify((await call("GET", `/resumes/${original._id}`, token)).body) === originalSnapshot);
 
   // ---------- Confirm a missing skill ----------
-  r = await call("POST", "/jobs/confirm-skill", token, { jobId, skill: "Kubernetes" });
-  await check("confirming without a note -> 400", r.status === 400, r.body.message);
-  r = await call("POST", "/jobs/confirm-skill", token, { jobId, skill: "Rust", note: "I used Rust for years" });
-  await check("a skill the job doesn't list -> 400", r.status === 400, r.body.message);
-  r = await call("POST", "/jobs/confirm-skill", token, { jobId, skill: "Kafka", note: "Used Kafka at Tessellate" });
-  await check("a skill the resume already shows -> 400", r.status === 400, r.body.message);
-  r = await call("POST", "/jobs/confirm-skill", other, { jobId, skill: "Kubernetes", note: "Ran services on Kubernetes at Harbour Health" });
-  await check("someone else's job -> 404", r.status === 404, r.status);
+  const harbour = tailored.places.jobs.find((place) => place.label === "Backend Engineer at Harbour Health");
+  await check("tailor returns where bullets can go (jobs and projects)", harbour && tailored.places.projects.some((place) => place.id === "Queuebench"), tailored.places);
 
-  r = await call("POST", "/jobs/confirm-skill", token, { jobId, skill: "kubernetes", note: "Ran our services on Kubernetes at Harbour Health" });
-  await check("confirm Kubernetes -> 200, added to Skills and as a bullet", r.status === 200 && r.body.skill === "Kubernetes" && r.body.bullet === "Ran our services on Kubernetes at Harbour Health", r.body);
+  const confirm = (body, as = token) => call("POST", "/jobs/confirm-skill", as, { jobId, ...body });
+  r = await confirm({ skill: "Kubernetes", placement: "skills" });
+  await check("confirming without a note -> 400", r.status === 400, r.body.message);
+  r = await confirm({ skill: "Kubernetes", note: "Ran services on it at work" });
+  await check("confirming without saying where it goes -> 400", r.status === 400, r.body.message);
+  r = await confirm({ skill: "Rust", note: "I used Rust for years", placement: "skills" });
+  await check("a skill the job doesn't list -> 400", r.status === 400, r.body.message);
+  r = await confirm({ skill: "Kafka", note: "Used Kafka at Tessellate", placement: "skills" });
+  await check("a skill the resume already shows -> 400", r.status === 400, r.body.message);
+  r = await confirm({ skill: "Kubernetes", note: "Ran services on Kubernetes at Harbour Health", placement: "skills" }, other);
+  await check("someone else's job -> 404", r.status === 404, r.status);
+  r = await confirm({ skill: "Kubernetes", note: "Ran our services on Kubernetes at work", placement: "bullet", bullet: "Ran our services on Kubernetes" });
+  await check("a bullet without a job or project -> 400", r.status === 400, r.body.message);
+  r = await confirm({ skill: "Kubernetes", note: "Ran our services on Kubernetes at work", placement: "bullet", target: { type: "job", id: harbour.id }, bullet: "Ran 40 services on Kubernetes and Terraform" });
+  await check("a bullet adding a number or skill the user didn't write -> 400", r.status === 400 && /number|skill/.test(r.body.message), r.body.message);
+  await check("  ...and nothing was added", !(await call("GET", `/resumes/${tailored.resume._id}`, token)).body.skills.includes("Kubernetes"));
+
+  // Nothing is guessed from the note: it names Harbour Health, but "skills only" adds no bullet
+  r = await confirm({ skill: "kubernetes", note: "Ran our services on Kubernetes at Harbour Health", placement: "skills" });
+  await check("confirm Kubernetes, Skills only -> 200, no bullet even though the note names a job", r.status === 200 && r.body.skill === "Kubernetes" && r.body.bullet === null, r.body);
   const afterConfirm = r.body.matchReport;
   await check(
     "  now counted, with the note as its evidence",
@@ -159,22 +172,66 @@ test("job tailoring", async (t) => {
   );
   let confirmedCopy = (await call("GET", `/resumes/${tailored.resume._id}`, token)).body;
   await check(
-    "  in the tailored resume: Skills and a bullet under the job the note names",
-    confirmedCopy.skills.includes("Kubernetes") && confirmedCopy.experience.find((j) => j.company === "Harbour Health").bullets.includes("Ran our services on Kubernetes at Harbour Health"),
+    "  in the tailored resume: Skills only",
+    confirmedCopy.skills.includes("Kubernetes") && !JSON.stringify(confirmedCopy.experience).includes("Ran our services on Kubernetes"),
     confirmedCopy.skills
   );
 
-  r = await call("POST", "/jobs/confirm-skill", token, { jobId, skill: "Terraform", note: "used it for side projects at home" });
-  await check("a note that doesn't name a job: Skills only, no bullet", r.status === 200 && r.body.bullet === null, r.body);
-  await check("  other unconfirmed skills still don't count", ["AWS", "GraphQL"].every((s) => r.body.matchReport.missingNiceToHave.includes(s)), r.body.matchReport);
+  // Skills + a bullet the user wrote, under the job they chose
+  r = await confirm({
+    skill: "Terraform",
+    note: "Managed our AWS-free staging setup with Terraform at Harbour Health",
+    placement: "bullet",
+    target: { type: "job", id: harbour.id },
+    bullet: "Managed the staging setup with Terraform",
+  });
+  await check("confirm Terraform with a bullet -> 200", r.status === 200 && r.body.bullet === "Managed the staging setup with Terraform" && r.body.target.label === harbour.label, r.body);
+  confirmedCopy = (await call("GET", `/resumes/${tailored.resume._id}`, token)).body;
+  await check(
+    "  the bullet is under the chosen job, in the user's words",
+    confirmedCopy.skills.includes("Terraform") && confirmedCopy.experience.find((j) => j.company === "Harbour Health").bullets.includes("Managed the staging setup with Terraform"),
+    confirmedCopy.experience
+  );
+
+  // Under a project: a sentence added to its description
+  r = await confirm({ skill: "GraphQL", note: "Queuebench has a GraphQL API for its results", placement: "bullet", target: { type: "project", id: "Queuebench" }, bullet: "Added a GraphQL API for the results" });
+  confirmedCopy = (await call("GET", `/resumes/${tailored.resume._id}`, token)).body;
+  await check(
+    "confirm GraphQL under a project -> added to its description",
+    r.status === 200 && confirmedCopy.projects.find((project) => project.name === "Queuebench").description.includes("Added a GraphQL API for the results"),
+    confirmedCopy.projects
+  );
+  await check("  unconfirmed skills still don't count", r.body.matchReport.missingNiceToHave.includes("AWS"), r.body.matchReport);
+  const latestScore = r.body.matchReport.score;
+
+  // "I don't have this": remembered, nothing added, still missing
+  r = await call("POST", `/jobs/${jobId}/decline-skill`, token, { skill: "AWS" });
+  await check("decline AWS -> remembered", r.status === 200 && r.body.declinedSkills.includes("AWS"), r.body);
+  r = await call("POST", `/jobs/${jobId}/decline-skill`, token, { skill: "Kafka" });
+  await check("declining a skill the resume shows -> 400", r.status === 400, r.body.message);
+
+  // The saved jobs
+  r = await call("GET", "/jobs", token);
+  await check("GET /jobs -> the job with role, company, match % and date", r.status === 200 && r.body[0]._id === jobId && r.body[0].title === "Senior Backend Engineer" && r.body[0].company === "Northbeam" && r.body[0].score === latestScore && r.body[0].createdAt, r.body);
+  r = await call("GET", `/jobs/${jobId}`, token);
+  await check(
+    "GET /jobs/:id -> analysis, report, confirmed and declined skills, places",
+    r.status === 200 && r.body.analysis.title === "Senior Backend Engineer" && r.body.confirmedSkills.length === 3 && r.body.declinedSkills.includes("AWS") && r.body.places.jobs.length === 2 && r.body.tailoredResume.title === "Senior Backend Engineer – Northbeam",
+    r.body
+  );
+  r = await call("GET", `/jobs/${jobId}`, other);
+  await check("someone else's job -> 404", r.status === 404, r.status);
 
   // Rejecting every tailoring change in the review keeps the confirmed skills
   const pending = confirmedCopy.atsOptimization.changes.filter((c) => c.status === "pending").map((c) => ({ id: c.id, status: "rejected" }));
   r = await call("PATCH", `/ats/review/${tailored.resume._id}`, token, { decisions: pending });
   confirmedCopy = (await call("GET", `/resumes/${tailored.resume._id}`, token)).body;
   await check(
-    "rejecting all tailoring changes keeps the confirmed skills",
-    r.status === 200 && confirmedCopy.skills.includes("Kubernetes") && confirmedCopy.skills.includes("Terraform") && !confirmedCopy.skills.includes("Kafka"),
+    "rejecting all tailoring changes keeps the confirmed skills and bullets",
+    r.status === 200 &&
+      ["Kubernetes", "Terraform", "GraphQL"].every((skill) => confirmedCopy.skills.includes(skill)) &&
+      !confirmedCopy.skills.includes("Kafka") &&
+      confirmedCopy.experience.some((job) => job.bullets.includes("Managed the staging setup with Terraform")),
     confirmedCopy.skills
   );
   await check("the original is still unchanged", JSON.stringify((await call("GET", `/resumes/${original._id}`, token)).body) === originalSnapshot);

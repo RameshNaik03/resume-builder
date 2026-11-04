@@ -27,6 +27,7 @@ import { htmlToText } from "../../utils/richText.js";
 //   skillOrder     { skills }                put the skills in this order (others keep their place after)
 //   design         { key, value }            set one design setting (e.g. fitOnePage)
 //   addBullet      { jobId, value }          add a bullet to a job (a skill the user confirmed)
+//   addProjectText { name, value }           add a sentence to a project's description (the same)
 
 // Design settings kept when the layout is changed (none of them affect ATS parsing)
 export const KEPT_DESIGN = ["pageSize", "hiddenSections", "accentColor"];
@@ -114,6 +115,12 @@ export function applyOp(content, op) {
     case "addBullet": {
       const job = findJob(content, op.jobId);
       if (job && !job.bullets.some((bullet) => sameBullet(bullet, op.value))) job.bullets.push(op.value);
+      break;
+    }
+    case "addProjectText": {
+      const project = content.projects.find((entry) => entry.name === op.name);
+      const paragraph = `<p>${op.value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p>`;
+      if (project && !htmlToText(project.description ?? "").includes(op.value)) project.description = `${project.description ?? ""}${paragraph}`;
       break;
     }
     case "layout": {

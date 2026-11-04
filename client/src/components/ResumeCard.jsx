@@ -62,6 +62,20 @@ export default function ResumeCard({ resume, onDuplicate, onDelete, onRecheck, i
             </svg>
             {isDuplicating ? "Copying..." : "Duplicate"}
           </button>
+          <Link
+            to={`/tailor?resume=${resume._id}`}
+            className="btn-secondary gap-1.5 px-2.5 py-1.5 whitespace-nowrap sm:px-3"
+            aria-label={`Tailor ${resume.title} to a job`}
+            title="Tailor to a job"
+          >
+            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <circle cx="12" cy="12" r="5" />
+              <circle cx="12" cy="12" r="1" />
+            </svg>
+            {/* Icon only on narrow phones (the link has an aria-label) */}
+            <span className="hidden min-[480px]:inline">Tailor</span>
+          </Link>
           <button
             type="button"
             onClick={() => onRecheck(resume)}

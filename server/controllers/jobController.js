@@ -3,9 +3,11 @@ import Resume from "../models/Resume.js";
 import Job from "../models/Job.js";
 import analyzeJob from "../services/jobs/analyzeJob.js";
 import tailorResume from "../services/jobs/tailorResume.js";
-import matchReport, { skillMatcher } from "../services/jobs/matchReport.js";
+import matchReport from "../services/jobs/matchReport.js";
 import { isAIEnabled } from "../services/ats/aiReview.js";
 import { applyOp } from "../services/ats/optimizationOps.js";
+import { checkRewrite } from "../services/ats/rewriteBullets.js";
+import resumeToText from "../services/ats/resumeToText.js";
 import scoreContent from "../services/ats/scoreContent.js";
 import { containsAnyTerm } from "../services/ats/keywords.js";
 import SKILLS from "../services/ats/skills.js";
@@ -19,6 +21,7 @@ const MAX_JOB_CHARACTERS = 20000;
 const MAX_LIST = 20;
 const MIN_NOTE_WORDS = 3;
 const MAX_NOTE_CHARACTERS = 300;
+const MAX_BULLET_CHARACTERS = 300;
 
 function readDescription(req, res, value) {
   const description = String(value ?? "").trim();
@@ -135,25 +138,95 @@ export const tailorToJob = async (req, res) => {
     jobId: saved._id,
     analysis,
     matchReport: report,
+    places: placesIn(created), // Where a confirmed skill's bullet can go
     changes,
     tailoredWith: result.tailoredWith,
     rewritesRejected: result.rejectedRewrites.length, // Generated lines dropped by the safety check
   });
 };
 
-// POST /api/jobs/confirm-skill (logged-in users; JSON: jobId, skill, note)
-// The user confirms they have a skill the job asks for that their resume doesn't show, and says
-// where they used it. The skill is added to the tailored resume's Skills. The note becomes a
-// bullet only when it supports one: it names one of the resume's jobs (role or employer) and
-// mentions the skill, so the bullet is the user's own words about real work. The match report is
-// updated (the skill now counts, with the note as its evidence).
-export const confirmSkill = async (req, res) => {
-  const { jobId, skill: rawSkill, note: rawNote } = req.body ?? {};
+// The places a confirmed skill's bullet can go: the tailored resume's jobs and projects
+const placesIn = (resume) => ({
+  jobs: (resume.experience ?? []).map((job) => ({ id: String(job._id), label: [job.role, job.company].filter(Boolean).join(" at ") || "Untitled job" })),
+  projects: (resume.projects ?? []).filter((project) => project.name).map((project) => ({ id: project.name, label: project.name })),
+});
+
+// A saved job for the client: the job, its tailored resume's title and where bullets can go
+const jobView = (job, resume) => ({
+  _id: job._id,
+  description: job.description,
+  analysis: job.analysis,
+  matchReport: job.matchReport,
+  confirmedSkills: job.confirmedSkills,
+  declinedSkills: job.declinedSkills,
+  sourceResumeId: job.sourceResumeId,
+  tailoredResumeId: job.tailoredResumeId,
+  tailoredResume: resume ? { _id: resume._id, title: resume.title } : null,
+  places: resume ? placesIn(resume) : { jobs: [], projects: [] },
+  createdAt: job.createdAt,
+});
+
+async function findUsersJob(req, res, jobId) {
   const job = mongoose.isObjectIdOrHexString(jobId) ? await Job.findOne({ _id: jobId, userId: req.user._id }) : null;
   if (!job) {
     res.status(404);
     throw new Error("Job not found");
   }
+  return job;
+}
+
+// GET /api/jobs (logged-in users): past tailored jobs, newest first
+export const listJobs = async (req, res) => {
+  const jobs = await Job.find({ userId: req.user._id }).sort({ createdAt: -1 }).limit(50).lean();
+  res.json(
+    jobs.map((job) => ({
+      _id: job._id,
+      title: job.analysis?.title ?? null,
+      company: job.analysis?.company ?? null,
+      score: job.matchReport?.score ?? 0,
+      tailoredResumeId: job.tailoredResumeId,
+      createdAt: job.createdAt,
+    }))
+  );
+};
+
+// GET /api/jobs/:id (logged-in users): one saved job, its match report and tailored resume
+export const getJob = async (req, res) => {
+  const job = await findUsersJob(req, res, req.params.id);
+  const resume = await Resume.findOne({ _id: job.tailoredResumeId, userId: req.user._id }, { title: 1, experience: 1, projects: 1 }).lean();
+  res.json(jobView(job, resume));
+};
+
+// POST /api/jobs/:id/decline-skill (logged-in users; JSON: skill)
+// The user says they don't have a missing skill. Nothing is added; it's only remembered so
+// the list shows it as decided. It still counts as missing in the match report.
+export const declineSkill = async (req, res) => {
+  const job = await findUsersJob(req, res, req.params.id);
+  const skill = [...job.matchReport.missingMustHave, ...job.matchReport.missingNiceToHave].find(
+    (missing) => missing.toLowerCase() === String(req.body?.skill ?? "").trim().toLowerCase()
+  );
+  if (!skill) {
+    res.status(400);
+    throw new Error("Only a skill this job asks for, and your resume doesn't show, can be marked.");
+  }
+  if (!job.declinedSkills.includes(skill)) job.declinedSkills.push(skill);
+  await job.save();
+  res.json({ declinedSkills: job.declinedSkills });
+};
+
+// POST /api/jobs/confirm-skill (logged-in users; JSON: jobId, skill, note, placement, target, bullet)
+// The user confirms they have a skill the job asks for that their resume doesn't show, and says
+// where they used it (note). They also choose where it goes:
+//   placement "skills" - Skills only
+//   placement "bullet" - Skills, plus their own bullet text (bullet) under one of the tailored
+//                        resume's jobs or projects: target { type: "job" | "project", id }
+//                        (a job's id, or a project's name)
+// The bullet must pass the optimizer's safety check against the user's own text: any number,
+// skill or name in it must come from the note, the skill or the resume. Nothing is guessed from
+// the note. The match report then counts the skill, with the note as its evidence.
+export const confirmSkill = async (req, res) => {
+  const { jobId, skill: rawSkill, note: rawNote, placement, target, bullet: rawBullet } = req.body ?? {};
+  const job = await findUsersJob(req, res, jobId);
   const skill = [...job.matchReport.missingMustHave, ...job.matchReport.missingNiceToHave].find(
     (missing) => missing.toLowerCase() === String(rawSkill ?? "").trim().toLowerCase()
   );
@@ -166,60 +239,71 @@ export const confirmSkill = async (req, res) => {
     res.status(400);
     throw new Error(`Please say briefly where you used ${skill} (a few words, up to ${MAX_NOTE_CHARACTERS} characters).`);
   }
+  if (!["skills", "bullet"].includes(placement)) {
+    res.status(400);
+    throw new Error('Please choose where it goes: "skills" or "bullet".');
+  }
 
   const resume = await Resume.findOne({ _id: job.tailoredResumeId, userId: req.user._id });
   if (!resume) {
     res.status(404);
     throw new Error("The tailored resume was deleted.");
   }
-
-  // Changes are applied to the resume and recorded (accepted) in its review, so a later
-  // rebuild from the review keeps them
   const content = resume.toObject();
+
+  // The bullet: the user's own text, at a job or project they chose
+  let bullet = null;
+  let place = null;
+  if (placement === "bullet") {
+    bullet = String(rawBullet ?? "").trim().replace(/\s+/g, " ");
+    if (bullet.split(/\s+/).filter(Boolean).length < MIN_NOTE_WORDS || bullet.length > MAX_BULLET_CHARACTERS) {
+      res.status(400);
+      throw new Error(`Please write the bullet (a few words, up to ${MAX_BULLET_CHARACTERS} characters).`);
+    }
+    const places = placesIn(content);
+    const list = target?.type === "job" ? places.jobs : target?.type === "project" ? places.projects : [];
+    place = list.find((entry) => entry.id === String(target?.id ?? ""));
+    if (!place) {
+      res.status(400);
+      throw new Error("Please choose one of your jobs or projects for the bullet.");
+    }
+    const ownText = `${note}\n${skill}\n${resumeToText(content)}`;
+    const problem = checkRewrite(ownText, bullet, ownText);
+    if (problem) {
+      res.status(400);
+      throw new Error(`The bullet adds something that isn't in your note or resume (${problem}). Please keep to what you wrote.`);
+    }
+  }
+
+  // Applied to the resume and recorded (accepted) in its review, so a later rebuild from the
+  // review keeps them
   const review = content.atsOptimization;
-  const added = [];
   const record = (section, before, after, reason, op) => {
     applyOp(content, op);
     if (review) review.changes.push({ id: `change-${review.changes.length + 1}`, section, before, after, reason, op, marks: { original: [], optimized: [after] }, revertible: true, status: "accepted" });
-    added.push({ section, after });
   };
-
   record("skills", "(not in your Skills list)", skill, `You confirmed you have ${skill}: "${note}".`, { kind: "addSkill", value: skill });
-
-  const mentionsSkill = skillMatcher(skill)(note);
-  const named = (text) => text && new RegExp(`(?<![\\p{L}])${text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![\\p{L}])`, "iu").test(note);
-  const targetJob = mentionsSkill ? content.experience.find((entry) => named(entry.company) || named(entry.role)) : null;
-  let bullet = null;
-  if (targetJob) {
-    bullet = `${note[0].toUpperCase()}${note.slice(1)}`.replace(/[.\s]+$/, "");
-    record(
-      "experience",
-      `${[targetJob.role, targetJob.company].filter(Boolean).join(" at ")}: (no bullet about ${skill})`,
-      bullet,
-      `Your note says where you used ${skill}, so it's now a bullet under that job, in your own words.`,
-      { kind: "addBullet", jobId: String(targetJob._id), value: bullet }
-    );
+  if (bullet) {
+    const where = target.type === "job" ? "experience" : "projects";
+    const op = target.type === "job" ? { kind: "addBullet", jobId: place.id, value: bullet } : { kind: "addProjectText", name: place.id, value: bullet };
+    record(where, `${place.label}: (nothing about ${skill})`, bullet, `You confirmed ${skill} and wrote this for ${place.label}.`, op);
   }
 
   resume.skills = content.skills;
   resume.experience = content.experience;
+  resume.projects = content.projects;
   if (review) {
     resume.atsOptimization = review;
     resume.markModified("atsOptimization");
   }
   await resume.save();
 
-  job.confirmedSkills.push({ skill, note, addedToJob: targetJob ? [targetJob.role, targetJob.company].filter(Boolean).join(" at ") : "" });
+  job.confirmedSkills.push({ skill, note, addedToJob: bullet ? place.label : "" });
+  job.declinedSkills = job.declinedSkills.filter((declined) => declined !== skill);
   // Still measured on the original resume, plus the confirmed skills
-  const original = review?.original ?? content;
-  job.matchReport = matchReport(job.analysis, original, job.confirmedSkills);
+  job.matchReport = matchReport(job.analysis, review?.original ?? content, job.confirmedSkills);
   job.markModified("matchReport");
   await job.save();
 
-  res.json({
-    skill,
-    addedTo: added.map((entry) => entry.section),
-    bullet,
-    matchReport: job.matchReport,
-  });
+  res.json({ skill, placement, target: bullet ? { type: target.type, id: place.id, label: place.label } : null, bullet, matchReport: job.matchReport });
 };
