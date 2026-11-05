@@ -89,6 +89,9 @@ test("Tailor to a job", async (t) => {
     const nice = await textOf('[data-testid="nice-to-have"]');
     assert.ok(!must.includes("Docker") && nice.includes("Docker"), "Docker moved to nice-to-have");
     assert.ok(!must.includes("REST APIs") && !nice.includes("REST APIs"), "REST APIs removed");
+    // No API key in the test stack: the page says so, and the strength choice is disabled
+    assert.match(await textOf('[data-testid="ai-off-note"]'), /AI is off, so tailoring is limited to reordering and small fixes\./);
+    assert.ok(await page.$eval('[data-testid="strength"] input[value="balanced"]', (el) => el.checked && el.matches(":disabled")), "Balanced is chosen, and disabled while AI is off");
   });
 
   await t.test("tailor: progress, then the match report", async () => {
@@ -97,6 +100,7 @@ test("Tailor to a job", async (t) => {
     jobUrl = page.url();
     await page.waitForSelector('[data-testid="match-score"]');
     assert.ok((await score()) > 0 && (await score()) < 100);
+    assert.match(await textOf('[data-testid="ai-off-note"]'), /AI is off/, "the report says it was tailored without AI");
     const ring = await textOf('[data-testid="match-score"]');
     assert.ok(ring.includes(fitLabel(await score())), `the ring should say "${fitLabel(await score())}": ${ring}`);
     assert.ok(!/match$|Partial|Weak/m.test(ring.replace("% match", "")), "no ATS-style labels");

@@ -81,6 +81,7 @@ test("job tailoring", async (t) => {
   r = await call("POST", "/jobs/analyze", token, { jobDescription: JD });
   const analysis = r.body.analysis;
   await check("analyze -> 200 with rules", r.status === 200 && analysis.analyzedWith === "rules", r.body);
+  await check("  says AI is off (the page shows it)", r.body.aiEnabled === false, r.body.aiEnabled);
   await check("  title, company and seniority", analysis.title === "Senior Backend Engineer" && analysis.company === "Northbeam" && analysis.seniority === "senior", analysis);
   await check(
     "  must-haves from the requirements and duties",
@@ -105,6 +106,7 @@ test("job tailoring", async (t) => {
   const tailored = r.body;
   const jobId = tailored.jobId;
   await check("  skills not in the job description are dropped from the analysis", !tailored.analysis.mustHave.includes("Rust"), tailored.analysis.mustHave);
+  await check("  rules only, balanced by default", tailored.tailoring.tailoredWith === "rules" && tailored.tailoring.strength === "balanced" && tailored.aiEnabled === false, tailored.tailoring);
   await check("  titled '<Role> – <Company>'", tailored.resume.title === "Senior Backend Engineer – Northbeam", tailored.resume.title);
   await check(
     "  every change in the review format",
@@ -216,7 +218,7 @@ test("job tailoring", async (t) => {
   r = await call("GET", `/jobs/${jobId}`, token);
   await check(
     "GET /jobs/:id -> analysis, report, confirmed and declined skills, places",
-    r.status === 200 && r.body.analysis.title === "Senior Backend Engineer" && r.body.confirmedSkills.length === 3 && r.body.declinedSkills.includes("AWS") && r.body.places.jobs.length === 2 && r.body.tailoredResume.title === "Senior Backend Engineer – Northbeam",
+    r.status === 200 && r.body.analysis.title === "Senior Backend Engineer" && r.body.confirmedSkills.length === 3 && r.body.declinedSkills.includes("AWS") && r.body.places.jobs.length === 2 && r.body.tailoredResume.title === "Senior Backend Engineer – Northbeam" && r.body.tailoring.tailoredWith === "rules" && r.body.aiEnabled === false,
     r.body
   );
   r = await call("GET", `/jobs/${jobId}`, other);
@@ -249,15 +251,17 @@ test("job tailoring", async (t) => {
         keywords: ["payments platform", "blockchain"], // "blockchain" isn't either
       };
     }
-    // The bullets' ids, from the request ("- id: <id>\n  text: <text>")
+    // The bullets' ids, from the request ("- id: <id>\n  rewrite: yes|no\n  text: <text>")
     const content = request.messages[0].content;
-    const idOf = (text) => content.match(new RegExp(`- id: (\\S+)\\n  text: ${text}`))?.[1];
+    const idOf = (text) => content.match(new RegExp(`- id: (\\S+)\\n  rewrite: \\w+\\n  text: ${text}`))?.[1];
     return {
+      headline: "Backend Engineer | Node.js, Kafka", // A title she holds, with skills she shows: kept
       summary: "Backend engineer with 8 years of experience running Kubernetes clusters.", // Adds a skill: dropped
       bullets: [
         { id: "unknown-id", after: "Not a bullet of this resume", reason: "ignored" },
         { id: idOf("Moved 14 services"), after: "Moved 20 services to Kafka consumers", reason: "Adds a number: dropped" },
-        { id: idOf("Ran weekly demos"), after: "Led weekly demos for the sales team", reason: "Clearer verb" }, // Safe: kept
+        { id: idOf("Built the appointments API"), after: "Built and ran the appointments API in Node.js, serving 2 million requests a day", reason: "Leads with the API" }, // Safe: kept
+        { id: idOf("Ran weekly demos"), after: "Led weekly demos for the sales team", reason: "Not relevant to the job, so never offered: ignored" },
       ],
     };
   });
@@ -265,19 +269,30 @@ test("job tailoring", async (t) => {
 
   r = await call("POST", "/jobs/analyze", token, { jobDescription: JD });
   await check("AI analysis -> only skills and keywords the description has", r.body.analysis.analyzedWith === "rules+ai" && !r.body.analysis.mustHave.includes("Rust") && r.body.analysis.mustHave.includes("Kubernetes") && !r.body.analysis.keywords.includes("blockchain"), r.body.analysis);
+  await check("  says AI is on", r.body.aiEnabled === true);
 
-  r = await call("POST", "/jobs/tailor", token, { resumeId: original._id, job: { description: JD, analysis: r.body.analysis } });
+  r = await call("POST", "/jobs/tailor", token, { resumeId: original._id, job: { description: JD, analysis: r.body.analysis }, strength: "strong" });
   const aiCopy = (await call("GET", `/resumes/${r.body.resume._id}`, token)).body;
   await check(
     "AI tailoring: a summary adding Kubernetes is dropped by the safety check",
     r.status === 201 && r.body.tailoredWith === "rules+ai" && !allText(aiCopy).includes("kubernetes"),
     aiCopy.summary
   );
+  await check("  the AI's headline is used", aiCopy.personalInfo.headline === "Backend Engineer | Node.js, Kafka", aiCopy.personalInfo.headline);
   const bullets = aiCopy.experience.flatMap((job) => job.bullets);
   await check(
-    "  a rewrite adding a number is dropped; a safe rewording is kept",
-    r.body.rewritesRejected === 2 && bullets.includes("Moved 14 services to Kafka consumers") && bullets.includes("Led weekly demos for the sales team"),
+    "  a rewrite adding a number is dropped; a safe rewording is kept; a bullet not offered is left alone",
+    r.body.rewritesRejected === 2 &&
+      bullets.includes("Moved 14 services to Kafka consumers") &&
+      bullets.includes("Built and ran the appointments API in Node.js, serving 2 million requests a day") &&
+      bullets.includes("Ran weekly demos for sales"),
     { rejected: r.body.rewritesRejected, bullets }
+  );
+  const saved = (await call("GET", `/jobs/${r.body.jobId}`, token)).body.tailoring;
+  await check(
+    "  the job remembers how it was tailored and why rewrites were dropped",
+    saved.tailoredWith === "rules+ai" && saved.strength === "strong" && saved.rejectedRewrites.length === 2 && saved.rejectedRewrites.some((x) => x.section === "summary" && x.problem === "new skill: Kubernetes") && saved.rejectedRewrites.some((x) => x.problem === "new number: 20"),
+    saved
   );
   await check("the original is unchanged after AI tailoring too", JSON.stringify((await call("GET", `/resumes/${original._id}`, token)).body) === originalSnapshot);
 });

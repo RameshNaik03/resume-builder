@@ -2,6 +2,8 @@
 // Each entry: the name we show, plus other ways the same skill is commonly written.
 // Matching is case-insensitive. Very short or ambiguous words (e.g. "Go", "R", "C")
 // are left out on purpose, because they'd match ordinary English words.
+// A "~" marks a generic word ("~security"): it finds the skill in a job description, but it's
+// never evidence that a resume shows the skill ("API security" isn't Cybersecurity).
 const SKILLS = [
   // Languages
   ["JavaScript", "js", "ecmascript"],
@@ -43,7 +45,7 @@ const SKILLS = [
   ["Flask"],
   ["FastAPI"],
   ["Spring Boot"],
-  ["Ruby on Rails", "rails"],
+  ["Ruby on Rails", "~rails"],
   [".NET", "dotnet", "asp.net"],
   ["Laravel"],
   ["REST APIs", "restful", "rest api", "restful apis"],
@@ -77,7 +79,7 @@ const SKILLS = [
   ["Jenkins"],
   ["Git", "github", "gitlab"],
   ["Linux"],
-  ["Serverless", "aws lambda", "lambda"],
+  ["Serverless", "aws lambda", "~lambda"],
   ["Nginx"],
   ["Monitoring", "observability", "prometheus", "grafana", "datadog"],
 
@@ -110,10 +112,10 @@ const SKILLS = [
   ["Power BI", "powerbi"],
   ["Excel", "Microsoft Excel"],
   ["Statistics", "statistical analysis"],
-  ["A/B testing", "ab testing", "experimentation"],
+  ["A/B testing", "ab testing", "~experimentation"],
 
   // Security
-  ["Cybersecurity", "information security", "security"],
+  ["Cybersecurity", "information security", "infosec", "application security", "appsec", "network security", "security engineering", "~security"],
   ["OAuth", "oauth2"],
   ["JWT", "json web tokens"],
 
@@ -126,12 +128,12 @@ const SKILLS = [
   // Design & product
   ["Figma"],
   ["UI design", "user interface design"],
-  ["UX design", "user experience", "ux"],
+  ["UX design", "ux", "~user experience"],
   ["Wireframing", "wireframes"],
   ["Prototyping"],
   ["User research"],
   ["Product management"],
-  ["Roadmapping", "product roadmap", "roadmap"],
+  ["Roadmapping", "product roadmap", "~roadmap"],
 
   // Ways of working
   ["Agile"],
@@ -139,7 +141,7 @@ const SKILLS = [
   ["Kanban"],
   ["Jira"],
   ["Project management"],
-  ["Stakeholder management", "stakeholders"],
+  ["Stakeholder management", "~stakeholders"],
   ["System design", "systems design"],
   ["Code review", "code reviews"],
   ["Documentation", "technical writing"],
@@ -166,7 +168,7 @@ const SKILLS = [
   ["Leadership", "team leadership"],
   ["Mentoring", "mentorship"],
   ["Problem solving", "problem-solving"],
-  ["Collaboration", "cross-functional"],
+  ["Collaboration", "~cross-functional"],
   ["Time management"],
   ["Attention to detail", "detail-oriented"],
 ];
@@ -175,11 +177,15 @@ const SKILLS = [
 // These only match when written with a capital letter, exactly as in the list above.
 const CASE_SENSITIVE = new Set(["Excel", "Express", "Swift", "Rust", "Spark", "Vite"]);
 
+// terms    - spellings that show the skill (in a resume or a job description)
+// jobTerms - terms plus the generic words, for reading job descriptions only
 export default SKILLS.map(([name, ...aliases]) => {
   const caseSensitive = CASE_SENSITIVE.has(name);
+  const terms = [caseSensitive ? name : name.toLowerCase(), ...aliases.filter((alias) => !alias.startsWith("~"))];
   return {
     name,
     caseSensitive,
-    terms: caseSensitive ? [name, ...aliases] : [name.toLowerCase(), ...aliases],
+    terms,
+    jobTerms: [...terms, ...aliases.filter((alias) => alias.startsWith("~")).map((alias) => alias.slice(1))],
   };
 });

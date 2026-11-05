@@ -12,16 +12,25 @@ import { fitTone } from "../components/ats/atsHelpers";
 
 // "Tailor to a job" (/tailor, /tailor/jobs/:jobId). Uses the /api/jobs routes:
 //   1. Paste a job description (or reuse a saved job) and pick the base resume
-//   2. Check the analysis: move skills between must-have and nice-to-have, or remove them
-//   3. Tailoring progress, then the match report (/tailor/jobs/:jobId): the match %, matched
-//      skills with their evidence, and missing skills the user confirms ("I have this skill")
-//      or declines ("I don't have this"). Skills are only ever added after confirming.
+//   2. Check the analysis: move skills between must-have and nice-to-have, or remove them;
+//      choose how much the AI rewrites (light, balanced, strong), or see that AI is off
+//   3. Tailoring progress, then the match report (/tailor/jobs/:jobId): how it was tailored
+//      (and how many rewrites the safety check dropped), the match %, matched skills with
+//      their evidence, and missing skills the user confirms ("I have this skill") or declines
+//      ("I don't have this"). Skills are only ever added after confirming.
 
 const MIN_JOB_WORDS = 30; // Same minimum as the server
 const countWords = (text) => text.trim().split(/\s+/).filter(Boolean).length;
 const HONEST_NOTE = "We only use what's true in your resume. Missing skills are listed so you can decide what to learn or mention.";
 const TAILOR_STEPS = ["Reading your resume", "Matching it to the job", "Writing the tailored copy"];
 const STEP_TIMES = [600, 1500]; // When each progress step starts (ms); the last one waits for the server
+const AI_OFF_NOTE = "AI is off, so tailoring is limited to reordering and small fixes.";
+// How many bullets the AI rewrites (server: services/jobs/tailorResume.js)
+const STRENGTHS = [
+  { value: "light", label: "Light", hint: "Headline and summary only; bullets are reordered, not reworded" },
+  { value: "balanced", label: "Balanced", hint: "Also rewords the most relevant half of your bullets" },
+  { value: "strong", label: "Strong", hint: "Rewords every bullet that relates to the job" },
+];
 
 const jobTitleOf = (job) => [job.title ?? job.analysis?.title, job.company ?? job.analysis?.company].filter(Boolean).join(" – ") || "Untitled job";
 
@@ -42,6 +51,8 @@ function TailorFlow() {
   const [resumeId, setResumeId] = useState(searchParams.get("resume") ?? "");
   const [description, setDescription] = useState("");
   const [analysis, setAnalysis] = useState(null);
+  const [aiEnabled, setAiEnabled] = useState(null); // From the server, with the analysis
+  const [strength, setStrength] = useState("balanced");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -63,6 +74,7 @@ function TailorFlow() {
     try {
       const { data } = await api.post("/jobs/analyze", { jobDescription: description });
       setAnalysis(data.analysis);
+      setAiEnabled(data.aiEnabled);
       setStep("check");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -79,6 +91,7 @@ function TailorFlow() {
       const { data } = await api.get(`/jobs/${id}`);
       setDescription(data.description);
       setAnalysis(data.analysis);
+      setAiEnabled(data.aiEnabled);
       setStep("check");
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -92,7 +105,7 @@ function TailorFlow() {
     setProgress(0);
     const timers = STEP_TIMES.map((ms, index) => setTimeout(() => setProgress(index + 1), ms));
     try {
-      const { data } = await api.post("/jobs/tailor", { resumeId, job: { description, analysis } });
+      const { data } = await api.post("/jobs/tailor", { resumeId, job: { description, analysis }, strength });
       timers.forEach(clearTimeout);
       setProgress(TAILOR_STEPS.length);
       toast.success(`Tailored copy saved as "${data.resume.title}"`);
@@ -188,7 +201,15 @@ function TailorFlow() {
       )}
 
       {step === "check" && analysis && (
-        <AnalysisCheck analysis={analysis} onChange={setAnalysis} onBack={() => setStep("input")} onTailor={tailor} />
+        <AnalysisCheck
+          analysis={analysis}
+          onChange={setAnalysis}
+          aiEnabled={aiEnabled}
+          strength={strength}
+          onStrength={setStrength}
+          onBack={() => setStep("input")}
+          onTailor={tailor}
+        />
       )}
 
       {step === "tailoring" && <TailorProgress step={progress} />}
@@ -202,6 +223,14 @@ function HonestNote() {
   return (
     <p className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200" data-testid="honest-note">
       {HONEST_NOTE}
+    </p>
+  );
+}
+
+function AiOffNote() {
+  return (
+    <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200" data-testid="ai-off-note">
+      {AI_OFF_NOTE}
     </p>
   );
 }
@@ -226,8 +255,8 @@ function Steps({ current }) {
   );
 }
 
-// Step 2: the analysis, editable before tailoring
-function AnalysisCheck({ analysis, onChange, onBack, onTailor }) {
+// Step 2: the analysis, editable before tailoring, and how strongly to tailor
+function AnalysisCheck({ analysis, onChange, aiEnabled, strength, onStrength, onBack, onTailor }) {
   const move = (skill, from, to) => onChange({ ...analysis, [from]: analysis[from].filter((s) => s !== skill), [to]: [...analysis[to], skill] });
   const remove = (skill, from) => onChange({ ...analysis, [from]: analysis[from].filter((s) => s !== skill) });
   const nothingLeft = !analysis.mustHave.length && !analysis.niceToHave.length;
@@ -283,6 +312,27 @@ function AnalysisCheck({ analysis, onChange, onBack, onTailor }) {
           </ul>
         </div>
       )}
+
+      {aiEnabled === false && <AiOffNote />}
+      <fieldset disabled={aiEnabled === false} className={aiEnabled === false ? "opacity-60" : ""}>
+        <legend className="text-sm font-semibold text-slate-900 dark:text-white">How much to rewrite</legend>
+        <div className="mt-2 grid gap-2 sm:grid-cols-3" data-testid="strength">
+          {STRENGTHS.map((option) => (
+            <label
+              key={option.value}
+              className={`flex cursor-pointer gap-2 rounded-xl border p-3 text-sm ${
+                strength === option.value ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/40" : "border-slate-200 dark:border-slate-700"
+              }`}
+            >
+              <input type="radio" name="strength" value={option.value} checked={strength === option.value} onChange={() => onStrength(option.value)} className="mt-0.5" />
+              <span>
+                <span className="block font-medium text-slate-900 dark:text-white">{option.label}</span>
+                <span className="block text-slate-500 dark:text-slate-400">{option.hint}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={onBack} className="btn-secondary">
@@ -446,6 +496,7 @@ function JobReport({ jobId }) {
         )}
       </div>
       <HonestNote />
+      <TailoringNote tailoring={job.tailoring} aiEnabled={job.aiEnabled} />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <section className="card p-6" aria-label="Match">
@@ -465,6 +516,37 @@ function JobReport({ jobId }) {
         <summary className="cursor-pointer font-semibold text-slate-900 dark:text-white">Job description</summary>
         <p className="mt-3 text-sm whitespace-pre-line text-slate-700 dark:text-slate-300">{job.description}</p>
       </details>
+    </div>
+  );
+}
+
+// How this copy was tailored: AI or rules only, the strength, and the generated lines the
+// safety check dropped (with why). Jobs tailored before this was saved have no tailoring.
+function TailoringNote({ tailoring, aiEnabled }) {
+  if (!tailoring) return aiEnabled === false ? <div className="mt-4"><AiOffNote /></div> : null;
+  if (tailoring.tailoredWith !== "rules+ai") return <div className="mt-4"><AiOffNote /></div>;
+  const dropped = tailoring.rejectedRewrites ?? [];
+  const strength = STRENGTHS.find((option) => option.value === tailoring.strength)?.label ?? "Balanced";
+  return (
+    <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300" data-testid="tailoring-note">
+      <p>
+        Tailored with AI · {strength} ·{" "}
+        <span data-testid="rewrites-dropped" data-count={dropped.length}>
+          {dropped.length === 1 ? "1 rewrite" : `${dropped.length} rewrites`} dropped by the safety check
+        </span>
+      </p>
+      {dropped.length > 0 && (
+        <details className="mt-2">
+          <summary className="cursor-pointer text-slate-500 dark:text-slate-400">Why they were dropped</summary>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {dropped.map((item, index) => (
+              <li key={index}>
+                <span className="font-medium capitalize">{item.section}</span>: {item.problem}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }

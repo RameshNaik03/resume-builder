@@ -50,9 +50,10 @@ const termPattern = (term) =>
 export const containsAnyTerm = (text, terms, caseSensitive) =>
   new RegExp(terms.map(termPattern).join("|"), caseSensitive ? "u" : "iu").test(text);
 
-// The first spelling of the terms in a text, as written there ("Postgres"), or null
+// The first spelling of the terms in a text, as written there ("Postgres"), or null. The
+// longest spelling wins where several start at the same place ("RESTful APIs", not "RESTful").
 export const matchTerm = (text, terms, caseSensitive) =>
-  text.match(new RegExp(terms.map(termPattern).join("|"), caseSensitive ? "u" : "iu"))?.[0] ?? null;
+  text.match(new RegExp([...terms].sort((a, b) => b.length - a.length).map(termPattern).join("|"), caseSensitive ? "u" : "iu"))?.[0] ?? null;
 
 // Known skills (from skills.js) that appear in a text, e.g. ["React", "Node.js"]
 export const findKnownSkills = (text) =>
@@ -78,10 +79,10 @@ function findSkills(jobDescription) {
     .filter((line) => REQUIREMENT_LINE.test(line))
     .join("\n");
 
-  return SKILLS.filter((skill) => containsAnyTerm(jobDescription, skill.terms, skill.caseSensitive)).map(
+  return SKILLS.filter((skill) => containsAnyTerm(jobDescription, skill.jobTerms, skill.caseSensitive)).map(
     (skill) => ({
       skill,
-      required: containsAnyTerm(requirementText, skill.terms, skill.caseSensitive),
+      required: containsAnyTerm(requirementText, skill.jobTerms, skill.caseSensitive),
     })
   );
 }
@@ -139,7 +140,7 @@ export default function analyzeKeywords(jobDescription, resumeText) {
   const skills = findSkills(jobDescription);
   // Skill terms and their parts ("next.js" and "next"), so they aren't counted again as general keywords
   const skillWords = new Set(
-    skills.flatMap(({ skill }) => skill.terms.flatMap((term) => [term.toLowerCase(), ...tokenize(term)]))
+    skills.flatMap(({ skill }) => skill.jobTerms.flatMap((term) => [term.toLowerCase(), ...tokenize(term)]))
   );
   const others = findOtherKeywords(jobDescription, skillWords);
 

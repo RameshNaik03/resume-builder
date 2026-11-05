@@ -89,7 +89,7 @@ export function analyzeJobWithRules(jobDescription) {
       continue;
     }
     if (!line.trim()) continue;
-    const skills = SKILLS.filter((skill) => containsAnyTerm(line, skill.terms, skill.caseSensitive)).map((skill) => skill.name);
+    const skills = SKILLS.filter((skill) => containsAnyTerm(line, skill.jobTerms, skill.caseSensitive)).map((skill) => skill.name);
     const lineKind = NICE_LINE.test(line) ? "nice" : section === "nice" ? "nice" : section === "must" || section === "duties" || MUST_LINE.test(line) ? "must" : "mentioned";
     for (const skill of skills) (lineKind === "nice" ? nice : lineKind === "must" ? must : mentioned).add(skill);
 
@@ -160,8 +160,8 @@ const getClient = () => {
 
 // True if the term appears in the description (dictionary skills by any of their spellings)
 const inDescription = (term, jobDescription) => {
-  const skill = SKILLS.find((s) => s.name.toLowerCase() === term.toLowerCase() || s.terms.some((t) => t.toLowerCase() === term.toLowerCase()));
-  if (skill) return containsAnyTerm(jobDescription, skill.terms, skill.caseSensitive);
+  const skill = SKILLS.find((s) => s.name.toLowerCase() === term.toLowerCase() || s.jobTerms.some((t) => t.toLowerCase() === term.toLowerCase()));
+  if (skill) return containsAnyTerm(jobDescription, skill.jobTerms, skill.caseSensitive);
   return jobDescription.toLowerCase().includes(term.toLowerCase());
 };
 // A dictionary skill's name ("node" -> "Node.js"), else the term as written

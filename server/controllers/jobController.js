@@ -3,7 +3,7 @@ import Resume from "../models/Resume.js";
 import Job from "../models/Job.js";
 import CoverLetter from "../models/CoverLetter.js";
 import analyzeJob from "../services/jobs/analyzeJob.js";
-import tailorResume from "../services/jobs/tailorResume.js";
+import tailorResume, { STRENGTHS } from "../services/jobs/tailorResume.js";
 import matchReport from "../services/jobs/matchReport.js";
 import { isAIEnabled } from "../services/ats/aiReview.js";
 import { applyOp } from "../services/ats/optimizationOps.js";
@@ -44,7 +44,7 @@ function readAnalysis(raw, description) {
   const text = (value, max) => (typeof value === "string" ? value.trim().slice(0, max) : "");
   const inDescription = (term) => {
     const skill = SKILLS.find((s) => s.name.toLowerCase() === term.toLowerCase());
-    return skill ? containsAnyTerm(description, skill.terms, skill.caseSensitive) : description.toLowerCase().includes(term.toLowerCase());
+    return skill ? containsAnyTerm(description, skill.jobTerms, skill.caseSensitive) : description.toLowerCase().includes(term.toLowerCase());
   };
   const list = (value, max = MAX_LIST, check = inDescription) =>
     (Array.isArray(value) ? value : []).map((item) => text(item, 200)).filter((item) => item && check(item)).slice(0, max);
@@ -74,15 +74,17 @@ async function findUsersResume(req, res, resumeId) {
 // responsibilities and keywords (AI when available, rules otherwise)
 export const analyzeJobDescription = async (req, res) => {
   const description = readDescription(req, res, req.body?.jobDescription);
-  res.json({ analysis: await analyzeJob(description) });
+  res.json({ analysis: await analyzeJob(description), aiEnabled: isAIEnabled() });
 };
 
-// POST /api/jobs/tailor (logged-in users; JSON: resumeId, job: { description, analysis })
+// POST /api/jobs/tailor (logged-in users; JSON: resumeId, job: { description, analysis }, strength)
 // Creates a NEW resume tailored to the job (the original is never changed) titled
 // "<Role> – <Company>", stores the job, and returns every change and the honest match report.
-// The analysis is optional (it's worked out from the description if it's missing).
+// The analysis is optional (it's worked out from the description if it's missing). strength
+// ("light" | "balanced" | "strong", default balanced) sets how many bullets the AI rewrites.
 export const tailorToJob = async (req, res) => {
   const { resumeId, job = {} } = req.body ?? {};
+  const strength = STRENGTHS.includes(req.body?.strength) ? req.body.strength : "balanced";
   const description = readDescription(req, res, job.description);
   const source = await findUsersResume(req, res, resumeId);
   const analysis = readAnalysis(job.analysis, description) ?? (await analyzeJob(description));
@@ -92,7 +94,13 @@ export const tailorToJob = async (req, res) => {
   }
 
   const original = source.toObject();
-  const result = await tailorResume(original, analysis, { jobDescription: description, useAI: isAIEnabled() });
+  const result = await tailorResume(original, analysis, { jobDescription: description, useAI: isAIEnabled(), strength });
+  // How it was tailored, for the page: AI or rules only, and what the safety check dropped
+  const tailoring = {
+    tailoredWith: result.tailoredWith,
+    strength: result.strength,
+    rejectedRewrites: result.rejectedRewrites.map(({ section, problem }) => ({ section, problem })),
+  };
   // The match is measured on the original resume: tailoring rewords and reorders, it never adds
   // a skill the resume didn't already show, so it can't change the honest match
   const report = matchReport(analysis, result.original);
@@ -132,6 +140,7 @@ export const tailorToJob = async (req, res) => {
     description,
     analysis,
     matchReport: report,
+    tailoring,
   });
 
   res.status(201).json({
@@ -142,6 +151,8 @@ export const tailorToJob = async (req, res) => {
     places: placesIn(created), // Where a confirmed skill's bullet can go
     changes,
     tailoredWith: result.tailoredWith,
+    tailoring,
+    aiEnabled: isAIEnabled(),
     rewritesRejected: result.rejectedRewrites.length, // Generated lines dropped by the safety check
   });
 };
@@ -158,6 +169,8 @@ const jobView = (job, resume) => ({
   description: job.description,
   analysis: job.analysis,
   matchReport: job.matchReport,
+  tailoring: job.tailoring ?? null, // null for jobs tailored before this was saved
+  aiEnabled: isAIEnabled(),
   confirmedSkills: job.confirmedSkills,
   declinedSkills: job.declinedSkills,
   sourceResumeId: job.sourceResumeId,

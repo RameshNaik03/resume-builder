@@ -13,6 +13,8 @@ const jobSchema = new mongoose.Schema(
     analysis: { type: mongoose.Schema.Types.Mixed, required: true },
     // { score, matched: [{ skill, required, evidence }], missingMustHave, missingNiceToHave, keywords }
     matchReport: { type: mongoose.Schema.Types.Mixed, required: true },
+    // How it was tailored: { tailoredWith: "rules" | "rules+ai", strength, rejectedRewrites: [{ section, problem }] }
+    tailoring: { type: mongoose.Schema.Types.Mixed, default: null },
     // Skills from the job the user said they have, with where they used them
     confirmedSkills: {
       type: [

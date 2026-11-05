@@ -35,10 +35,19 @@ const getClient = () => {
 
 const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const PLACEHOLDER = /\[[^\]]*\]/g;
+// Numbers as whole tokens ("1.5" is one number, never a "5"), and numbers written as words
+const NUMBER = /\d+(?:[.,]\d+)*/g;
+const NUMBER_WORDS =
+  /\b(?:two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundreds?|thousands?|millions?|billions?|dozens?)\b/gi;
+const numbersIn = (text) => [...(text.match(NUMBER) ?? []), ...(text.match(NUMBER_WORDS) ?? []).map((word) => word.toLowerCase())];
+// A word written twice in a row ("REST APIs APIs"), lowercased, or null
+export const repeatedWord = (text) => text.match(/(?<![\p{L}\p{N}])([\p{L}\p{N}][\p{L}\p{N}.+#-]*)\s+\1(?![\p{L}\p{N}])/iu)?.[1].toLowerCase() ?? null;
 
 // Returns null if the rewrite is safe to use, otherwise why it was rejected.
-//   resumeText - the whole original resume (names in the rewrite must appear somewhere in it)
-export function checkRewrite(before, after, resumeText) {
+//   resumeText    - the whole original resume (names in the rewrite must appear somewhere in it)
+//   allowedSkills - skills the rewrite may name besides the original's own (e.g. the ones the
+//                   same job shows in its other bullets)
+export function checkRewrite(before, after, resumeText, { allowedSkills = [] } = {}) {
   const text = after.trim();
   if (!text) return "empty";
   if (text.length > Math.max(300, before.length * 2)) return "too long";
@@ -49,14 +58,17 @@ export function checkRewrite(before, after, resumeText) {
   const withoutPlaceholders = text.replace(PLACEHOLDER, " ");
 
   // Every number must already be in the original bullet
-  const originalNumbers = new Set(before.match(/\d+(?:[.,]\d+)*/g) ?? []);
-  const newNumber = (withoutPlaceholders.match(/\d+(?:[.,]\d+)*/g) ?? []).find((n) => !originalNumbers.has(n));
+  const originalNumbers = new Set(numbersIn(before));
+  const newNumber = numbersIn(withoutPlaceholders).find((n) => !originalNumbers.has(n));
   if (newNumber) return `new number: ${newNumber}`;
 
-  // No skill or tool the original bullet didn't mention
-  const originalSkills = new Set(findKnownSkills(before));
+  // No skill or tool the original bullet (or the allowed list) didn't mention
+  const originalSkills = new Set([...findKnownSkills(before), ...allowedSkills]);
   const newSkill = findKnownSkills(withoutPlaceholders).find((skill) => !originalSkills.has(skill));
   if (newSkill) return `new skill: ${newSkill}`;
+
+  const repeated = repeatedWord(withoutPlaceholders);
+  if (repeated && repeatedWord(before) !== repeated) return `repeated word: ${repeated}`;
 
   // No new names (companies, products, titles): capitalised words that don't start a
   // sentence must appear somewhere in the original resume
