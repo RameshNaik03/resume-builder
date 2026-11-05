@@ -59,6 +59,7 @@ export default function sanitizeResume(data = {}) {
         startDate: str(job?.startDate, 50),
         endDate: str(job?.endDate, 50),
         bullets: stringList(job?.bullets, LIMITS.bulletsPerJob, 2000),
+        hiddenBullets: stringList(job?.hiddenBullets, LIMITS.bulletsPerJob, 2000),
       }))
       .filter(hasAnyValue),
 

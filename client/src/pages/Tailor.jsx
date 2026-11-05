@@ -7,8 +7,12 @@ import usePageTitle from "../hooks/usePageTitle";
 import getErrorMessage from "../utils/getErrorMessage";
 import timeAgo from "../utils/timeAgo";
 import Loader from "../components/Loader";
+import Modal from "../components/Modal";
+import DeleteApplicationModal from "../components/DeleteApplicationModal";
 import ScoreRing from "../components/ats/ScoreRing";
 import { fitTone } from "../components/ats/atsHelpers";
+import TailorOptions from "../components/tailor/TailorOptions";
+import { STRENGTHS, initialChoices, toRequestOptions } from "../components/tailor/tailorChoices";
 
 // "Tailor to a job" (/tailor, /tailor/jobs/:jobId). Uses the /api/jobs routes:
 //   1. Paste a job description (or reuse a saved job) and pick the base resume
@@ -25,12 +29,7 @@ const HONEST_NOTE = "We only use what's true in your resume. Missing skills are 
 const TAILOR_STEPS = ["Reading your resume", "Matching it to the job", "Writing the tailored copy"];
 const STEP_TIMES = [600, 1500]; // When each progress step starts (ms); the last one waits for the server
 const AI_OFF_NOTE = "AI is off, so tailoring is limited to reordering and small fixes.";
-// How many bullets the AI rewrites (server: services/jobs/tailorResume.js)
-const STRENGTHS = [
-  { value: "light", label: "Light", hint: "Headline and summary only; bullets are reordered, not reworded" },
-  { value: "balanced", label: "Balanced", hint: "Also rewords the most relevant half of your bullets" },
-  { value: "strong", label: "Strong", hint: "Rewords every bullet that relates to the job" },
-];
+const OPTIONS_DELAY = 300; // ms after the last analysis edit before the options are fetched again
 
 const jobTitleOf = (job) => [job.title ?? job.analysis?.title, job.company ?? job.analysis?.company].filter(Boolean).join(" – ") || "Untitled job";
 
@@ -52,9 +51,31 @@ function TailorFlow() {
   const [description, setDescription] = useState("");
   const [analysis, setAnalysis] = useState(null);
   const [aiEnabled, setAiEnabled] = useState(null); // From the server, with the analysis
-  const [strength, setStrength] = useState("balanced");
+  const [options, setOptions] = useState(null); // What the options panel offers (POST /jobs/options)
+  const [choices, setChoices] = useState(null); // The user's options
+  const [askVersion, setAskVersion] = useState(false); // "Replace the existing version" or "Create a new version"
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  // The options for this resume and job, again whenever the analysis is edited
+  useEffect(() => {
+    if (step !== "check" || !analysis || !resumeId) return undefined;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      api
+        .post("/jobs/options", { resumeId, job: { description, analysis } })
+        .then(({ data }) => {
+          if (cancelled) return;
+          setOptions(data);
+          setChoices((previous) => initialChoices(data, previous ?? {}));
+        })
+        .catch((error) => !cancelled && toast.error(getErrorMessage(error)));
+    }, OPTIONS_DELAY);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [step, analysis, resumeId, description]);
 
   useEffect(() => {
     Promise.all([api.get("/resumes"), api.get("/jobs")])
@@ -100,15 +121,23 @@ function TailorFlow() {
     }
   };
 
-  const tailor = async () => {
+  // replaceJobId: an earlier version of this resume for this job to replace (null: a new one)
+  const tailor = async (replaceJobId = null) => {
+    setAskVersion(false);
     setStep("tailoring");
     setProgress(0);
     const timers = STEP_TIMES.map((ms, index) => setTimeout(() => setProgress(index + 1), ms));
     try {
-      const { data } = await api.post("/jobs/tailor", { resumeId, job: { description, analysis }, strength });
+      const { data } = await api.post("/jobs/tailor", {
+        resumeId,
+        job: { description, analysis },
+        options: toRequestOptions(choices),
+        title: choices.title.trim(),
+        replaceJobId,
+      });
       timers.forEach(clearTimeout);
       setProgress(TAILOR_STEPS.length);
-      toast.success(`Tailored copy saved as "${data.resume.title}"`);
+      toast.success(data.replaced ? `Replaced "${data.resume.title}" with the new version` : `Tailored copy saved as "${data.resume.title}"`);
       navigate(`/tailor/jobs/${data.jobId}`);
     } catch (error) {
       timers.forEach(clearTimeout);
@@ -205,12 +234,16 @@ function TailorFlow() {
           analysis={analysis}
           onChange={setAnalysis}
           aiEnabled={aiEnabled}
-          strength={strength}
-          onStrength={setStrength}
+          resume={resumes.find((resume) => resume._id === resumeId)}
+          options={options}
+          choices={choices}
+          onChoices={(patch) => setChoices((current) => ({ ...current, ...patch }))}
+          onUseResume={setResumeId}
           onBack={() => setStep("input")}
-          onTailor={tailor}
+          onTailor={() => (options?.existingVersions.length ? setAskVersion(true) : tailor())}
         />
       )}
+      {askVersion && options && <VersionChoice versions={options.existingVersions} onReplace={() => tailor(options.existingVersions[0].jobId)} onNew={() => tailor()} onCancel={() => setAskVersion(false)} />}
 
       {step === "tailoring" && <TailorProgress step={progress} />}
 
@@ -255,8 +288,8 @@ function Steps({ current }) {
   );
 }
 
-// Step 2: the analysis, editable before tailoring, and how strongly to tailor
-function AnalysisCheck({ analysis, onChange, aiEnabled, strength, onStrength, onBack, onTailor }) {
+// Step 2: the analysis, editable before tailoring, and the options
+function AnalysisCheck({ analysis, onChange, aiEnabled, resume, options, choices, onChoices, onUseResume, onBack, onTailor }) {
   const move = (skill, from, to) => onChange({ ...analysis, [from]: analysis[from].filter((s) => s !== skill), [to]: [...analysis[to], skill] });
   const remove = (skill, from) => onChange({ ...analysis, [from]: analysis[from].filter((s) => s !== skill) });
   const nothingLeft = !analysis.mustHave.length && !analysis.niceToHave.length;
@@ -314,37 +347,75 @@ function AnalysisCheck({ analysis, onChange, aiEnabled, strength, onStrength, on
       )}
 
       {aiEnabled === false && <AiOffNote />}
-      <fieldset disabled={aiEnabled === false} className={aiEnabled === false ? "opacity-60" : ""}>
-        <legend className="text-sm font-semibold text-slate-900 dark:text-white">How much to rewrite</legend>
-        <div className="mt-2 grid gap-2 sm:grid-cols-3" data-testid="strength">
-          {STRENGTHS.map((option) => (
-            <label
-              key={option.value}
-              className={`flex cursor-pointer gap-2 rounded-xl border p-3 text-sm ${
-                strength === option.value ? "border-indigo-500 bg-indigo-50 dark:border-indigo-400 dark:bg-indigo-950/40" : "border-slate-200 dark:border-slate-700"
-              }`}
-            >
-              <input type="radio" name="strength" value={option.value} checked={strength === option.value} onChange={() => onStrength(option.value)} className="mt-0.5" />
-              <span>
-                <span className="block font-medium text-slate-900 dark:text-white">{option.label}</span>
-                <span className="block text-slate-500 dark:text-slate-400">{option.hint}</span>
-              </span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      {resume && (
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          Tailoring <span className="font-medium text-slate-900 dark:text-white">{resume.title}</span>
+        </p>
+      )}
+      {options?.tailoredFrom && <TailoredCopyWarning base={options.tailoredFrom} onUse={onUseResume} />}
+      {options && choices ? <TailorOptions options={options} choices={choices} onChange={onChoices} aiEnabled={aiEnabled !== false} /> : <p className="text-sm text-slate-500 dark:text-slate-400">Loading the options...</p>}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={onBack} className="btn-secondary">
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back
         </button>
-        <button type="button" onClick={onTailor} disabled={nothingLeft} className="btn-primary">
+        <button type="button" onClick={onTailor} disabled={nothingLeft || !choices} className="btn-primary">
           Tailor my resume
           <ArrowRight className="size-4" aria-hidden="true" />
         </button>
       </div>
     </section>
+  );
+}
+
+// The chosen resume is itself a tailored copy: suggest its base resume instead
+function TailoredCopyWarning({ base, onUse }) {
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200" role="alert" data-testid="tailored-copy-warning">
+      <p>
+        This resume is already a tailored copy{base.title ? ` of "${base.title}"` : ""}. Tailoring it again carries over its changes (and any mistakes in them), so it's best to start from
+        your base resume.
+      </p>
+      {base.resumeId ? (
+        <button type="button" onClick={() => onUse(base.resumeId)} className="btn-secondary mt-2 px-3 py-1.5">
+          Use "{base.title}" instead
+        </button>
+      ) : (
+        <p className="mt-1">Its base resume was deleted.</p>
+      )}
+    </div>
+  );
+}
+
+// The same resume was tailored for this job before: replace that version or add a new one
+function VersionChoice({ versions, onReplace, onNew, onCancel }) {
+  const latest = versions[0];
+  return (
+    <Modal onClose={onCancel} labelledBy="version-choice-title" className="max-w-md p-6">
+      <h2 id="version-choice-title" className="text-lg font-semibold text-slate-900 dark:text-white">
+        You've tailored this resume for this job before
+      </h2>
+      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+        "{latest.title}", {timeAgo(latest.createdAt)}
+        {versions.length > 1 ? ` (and ${versions.length - 1} older ${versions.length === 2 ? "version" : "versions"})` : ""}.
+      </p>
+      <div className="mt-5 space-y-3">
+        <button type="button" onClick={onReplace} className="w-full rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-left hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:hover:bg-indigo-950/70">
+          <span className="block font-medium text-indigo-800 dark:text-indigo-200">Replace the existing version</span>
+          <span className="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">Same application: its cover letter and the skills you confirmed are kept.</span>
+        </button>
+        <button type="button" onClick={onNew} className="w-full rounded-xl border border-slate-200 p-3 text-left hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+          <span className="block font-medium text-slate-900 dark:text-white">Create a new version</span>
+          <span className="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">Keep both, as separate applications.</span>
+        </button>
+      </div>
+      <div className="mt-5 flex justify-end">
+        <button type="button" onClick={onCancel} className="btn-secondary">
+          Cancel
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -439,8 +510,25 @@ function SavedJobs({ jobs }) {
 // ---------- Step 3: the match report ----------
 
 function JobReport({ jobId }) {
+  const navigate = useNavigate();
   const [job, setJob] = useState(null);
   const [failed, setFailed] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // scope "resume": only the tailored resume; "application": the job, resume and cover letters
+  const remove = async (scope) => {
+    setDeleting(true);
+    try {
+      if (scope === "resume") await api.delete(`/resumes/${job.tailoredResumeId}`);
+      else await api.delete(`/jobs/${job._id}`);
+      toast.success(scope === "resume" ? "Tailored resume deleted" : "Application deleted");
+      navigate("/dashboard");
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+      setDeleting(false);
+    }
+  };
   usePageTitle(job ? `${jobTitleOf(job.analysis)} · Match` : "Match report");
 
   useEffect(() => {
@@ -492,11 +580,16 @@ function JobReport({ jobId }) {
             <Link to={`/editor/${job.tailoredResumeId}`} className="btn-primary">
               Open in editor
             </Link>
+            <button type="button" onClick={() => setDeleteOpen(true)} className="btn-secondary text-red-600 hover:border-red-200 hover:bg-red-50 dark:text-red-400 dark:hover:border-red-900 dark:hover:bg-red-950/50">
+              Delete
+            </button>
           </div>
         )}
       </div>
       <HonestNote />
       <TailoringNote tailoring={job.tailoring} aiEnabled={job.aiEnabled} />
+      {job.tailoring?.differences && <Differences differences={job.tailoring.differences} />}
+      <DeleteApplicationModal open={deleteOpen} name={job.tailoredResume?.title ?? jobTitleOf(job.analysis)} onChoose={remove} onCancel={() => setDeleteOpen(false)} loading={deleting} />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
         <section className="card p-6" aria-label="Match">
@@ -548,6 +641,42 @@ function TailoringNote({ tailoring, aiEnabled }) {
         </details>
       )}
     </div>
+  );
+}
+
+// "How this version differs": the changes by type, and a warning (with why) when the tailored
+// copy is nearly the same as the base resume
+function Differences({ differences }) {
+  const percent = Math.round(differences.changedShare * 100);
+  return (
+    <section className="card mt-4 p-5" aria-labelledby="differences" data-testid="differences">
+      <h2 id="differences" className="font-semibold text-slate-900 dark:text-white">
+        How this version differs
+      </h2>
+      {differences.nearlyIdentical && (
+        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200" role="alert" data-testid="nearly-identical">
+          <p className="font-medium">This version is nearly identical to your base resume ({percent}% of its words changed).</p>
+          <ul className="mt-1 list-disc pl-5">
+            {differences.reasons.map((reason) => (
+              <li key={reason}>{reason}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {differences.byType.length ? (
+        <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          {differences.byType.map((entry) => (
+            <li key={entry.type} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
+              <span className="text-slate-700 dark:text-slate-300">{entry.label}</span>
+              <span className="font-semibold tabular-nums text-slate-900 dark:text-white">{entry.count}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">No changes were made.</p>
+      )}
+      {!differences.nearlyIdentical && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{percent}% of the words differ from your base resume (reordering not counted).</p>}
+    </section>
   );
 }
 

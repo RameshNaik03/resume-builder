@@ -23,6 +23,9 @@ const jobSchema = new mongoose.Schema(
             skill: { type: String, required: true, trim: true, maxlength: 60 },
             note: { type: String, required: true, trim: true, maxlength: 300 },
             addedToJob: { type: String, default: "" }, // The job or project the bullet went under ("" if Skills only)
+            // The bullet itself and where it went, so a replaced tailored version gets it again
+            bullet: { type: String, trim: true, maxlength: 300, default: "" },
+            targetType: { type: String, enum: ["", "job", "project"], default: "" },
             confirmedAt: { type: Date, default: Date.now },
           },
           { _id: false }

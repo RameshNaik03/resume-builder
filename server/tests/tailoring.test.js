@@ -11,7 +11,9 @@ import { startFakeClaude } from "./helpers/fakeClaude.js";
 import tailorResume, { splitSentences, statedYears } from "../services/jobs/tailorResume.js";
 import { analyzeJobWithRules } from "../services/jobs/analyzeJob.js";
 import matchReport from "../services/jobs/matchReport.js";
-import { checkRewrite } from "../services/ats/rewriteBullets.js";
+import { checkGermanRewrite, checkRewrite } from "../services/ats/rewriteBullets.js";
+import { buildContent } from "../services/ats/optimizationOps.js";
+import describeDifferences, { changedShare } from "../services/jobs/differences.js";
 import resumeToText from "../services/ats/resumeToText.js";
 import { htmlToText } from "../utils/richText.js";
 
@@ -215,6 +217,26 @@ test("AI tailoring: different jobs get different resumes", async (t) => {
   const light = await run(BACKEND, "light");
   await check("  light rewrites no bullet wording, even one the AI returns", !light.changes.some((c) => c.op.kind === "bullet"), light.changes.map((c) => c.op.kind));
 
+  await check("AI tailoring isn't nearly identical to the base resume", !frontend.differences.nearlyIdentical && !backend.differences.nearlyIdentical, [frontend.differences, backend.differences]);
+
+  // German: the AI writes in German ("1,5+ Jahren" is the resume's own "1.5+ years")
+  answer = (content) => ({
+    headline: "Full Stack Developer | Node.js, MongoDB",
+    summary: "Full Stack Developer mit 1,5+ Jahren Erfahrung mit RESTful APIs in Node.js, Express.js und MongoDB.",
+    bullets: [{ id: idOf(content, "Designed MongoDB"), after: "Entwarf MongoDB-Schemas und optimierte Abfragen für Anwendungsdaten.", reason: "Auf Deutsch." }],
+  });
+  const germanAgain = await tailorResume(RESUME, analyzeJobWithRules(BACKEND), { jobDescription: BACKEND, useAI: true, strength: "strong", language: "de" });
+  const germanRequest = fake.requests.at(-1).messages[0].content;
+  await check("German: the AI is asked to write in German", germanRequest.includes("<language>Write the headline's focus, the summary and the bullets in German") && germanRequest.includes('"1.5+ Jahre"'), germanRequest.slice(0, 300));
+  await check(
+    "  German summary and bullet pass the German safety check; headings are German",
+    plain(germanAgain.resume.summary).startsWith("Full Stack Developer mit 1,5+ Jahren") &&
+      bulletsOf(germanAgain.resume).includes("Entwarf MongoDB-Schemas und optimierte Abfragen für Anwendungsdaten.") &&
+      germanAgain.resume.design.sectionHeadings.experience === "Berufserfahrung",
+    { summary: plain(germanAgain.resume.summary), rejected: germanAgain.rejectedRewrites }
+  );
+  await check("  ...but a name after 'bei' that the resume doesn't have is still dropped", /new name: Google/.test(checkGermanRewrite("Designed MongoDB schemas", "Entwarf MongoDB-Schemas bei Google", resumeToText(RESUME))));
+
   // Unsafe headline and summary: dropped with reasons, the rules' versions are used instead
   answer = () => ({ headline: "Senior Backend Engineer", summary: "Full Stack Developer with 5+ years of experience in Node.js and MongoDB.", bullets: [] });
   const unsafe = await run(BACKEND);
@@ -225,4 +247,64 @@ test("AI tailoring: different jobs get different resumes", async (t) => {
     unsafe.rejectedRewrites
   );
   await check("  the rules' summary is used instead", plain(unsafe.resume.summary).startsWith("Full Stack Developer with 1.5+ years of experience in Node.js") && unsafe.resume.personalInfo.headline === "Full Stack Developer", plain(unsafe.resume.summary));
+});
+
+test("tailoring options: skills, projects, bullets, template, language, one page", async (t) => {
+  const check = checker(t);
+  const analysis = analyzeJobWithRules(FRONTEND);
+  const withProjects = {
+    ...RESUME,
+    projects: [
+      { name: "Notes", description: "A notes app in Python.", link: "" },
+      { name: "Shopfront", description: "An e-commerce site built with React, TypeScript, Redux, Tailwind CSS and Jest.", link: "" },
+    ],
+  };
+  const run = (options, resume = withProjects) => tailorResume(resume, analysis, { jobDescription: FRONTEND, ...options });
+
+  let result = await run({ featuredSkills: ["TypeScript", "React", "Kubernetes"] });
+  await check("featured skills lead Skills in the chosen order (one the resume doesn't show is ignored)", result.resume.skills[0] === "TypeScript" && result.resume.skills[1] === "React.js" && !result.resume.skills.includes("Kubernetes"), result.resume.skills);
+  await check("  ...and the summary leads with them", plain(result.resume.summary).includes("in TypeScript and React."), plain(result.resume.summary));
+
+  result = await run({ excludedProjects: ["Notes"] });
+  await check("an excluded project is left out of the copy", result.resume.projects.map((p) => p.name).join() === "Shopfront" && withProjects.projects.length === 2, result.resume.projects);
+  await check("Projects go before Experience when a project matches better", result.resume.design.sectionOrder.indexOf("projects") < result.resume.design.sectionOrder.indexOf("experience"), result.resume.design.sectionOrder);
+  const noProjectsFirst = await run({}, RESUME);
+  await check("  ...not otherwise", !noProjectsFirst.changes.some((c) => c.op.key === "sectionOrder"));
+
+  result = await run({ maxBulletsPerJob: 2 });
+  const northwind = result.resume.experience[0];
+  await check(
+    "max bullets per job: only bullets beyond the limit that show nothing the job asks for are hidden",
+    // The two React / REST bullets stay; the four that show nothing a frontend job asks for are hidden
+    northwind.bullets.length === 2 && northwind.hiddenBullets.length === 4 && northwind.hiddenBullets.every((b) => !/React|REST/.test(b)) && northwind.bullets.every((b) => /React|REST/.test(plain(b))),
+    { bullets: northwind.bullets.map(plain), hidden: northwind.hiddenBullets }
+  );
+  const restored = buildContent(result.original, result.changes.map((c) => ({ ...c, status: c.op.kind === "hideBullets" ? "rejected" : "accepted" })));
+  await check("  rejecting the change restores them", restored.experience[0].bullets.length === 6 && restored.experience[0].hiddenBullets.length === 0, restored.experience[0]);
+
+  result = await run({ template: "modern-line-teal", fitOnePage: false });
+  await check("the chosen template, and Fit to one page off", result.resume.template === "modern-line-teal" && !result.resume.design.fitOnePage, { template: result.resume.template, design: result.resume.design });
+  result = await run({});
+  await check("Fit to one page on by default", result.resume.design.fitOnePage === true);
+
+  result = await run({ language: "de" });
+  await check("German: German section headings", result.resume.design.sectionHeadings.experience === "Berufserfahrung" && result.resume.design.sectionHeadings.skills === "Kenntnisse", result.resume.design.sectionHeadings);
+  await check("  without AI the summary stays as written (no English lead added)", plain(result.resume.summary) === plain(RESUME.summary), plain(result.resume.summary));
+
+  // How this version differs
+  const rules = await run({}, RESUME);
+  await check(
+    "differences: counted by type, with the share of words changed",
+    rules.differences.byType.find((e) => e.type === "bulletsReworded")?.count === 2 && rules.differences.byType.some((e) => e.type === "summary") && rules.differences.changedShare > 0,
+    rules.differences
+  );
+  await check("  reordering alone isn't a change of words", changedShare("Built APIs. Led the team.", "Led the team. Built APIs.") === 0);
+  const same = describeDifferences([], RESUME, RESUME, { aiUsed: false, strength: "balanced" });
+  await check("  nearly identical without AI, and why", same.nearlyIdentical && same.reasons[0] === "AI is off, so only reordering and small wording fixes were possible.", same);
+  const sparse = describeDifferences([], RESUME, RESUME, { aiUsed: true, strength: "balanced", rejected: 2, skillsShown: 1, jobSkills: 10 });
+  await check(
+    "  with AI: dropped rewrites and few matching skills are the reasons",
+    sparse.reasons.some((reason) => reason.startsWith("2 AI rewrites were dropped")) && sparse.reasons.some((reason) => reason.includes("only 1 of the job's 10 skills")),
+    sparse.reasons
+  );
 });

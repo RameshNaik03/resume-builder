@@ -5,7 +5,7 @@ import { htmlToText } from "../../utils/richText.js";
 import SKILLS from "../ats/skills.js";
 import { findKnownSkills } from "../ats/keywords.js";
 import resumeToText from "../ats/resumeToText.js";
-import { checkRewrite } from "../ats/rewriteBullets.js";
+import { checkGermanRewrite, checkRewrite } from "../ats/rewriteBullets.js";
 import { startsWithActionVerb } from "../ats/textRules.js";
 import { resumeLines, skillMatcher } from "../jobs/matchReport.js";
 import { findBannedPhrase } from "./bannedPhrases.js";
@@ -286,8 +286,6 @@ const assemble = (parts, opening) => [parts.greeting, opening, ...parts.body, pa
 
 // ---------- Checks ----------
 
-const PROPER_NAME_AFTER = /\b(?:at|for|with|as|bei|für|als|von|an der|am)\s+((?:[A-ZÄÖÜ][\w&.'-]*)(?:\s+[A-ZÄÖÜ][\w&.'-]*){0,3})/g;
-
 // Returns null if a text only uses allowed facts and has no banned phrase, else why not
 export function checkLetter(text, facts, language = "en") {
   const banned = findBannedPhrase(text);
@@ -298,17 +296,7 @@ export function checkLetter(text, facts, language = "en") {
   if (language === "en") return checkRewrite(facts.allowedText, withoutPlaceholders.slice(0, 4000), `${facts.allowedText}\nI I'd I'm I've I'll Dear Kind Your That`);
 
   // German capitalises every noun, so only numbers, skills and names after "bei", "als"... are checked
-  const allowedNumbers = new Set(facts.allowedText.match(/\d+(?:[.,]\d+)*/g) ?? []);
-  const newNumber = (withoutPlaceholders.match(/\d+(?:[.,]\d+)*/g) ?? []).find((n) => !allowedNumbers.has(n));
-  if (newNumber) return `new number: ${newNumber}`;
-  const allowedSkills = new Set(findKnownSkills(facts.allowedText));
-  const newSkill = findKnownSkills(withoutPlaceholders).find((skill) => !allowedSkills.has(skill));
-  if (newSkill) return `new skill: ${newSkill}`;
-  const allowedLower = facts.allowedText.toLowerCase();
-  for (const [, name] of withoutPlaceholders.matchAll(PROPER_NAME_AFTER)) {
-    if (!name.split(/\s+/).every((word) => allowedLower.includes(word.toLowerCase()))) return `new name: ${name}`;
-  }
-  return null;
+  return checkGermanRewrite(facts.allowedText, withoutPlaceholders.slice(0, 4000), facts.allowedText);
 }
 
 // ---------- AI (optional) ----------

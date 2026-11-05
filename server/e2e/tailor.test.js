@@ -1,9 +1,13 @@
 // Browser test of the "Tailor to a job" page (/tailor):
 //   dashboard entry point -> paste a job and pick a resume -> check the analysis (move and remove
-//   skills) -> tailoring progress -> the match report (ring, breakdown, evidence on hover) ->
+//   skills) -> the options (featured skills reordered, a project left out, a bullet limit, the
+//   default title) -> tailoring progress -> the match report (how this version differs, ring,
+//   breakdown, evidence on hover) ->
 //   "I have this skill" (Skills + an edited bullet; a bullet that adds a number is refused;
 //   Skills only) and "I don't have this" -> the match % goes up after each confirmation ->
-//   "Review changes" -> saved jobs -> the resume card's entry point. The original never changes.
+//   "Review changes" -> saved jobs -> the resume card's entry point -> tailoring the same job
+//   again (replace the existing version) -> deleting the whole application from its dashboard
+//   card. The original never changes.
 //
 // Run: node --test e2e/tailor.test.js (in server/; part of npm run test:e2e)
 import { test } from "node:test";
@@ -91,7 +95,19 @@ test("Tailor to a job", async (t) => {
     assert.ok(!must.includes("REST APIs") && !nice.includes("REST APIs"), "REST APIs removed");
     // No API key in the test stack: the page says so, and the strength choice is disabled
     assert.match(await textOf('[data-testid="ai-off-note"]'), /AI is off, so tailoring is limited to reordering and small fixes\./);
+    await page.waitForSelector('[data-testid="tailor-options"]', { timeout: 10000 });
     assert.ok(await page.$eval('[data-testid="strength"] input[value="balanced"]', (el) => el.checked && el.matches(":disabled")), "Balanced is chosen, and disabled while AI is off");
+  });
+
+  await t.test("options: featured skills (reordered), a project left out, a bullet limit, the title", async () => {
+    // The skills the resume shows; move PostgreSQL to the top with its arrow button
+    const skills = () => page.$$eval('[data-testid="featured-skills"] li', (items) => items.map((li) => li.dataset.skill));
+    assert.ok((await skills()).includes("Node.js") && (await skills()).includes("Kafka"), `featured skills: ${await skills()}`);
+    while ((await skills())[0] !== "PostgreSQL") await page.click('button[aria-label="Move PostgreSQL up"]');
+    await page.evaluate(() => [...document.querySelectorAll('[data-testid="project-options"] label')].find((label) => label.innerText.includes("Queuebench")).querySelector("input").click());
+    await page.select("#max-bullets", "3");
+    assert.match(await textOf('[data-testid="bullets-hidden-hint"]'), /always stay|Hides \d+ bullet/);
+    assert.equal(await page.$eval("#tailor-title", (el) => el.value), "Senior Backend Engineer – Northbeam", "the default title");
   });
 
   await t.test("tailor: progress, then the match report", async () => {
@@ -101,6 +117,9 @@ test("Tailor to a job", async (t) => {
     await page.waitForSelector('[data-testid="match-score"]');
     assert.ok((await score()) > 0 && (await score()) < 100);
     assert.match(await textOf('[data-testid="ai-off-note"]'), /AI is off/, "the report says it was tailored without AI");
+    const differences = await textOf('[data-testid="differences"]');
+    assert.match(differences, /How this version differs/);
+    assert.match(differences, /Projects left out\s*1/, `the excluded project is counted: ${differences}`);
     const ring = await textOf('[data-testid="match-score"]');
     assert.ok(ring.includes(fitLabel(await score())), `the ring should say "${fitLabel(await score())}": ${ring}`);
     assert.ok(!/match$|Partial|Weak/m.test(ring.replace("% match", "")), "no ATS-style labels");
@@ -179,6 +198,34 @@ test("Tailor to a job", async (t) => {
     await page.click(`a[aria-label="Tailor ${RESUME.title} to a job"]`);
     await page.waitForSelector("#base-resume");
     assert.equal(await page.$eval("#base-resume", (el) => el.value), original._id, "the card's resume is preselected");
+  });
+
+  await t.test("the tailored copy: PostgreSQL leads Skills, the project is left out", async () => {
+    const [job] = (await api("GET", "/jobs", token)).body;
+    const copy = (await api("GET", `/resumes/${job.tailoredResumeId}`, token)).body;
+    assert.equal(copy.skills[0], "PostgreSQL", copy.skills.join());
+    assert.ok(!copy.projects.some((project) => project.name === "Queuebench"), "Queuebench left out");
+  });
+
+  await t.test("tailoring the same resume for the same job again offers to replace it", async () => {
+    const before = (await api("GET", "/jobs", token)).body.length;
+    await page.goto(`${APP}/tailor?resume=${original._id}`, { waitUntil: "networkidle0" });
+    await page.select("#saved-job", jobUrl.split("/").pop());
+    await page.waitForSelector('[data-testid="tailor-options"]', { timeout: 10000 });
+    await clickText("button", "Tailor my resume");
+    await page.waitForSelector("#version-choice-title");
+    await page.evaluate(() => [...document.querySelectorAll("button")].find((button) => button.innerText.startsWith("Replace the existing version")).click());
+    await page.waitForFunction(() => location.pathname.startsWith("/tailor/jobs/") && document.querySelector('[data-testid="match-score"]'), { timeout: 30000 });
+    assert.equal((await api("GET", "/jobs", token)).body.length, before, "no duplicate application");
+  });
+
+  await t.test("delete the whole application from its dashboard card", async () => {
+    await page.goto(`${APP}/dashboard`, { waitUntil: "networkidle0" });
+    await page.click('[data-testid="application-card"] button[aria-label^="Delete"]');
+    await page.waitForSelector("#delete-application-title");
+    await page.evaluate(() => [...document.querySelectorAll("button")].find((button) => button.innerText.startsWith("Delete the whole application")).click());
+    await page.waitForFunction(() => !document.querySelector('[data-testid="application-card"]'), { timeout: 10000 });
+    assert.equal((await api("GET", "/jobs", token)).body.length, 0, "the job is gone");
   });
 
   await t.test("the original resume never changed", async () => {

@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import Resume from "../models/Resume.js";
-import { copyPhoto, deletePhoto, isPhotoStorageConfigured } from "../services/photoStorage.js";
+import { copyPhoto, isPhotoStorageConfigured } from "../services/photoStorage.js";
+import { deleteApplications, deleteResumes } from "../services/jobs/applications.js";
+
+const MAX_BULK_DELETE = 100;
 
 // Personal info fields the client may change. The photo URL isn't one of them:
 // it's only set by the photo routes (see photoController.js).
@@ -63,7 +66,8 @@ export const findOwnedResume = async (req, res) => {
 // GET /api/resumes
 export const getResumes = async (req, res) => {
   const resumes = await Resume.find({ userId: req.user._id })
-    .select("title updatedAt atsScore.score atsScore.grade atsScore.checkedAt") // The ATS badge, without the job description
+    // The ATS badge (without the job description), and what a tailored copy was made from
+    .select("title updatedAt atsScore.score atsScore.grade atsScore.checkedAt atsOptimization.source")
     .sort({ updatedAt: -1 }); // Most recently edited first
 
   res.json(resumes);
@@ -116,16 +120,32 @@ export const updateResume = async (req, res) => {
 };
 
 // DELETE /api/resumes/:id
+// Its cover letters move to another resume of their job, or are deleted when none is left (see
+// services/jobs/applications.js); a tailored resume's job stays (delete the whole application
+// with DELETE /api/jobs/:id)
 export const deleteResume = async (req, res) => {
   const resume = await findOwnedResume(req, res);
-  await resume.deleteOne();
+  const result = await deleteResumes(req.user._id, [resume._id]);
+  res.json({ message: "Resume deleted", id: resume._id, ...result });
+};
 
-  // Remove its photo from Cloudinary too (if that fails, the resume is still deleted)
-  if (resume.photoPublicId && isPhotoStorageConfigured()) {
-    deletePhoto(resume.photoPublicId).catch((error) => console.error("Deleting photo failed:", error.message));
+// POST /api/resumes/delete-many (JSON: resumeIds - resumes to delete on their own, jobIds -
+// whole applications to delete: job, tailored resume and cover letters)
+// Ids that aren't the user's are ignored. Returns how many of each were deleted.
+export const deleteManyResumes = async (req, res) => {
+  const { resumeIds = [], jobIds = [] } = req.body ?? {};
+  if (!Array.isArray(resumeIds) || !Array.isArray(jobIds) || resumeIds.length + jobIds.length === 0 || resumeIds.length + jobIds.length > MAX_BULK_DELETE) {
+    res.status(400);
+    throw new Error(`Choose between 1 and ${MAX_BULK_DELETE} resumes or applications to delete.`);
   }
-
-  res.json({ message: "Resume deleted", id: resume._id });
+  const applications = await deleteApplications(req.user._id, jobIds);
+  const resumes = await deleteResumes(req.user._id, resumeIds);
+  res.json({
+    applications: applications.jobs,
+    resumes: applications.resumes + resumes.resumes,
+    lettersDeleted: applications.lettersDeleted + resumes.lettersDeleted,
+    lettersMoved: resumes.lettersMoved,
+  });
 };
 
 // POST /api/resumes/:id/duplicate

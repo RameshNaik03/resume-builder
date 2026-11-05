@@ -5,6 +5,7 @@ import {
   getResumeById,
   updateResume,
   deleteResume,
+  deleteManyResumes,
   duplicateResume,
 } from "../controllers/resumeController.js";
 import { importResume } from "../controllers/importController.js";
@@ -21,6 +22,7 @@ router.use(protect);
 router.route("/").get(getResumes).post(createResume);
 // Rate limit first, so rejected requests don't even upload the file
 router.post("/import", importLimiter, uploadResumeFile, importResume);
+router.post("/delete-many", deleteManyResumes); // Bulk delete (dashboard): resumes and whole applications
 router.route("/:id").get(getResumeById).put(updateResume).delete(deleteResume);
 router.post("/:id/duplicate", duplicateResume);
 router.route("/:id/photo").post(photoLimiter, uploadPhotoFile, uploadPhoto).delete(removePhoto);

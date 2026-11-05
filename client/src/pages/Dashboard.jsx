@@ -8,6 +8,7 @@ import usePageTitle from "../hooks/usePageTitle";
 import ResumeCard, { ResumeCardSkeleton } from "../components/ResumeCard";
 import ApplicationCard from "../components/ApplicationCard";
 import ConfirmModal from "../components/ConfirmModal";
+import DeleteApplicationModal from "../components/DeleteApplicationModal";
 import EmptyState from "../components/EmptyState";
 import ImportResumeModal from "../components/ImportResumeModal";
 import { clearPendingImport, getPendingImport } from "../utils/resumeFile";
@@ -31,6 +32,9 @@ export default function Dashboard() {
   const [duplicatingId, setDuplicatingId] = useState(null);
   const [recheckingId, setRecheckingId] = useState(null);
   const [resumeToDelete, setResumeToDelete] = useState(null); // The resume shown in the modal
+  const [applicationToDelete, setApplicationToDelete] = useState(null); // The job shown in "Delete this application?"
+  const [selected, setSelected] = useState({ resumes: [], jobs: [] }); // Bulk delete: resume ids, job ids
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [loadError, setLoadError] = useState(null);
   const [reloadKey, setReloadKey] = useState(0); // Increase it to fetch the list again
@@ -127,6 +131,45 @@ export default function Dashboard() {
     }
   };
 
+  // One application: scope "resume" (the tailored resume only) or "application" (job, resume, cover letters)
+  const handleDeleteApplication = async (scope) => {
+    const job = applicationToDelete;
+    setDeleting(true);
+    try {
+      if (scope === "resume") await api.delete(`/resumes/${job.tailoredResumeId}`);
+      else await api.delete(`/jobs/${job._id}`);
+      toast.success(scope === "resume" ? "Tailored resume deleted" : "Application deleted");
+      setApplicationToDelete(null);
+      setReloadKey((key) => key + 1);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  // Bulk delete: the selected resumes, and the selected applications (resume only, or whole)
+  const toggle = (kind, id, on) => setSelected((current) => ({ ...current, [kind]: on ? [...current[kind], id] : current[kind].filter((other) => other !== id) }));
+  const selectedCount = selected.resumes.length + selected.jobs.length;
+  const handleBulkDelete = async (scope = "resume") => {
+    const tailoredIds = applications.filter((job) => selected.jobs.includes(job._id)).map((job) => job.tailoredResumeId);
+    setDeleting(true);
+    try {
+      const { data } = await api.post("/resumes/delete-many", {
+        resumeIds: [...selected.resumes, ...(scope === "resume" ? tailoredIds : [])],
+        jobIds: scope === "application" ? selected.jobs : [],
+      });
+      toast.success(`Deleted ${data.resumes} ${data.resumes === 1 ? "resume" : "resumes"}${data.applications ? ` and ${data.applications} ${data.applications === 1 ? "application" : "applications"}` : ""}`);
+      setSelected({ resumes: [], jobs: [] });
+      setBulkOpen(false);
+      setReloadKey((key) => key + 1);
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
       {/* Header */}
@@ -188,6 +231,19 @@ export default function Dashboard() {
           <EmptyState onCreate={handleCreate} onUpload={() => setIsImportOpen(true)} creating={creating} />
         ) : (
           <>
+            {selectedCount > 0 && (
+              <div className="sticky top-2 z-20 mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm dark:border-indigo-900 dark:bg-indigo-950/70" data-testid="bulk-bar">
+                <span className="font-medium text-indigo-900 dark:text-indigo-100">{selectedCount} selected</span>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setSelected({ resumes: [], jobs: [] })} className="btn-secondary px-3 py-1.5">
+                    Clear
+                  </button>
+                  <button type="button" onClick={() => setBulkOpen(true)} className="btn-primary bg-red-600 px-3 py-1.5 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500">
+                    Delete selected
+                  </button>
+                </div>
+              </div>
+            )}
             {applications.length > 0 && (
               <section className="mb-10" aria-labelledby="applications">
                 <h2 id="applications" className="text-lg font-semibold text-slate-900 dark:text-white">
@@ -196,7 +252,13 @@ export default function Dashboard() {
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Each tailored resume with its job and cover letter.</p>
                 <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {applications.map((job) => (
-                    <ApplicationCard key={job._id} job={job} />
+                    <ApplicationCard
+                      key={job._id}
+                      job={job}
+                      selected={selected.jobs.includes(job._id)}
+                      onSelect={(on) => toggle("jobs", job._id, on)}
+                      onDelete={() => setApplicationToDelete(job)}
+                    />
                   ))}
                 </div>
               </section>
@@ -214,6 +276,8 @@ export default function Dashboard() {
                 onRecheck={handleRecheck}
                 isDuplicating={duplicatingId === resume._id}
                 isRechecking={recheckingId === resume._id}
+                selected={selected.resumes.includes(resume._id)}
+                onSelect={(on) => toggle("resumes", resume._id, on)}
               />
             ))}
           </div>
@@ -228,6 +292,31 @@ export default function Dashboard() {
         confirmText="Delete"
         onConfirm={handleConfirmDelete}
         onCancel={() => setResumeToDelete(null)}
+        loading={deleting}
+      />
+      <DeleteApplicationModal
+        open={applicationToDelete !== null}
+        name={applicationToDelete?.title || "Untitled job"}
+        onChoose={handleDeleteApplication}
+        onCancel={() => setApplicationToDelete(null)}
+        loading={deleting}
+      />
+      {/* Bulk: applications in the selection need the resume-only / whole choice */}
+      <DeleteApplicationModal
+        open={bulkOpen && selected.jobs.length > 0}
+        count={selectedCount}
+        name={applications.find((job) => job._id === selected.jobs[0])?.title || "Untitled job"}
+        onChoose={handleBulkDelete}
+        onCancel={() => setBulkOpen(false)}
+        loading={deleting}
+      />
+      <ConfirmModal
+        open={bulkOpen && selected.jobs.length === 0}
+        title={`Delete ${selected.resumes.length} ${selected.resumes.length === 1 ? "resume" : "resumes"}?`}
+        message="The selected resumes will be permanently deleted. This can't be undone."
+        confirmText="Delete"
+        onConfirm={() => handleBulkDelete("resume")}
+        onCancel={() => setBulkOpen(false)}
         loading={deleting}
       />
 

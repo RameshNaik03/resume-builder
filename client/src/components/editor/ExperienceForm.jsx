@@ -1,6 +1,7 @@
 import ItemsEditor from "./ItemsEditor";
 import ListEditor from "./ListEditor";
 import TextField from "./TextField";
+import { toPlainText } from "../../utils/richText";
 
 const PRESENT = "Present";
 
@@ -68,9 +69,40 @@ export default function ExperienceForm({ items, onChange }) {
               itemName="Bullet point"
               rich
             />
+
+            <HiddenBullets
+              bullets={job.hiddenBullets ?? []}
+              onRestore={(index) =>
+                update({ bullets: [...(job.bullets ?? []), job.hiddenBullets[index]], hiddenBullets: job.hiddenBullets.filter((_, i) => i !== index) })
+              }
+            />
           </>
         );
       }}
     />
+  );
+}
+
+// Bullets that tailoring hid for this job (over the per-job limit and unrelated to the job):
+// kept here, never shown on the resume, and back in the list with "Restore"
+function HiddenBullets({ bullets, onRestore }) {
+  if (!bullets.length) return null;
+  return (
+    <div className="rounded-lg border border-dashed border-slate-300 p-3 dark:border-slate-700" data-testid="hidden-bullets">
+      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+        Hidden for this job ({bullets.length})
+      </p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">Not shown on the resume. Restore one to add it back to the end of the list.</p>
+      <ul className="mt-2 space-y-1.5">
+        {bullets.map((bullet, index) => (
+          <li key={`${index}-${bullet}`} className="flex items-start justify-between gap-3 text-sm text-slate-600 dark:text-slate-400">
+            <span className="min-w-0">{toPlainText(bullet)}</span>
+            <button type="button" onClick={() => onRestore(index)} className="btn-secondary shrink-0 px-2.5 py-1 text-xs">
+              Restore
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

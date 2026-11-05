@@ -3,7 +3,8 @@ import Resume from "../models/Resume.js";
 import Job from "../models/Job.js";
 import CoverLetter from "../models/CoverLetter.js";
 import analyzeJob from "../services/jobs/analyzeJob.js";
-import tailorResume, { STRENGTHS } from "../services/jobs/tailorResume.js";
+import tailorResume, { LANGUAGES, MAX_FEATURED_SKILLS, STRENGTHS, tailoringOptions } from "../services/jobs/tailorResume.js";
+import { baseResumeOf, defaultTitle, deleteApplications, versionsFor } from "../services/jobs/applications.js";
 import matchReport from "../services/jobs/matchReport.js";
 import { isAIEnabled } from "../services/ats/aiReview.js";
 import { applyOp } from "../services/ats/optimizationOps.js";
@@ -23,6 +24,7 @@ const MAX_LIST = 20;
 const MIN_NOTE_WORDS = 3;
 const MAX_NOTE_CHARACTERS = 300;
 const MAX_BULLET_CHARACTERS = 300;
+const MAX_BULLETS_LIMIT = 20; // The highest "max bullets per job" accepted
 
 function readDescription(req, res, value) {
   const description = String(value ?? "").trim();
@@ -77,42 +79,94 @@ export const analyzeJobDescription = async (req, res) => {
   res.json({ analysis: await analyzeJob(description), aiEnabled: isAIEnabled() });
 };
 
-// POST /api/jobs/tailor (logged-in users; JSON: resumeId, job: { description, analysis }, strength)
-// Creates a NEW resume tailored to the job (the original is never changed) titled
-// "<Role> – <Company>", stores the job, and returns every change and the honest match report.
-// The analysis is optional (it's worked out from the description if it's missing). strength
-// ("light" | "balanced" | "strong", default balanced) sets how many bullets the AI rewrites.
-export const tailorToJob = async (req, res) => {
-  const { resumeId, job = {} } = req.body ?? {};
-  const strength = STRENGTHS.includes(req.body?.strength) ? req.body.strength : "balanced";
+// The tailoring options from a request body (anything invalid falls back to its default)
+function readTailorOptions(body = {}) {
+  const strings = (value, max) => (Array.isArray(value) ? value.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim().slice(0, 200)).slice(0, max) : null);
+  const maxBullets = Number(body.maxBulletsPerJob);
+  return {
+    strength: STRENGTHS.includes(body.strength) ? body.strength : "balanced",
+    featuredSkills: strings(body.featuredSkills, MAX_FEATURED_SKILLS),
+    excludedProjects: strings(body.excludedProjects, 100) ?? [],
+    maxBulletsPerJob: Number.isInteger(maxBullets) && maxBullets >= 1 && maxBullets <= MAX_BULLETS_LIMIT ? maxBullets : null,
+    template: typeof body.template === "string" && /^[a-z0-9-]{1,60}$/.test(body.template) ? body.template : null,
+    language: LANGUAGES.includes(body.language) ? body.language : "en",
+    fitOnePage: body.fitOnePage !== false,
+  };
+}
+
+// The job and its analysis from a request ({ job: { description, analysis } }); the analysis is
+// worked out from the description when it's missing
+async function readJob(req, res) {
+  const job = req.body?.job ?? {};
   const description = readDescription(req, res, job.description);
-  const source = await findUsersResume(req, res, resumeId);
   const analysis = readAnalysis(job.analysis, description) ?? (await analyzeJob(description));
   if (!analysis.mustHave.length && !analysis.niceToHave.length) {
     res.status(422);
     throw new Error("We couldn't find any skills in this job description to tailor to. Please paste the full description, including its requirements.");
   }
+  return { description, analysis };
+}
+
+// POST /api/jobs/options (logged-in users; JSON: resumeId, job: { description, analysis })
+// What the options panel offers before tailoring (see tailoringOptions in tailorResume.js), plus
+//   suggestedTitle   - "<Role> – <Company>" (the copy's default title)
+//   tailoredFrom     - set when the chosen resume is itself a tailored copy: its base resume
+//                      { resumeId, title } (resumeId null if that was deleted)
+//   existingVersions - earlier tailored versions of this resume for this job (to replace one)
+export const tailorOptions = async (req, res) => {
+  const source = await findUsersResume(req, res, req.body?.resumeId);
+  const { description, analysis } = await readJob(req, res);
+  res.json({
+    ...tailoringOptions(source.toObject(), analysis),
+    maxFeatured: MAX_FEATURED_SKILLS,
+    suggestedTitle: defaultTitle(analysis, source),
+    tailoredFrom: await baseResumeOf(req.user._id, source),
+    existingVersions: await versionsFor(req.user._id, source._id, description),
+    aiEnabled: isAIEnabled(),
+  });
+};
+
+// POST /api/jobs/tailor (logged-in users; JSON: resumeId, job: { description, analysis },
+// options (see readTailorOptions), title, replaceJobId)
+// Creates a NEW resume tailored to the job (the original is never changed) titled
+// "<Role> – <Company>" (or the title given), stores the job, and returns every change, the
+// honest match report and how this version differs from the original. The analysis is
+// optional (it's worked out from the description if it's missing).
+// replaceJobId: an earlier version of the same resume for the same job to replace instead: its
+// resume and job are updated in place (same ids, so its cover letters stay linked) and the
+// skills the user confirmed there are added again.
+export const tailorToJob = async (req, res) => {
+  const source = await findUsersResume(req, res, req.body?.resumeId);
+  const { description, analysis } = await readJob(req, res);
+  const options = readTailorOptions(req.body?.options ?? req.body);
+  const replacing = req.body?.replaceJobId ? await findUsersJob(req, res, req.body.replaceJobId) : null;
+  if (replacing && String(replacing.sourceResumeId) !== String(source._id)) {
+    res.status(400);
+    throw new Error("Only a version tailored from the same resume can be replaced.");
+  }
 
   const original = source.toObject();
-  const result = await tailorResume(original, analysis, { jobDescription: description, useAI: isAIEnabled(), strength });
-  // How it was tailored, for the page: AI or rules only, and what the safety check dropped
+  const result = await tailorResume(original, analysis, { jobDescription: description, useAI: isAIEnabled(), ...options });
+  // How it was tailored, for the page: AI or rules only, what the safety check dropped, and how
+  // this version differs from the original
   const tailoring = {
     tailoredWith: result.tailoredWith,
     strength: result.strength,
+    language: result.language,
     rejectedRewrites: result.rejectedRewrites.map(({ section, problem }) => ({ section, problem })),
+    differences: result.differences,
   };
   // The match is measured on the original resume: tailoring rewords and reorders, it never adds
   // a skill the resume didn't already show, so it can't change the honest match
-  const report = matchReport(analysis, result.original);
+  const confirmed = replacing?.confirmedSkills.map((entry) => entry.toObject()) ?? [];
+  const report = matchReport(analysis, result.original, confirmed);
 
-  const role = analysis.title || "Tailored resume";
-  const title = (analysis.company ? `${role} – ${analysis.company}` : role).slice(0, 100);
+  const title = (typeof req.body?.title === "string" && req.body.title.trim().slice(0, 100)) || defaultTitle(analysis, source);
   const { template, design } = result.resume;
   const after = scoreContent(result.resume, { template, design }, { jobDescription: description, jobTitle: analysis.title ?? "" });
   const before = scoreContent(result.original, { template: result.original.template, design: result.original.design }, { jobDescription: description, jobTitle: analysis.title ?? "" });
   const changes = result.changes.map((change) => ({ ...change, status: "pending" }));
-
-  const created = await Resume.create({
+  const content = {
     ...result.resume,
     title,
     userId: req.user._id,
@@ -132,20 +186,29 @@ export const tailorToJob = async (req, res) => {
       optimizedWith: result.tailoredWith,
       lockedAt: null,
     },
-  });
-  const saved = await Job.create({
-    userId: req.user._id,
-    sourceResumeId: source._id,
-    tailoredResumeId: created._id,
-    description,
-    analysis,
-    matchReport: report,
-    tailoring,
-  });
+  };
+  for (const entry of confirmed) applyConfirmed(content, entry); // A replaced version keeps them
 
-  res.status(201).json({
+  let created;
+  let saved;
+  if (replacing) {
+    created = await Resume.findOne({ _id: replacing.tailoredResumeId, userId: req.user._id });
+    if (created) {
+      created.set(content);
+      created.markModified("atsOptimization");
+      await created.save();
+    } else created = await Resume.create(content);
+    replacing.set({ tailoredResumeId: created._id, description, analysis, matchReport: report, tailoring });
+    saved = await replacing.save();
+  } else {
+    created = await Resume.create(content);
+    saved = await Job.create({ userId: req.user._id, sourceResumeId: source._id, tailoredResumeId: created._id, description, analysis, matchReport: report, tailoring });
+  }
+
+  res.status(replacing ? 200 : 201).json({
     resume: { _id: created._id, title: created.title, template: created.template },
     jobId: saved._id,
+    replaced: Boolean(replacing),
     analysis,
     matchReport: report,
     places: placesIn(created), // Where a confirmed skill's bullet can go
@@ -155,6 +218,13 @@ export const tailorToJob = async (req, res) => {
     aiEnabled: isAIEnabled(),
     rewritesRejected: result.rejectedRewrites.length, // Generated lines dropped by the safety check
   });
+};
+
+// DELETE /api/jobs/:id (logged-in users): the whole application: the job, its tailored resume
+// and its cover letters (to delete only the resume, use DELETE /api/resumes/:id)
+export const deleteJob = async (req, res) => {
+  const job = await findUsersJob(req, res, req.params.id);
+  res.json({ message: "Application deleted", ...(await deleteApplications(req.user._id, [job._id])) });
 };
 
 // The places a confirmed skill's bullet can go: the tailored resume's jobs and projects
@@ -235,6 +305,26 @@ export const declineSkill = async (req, res) => {
   res.json({ declinedSkills: job.declinedSkills });
 };
 
+// A confirmed skill ({ skill, note, bullet, targetType, addedToJob }) applied to a tailored
+// resume's content and recorded (accepted) in its review, so a rebuild from the review keeps it.
+// The bullet goes under the job or project named addedToJob, if the resume still has it.
+// Returns the review (or undefined if the content has none).
+function applyConfirmed(content, { skill, note, bullet, targetType, addedToJob }) {
+  const review = content.atsOptimization;
+  const record = (section, before, after, reason, op) => {
+    applyOp(content, op);
+    if (review) review.changes.push({ id: `change-${review.changes.length + 1}`, section, before, after, reason, op, marks: { original: [], optimized: [after] }, revertible: true, status: "accepted" });
+  };
+  record("skills", "(not in your Skills list)", skill, `You confirmed you have ${skill}: "${note}".`, { kind: "addSkill", value: skill });
+  const places = placesIn(content);
+  const place = bullet && (targetType === "job" ? places.jobs : targetType === "project" ? places.projects : []).find((entry) => entry.label === addedToJob);
+  if (place) {
+    const op = targetType === "job" ? { kind: "addBullet", jobId: place.id, value: bullet } : { kind: "addProjectText", name: place.id, value: bullet };
+    record(targetType === "job" ? "experience" : "projects", `${place.label}: (nothing about ${skill})`, bullet, `You confirmed ${skill} and wrote this for ${place.label}.`, op);
+  }
+  return review;
+}
+
 // POST /api/jobs/confirm-skill (logged-in users; JSON: jobId, skill, note, placement, target, bullet)
 // The user confirms they have a skill the job asks for that their resume doesn't show, and says
 // where they used it (note). They also choose where it goes:
@@ -296,19 +386,8 @@ export const confirmSkill = async (req, res) => {
     }
   }
 
-  // Applied to the resume and recorded (accepted) in its review, so a later rebuild from the
-  // review keeps them
-  const review = content.atsOptimization;
-  const record = (section, before, after, reason, op) => {
-    applyOp(content, op);
-    if (review) review.changes.push({ id: `change-${review.changes.length + 1}`, section, before, after, reason, op, marks: { original: [], optimized: [after] }, revertible: true, status: "accepted" });
-  };
-  record("skills", "(not in your Skills list)", skill, `You confirmed you have ${skill}: "${note}".`, { kind: "addSkill", value: skill });
-  if (bullet) {
-    const where = target.type === "job" ? "experience" : "projects";
-    const op = target.type === "job" ? { kind: "addBullet", jobId: place.id, value: bullet } : { kind: "addProjectText", name: place.id, value: bullet };
-    record(where, `${place.label}: (nothing about ${skill})`, bullet, `You confirmed ${skill} and wrote this for ${place.label}.`, op);
-  }
+  const entry = { skill, note, addedToJob: bullet ? place.label : "", bullet: bullet ?? "", targetType: bullet ? target.type : "" };
+  const review = applyConfirmed(content, entry);
 
   resume.skills = content.skills;
   resume.experience = content.experience;
@@ -319,7 +398,7 @@ export const confirmSkill = async (req, res) => {
   }
   await resume.save();
 
-  job.confirmedSkills.push({ skill, note, addedToJob: bullet ? place.label : "" });
+  job.confirmedSkills.push(entry);
   job.declinedSkills = job.declinedSkills.filter((declined) => declined !== skill);
   // Still measured on the original resume, plus the confirmed skills
   job.matchReport = matchReport(job.analysis, review?.original ?? content, job.confirmedSkills);

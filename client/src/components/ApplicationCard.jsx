@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
-import { FileText, Mail, Target } from "lucide-react";
+import { FileText, Mail, Target, Trash2 } from "lucide-react";
 import timeAgo from "../utils/timeAgo";
 import { fitTone } from "./ats/atsHelpers";
 
 // One application on the dashboard: a tailored resume grouped with its job and cover letter.
 //   job - a saved job from GET /api/jobs ({ title, company, score, tailoredResumeId, coverLetterId, createdAt })
-export default function ApplicationCard({ job }) {
+//   selected / onSelect - the bulk-delete checkbox; onDelete - opens "Delete this application?"
+export default function ApplicationCard({ job, selected = false, onSelect, onDelete }) {
   const fit = fitTone(job.score);
+  const name = job.title || "Untitled job";
   const links = [
     { to: `/editor/${job.tailoredResumeId}`, label: "Resume", icon: FileText },
     job.coverLetterId
@@ -16,13 +18,18 @@ export default function ApplicationCard({ job }) {
   ];
 
   return (
-    <article className="card flex flex-col p-4" data-testid="application-card">
+    <article className={`card flex flex-col p-4 ${selected ? "ring-2 ring-indigo-500" : ""}`} data-testid="application-card">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <Link to={`/tailor/jobs/${job._id}`} className="block truncate font-semibold text-slate-900 hover:text-indigo-700 dark:text-white dark:hover:text-indigo-300">
-            {job.title || "Untitled job"}
-          </Link>
-          <p className="truncate text-sm text-slate-500 dark:text-slate-400">{job.company || "Company not stated"}</p>
+        <div className="flex min-w-0 items-start gap-2">
+          {onSelect && (
+            <input type="checkbox" checked={selected} onChange={(event) => onSelect(event.target.checked)} className="mt-1 size-4 shrink-0 accent-indigo-600" aria-label={`Select ${name}`} />
+          )}
+          <div className="min-w-0">
+            <Link to={`/tailor/jobs/${job._id}`} className="block truncate font-semibold text-slate-900 hover:text-indigo-700 dark:text-white dark:hover:text-indigo-300">
+              {name}
+            </Link>
+            <p className="truncate text-sm text-slate-500 dark:text-slate-400">{job.company || "Company not stated"}</p>
+          </div>
         </div>
         <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${fit.badge}`}>
           {job.score}% · {fit.label}
@@ -38,6 +45,19 @@ export default function ApplicationCard({ job }) {
             </Link>
           </li>
         ))}
+        {onDelete && (
+          <li>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="btn-secondary gap-1.5 px-2.5 py-1.5 text-sm text-red-600 hover:border-red-200 hover:bg-red-50 dark:text-red-400 dark:hover:border-red-900 dark:hover:bg-red-950/50"
+              aria-label={`Delete ${name}`}
+            >
+              <Trash2 className="size-4" aria-hidden="true" />
+              Delete
+            </button>
+          </li>
+        )}
       </ul>
     </article>
   );

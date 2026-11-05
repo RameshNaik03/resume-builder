@@ -82,6 +82,32 @@ export function checkRewrite(before, after, resumeText, { allowedSkills = [] } =
   return null;
 }
 
+// Names after "bei" (an employer), "als" (a title), "an der" (a university) and their English
+// forms: in German every noun is capitalised, so only these count ("für Anwendungsdaten" is a noun)
+const PROPER_NAME_AFTER = /\b(?:[Aa]t|[Aa]s|[Bb]ei|[Aa]ls|[Aa]n der)\s+((?:[A-ZÄÖÜ][\w&.'-]*)(?:\s+[A-ZÄÖÜ][\w&.'-]*){0,3})/g;
+
+// checkRewrite for German text (the same arguments): numbers, skills and the names after
+// "bei", "als"... are checked, not every capitalised word
+export function checkGermanRewrite(before, after, resumeText, { allowedSkills = [] } = {}) {
+  const text = after.trim();
+  if (!text) return "empty";
+  if (text.length > Math.max(300, before.length * 2.5)) return "too long";
+  const withoutPlaceholders = text.replace(PLACEHOLDER, " ");
+  // German writes "1,5" for the resume's "1.5" (and "2.000" for "2,000"): either mark is the same number
+  const otherMark = (n) => n.replace(/[.,]/g, (mark) => (mark === "." ? "," : "."));
+  const originalNumbers = new Set(numbersIn(before));
+  const newNumber = numbersIn(withoutPlaceholders).find((n) => !originalNumbers.has(n) && !originalNumbers.has(otherMark(n)));
+  if (newNumber) return `new number: ${newNumber}`;
+  const originalSkills = new Set([...findKnownSkills(before), ...allowedSkills]);
+  const newSkill = findKnownSkills(withoutPlaceholders).find((skill) => !originalSkills.has(skill));
+  if (newSkill) return `new skill: ${newSkill}`;
+  const allowedLower = resumeText.toLowerCase();
+  for (const [, name] of withoutPlaceholders.matchAll(PROPER_NAME_AFTER)) {
+    if (!name.split(/\s+/).every((word) => allowedLower.includes(word.toLowerCase()))) return `new name: ${name}`;
+  }
+  return null;
+}
+
 // bullets: [{ id, text, issues }] -> [{ id, after, reason }] (only safe rewrites),
 // or null if the AI couldn't help (the caller keeps the rule-based fixes only)
 //   failedChecks - ids of the ATS checks the resume failed (e.g. "quantified"), as a hint

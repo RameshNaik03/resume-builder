@@ -9,10 +9,20 @@ const BADGE_STYLES = {
   "bg-rose-500": "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/70 dark:text-rose-300 dark:ring-rose-900",
 };
 
-export default function ResumeCard({ resume, onDuplicate, onDelete, onRecheck, isDuplicating, isRechecking }) {
+// selected / onSelect: the bulk-delete checkbox (top left, above the card's stretched link)
+export default function ResumeCard({ resume, onDuplicate, onDelete, onRecheck, isDuplicating, isRechecking, selected = false, onSelect }) {
   const ats = resume.atsScore;
   return (
-    <div className="card group relative flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md dark:hover:border-indigo-800">
+    <div className={`card group relative flex flex-col overflow-hidden transition hover:-translate-y-0.5 hover:border-indigo-300 hover:shadow-md dark:hover:border-indigo-800 ${selected ? "ring-2 ring-indigo-500" : ""}`}>
+      {onSelect && (
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={(event) => onSelect(event.target.checked)}
+          className="absolute top-3 left-3 z-10 size-4 accent-indigo-600"
+          aria-label={`Select ${resume.title}`}
+        />
+      )}
       {ats && (
         <span
           className={`absolute top-3 right-3 z-10 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${BADGE_STYLES[scoreTone(ats.score).bar]}`}

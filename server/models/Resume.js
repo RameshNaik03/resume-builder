@@ -14,6 +14,8 @@ const experienceSchema = new mongoose.Schema({
   startDate: { type: String, trim: true, default: "" }, // Free text, e.g. "Jan 2024"
   endDate: { type: String, trim: true, default: "" }, // e.g. "Present"
   bullets: { type: [{ type: String, set: richInline }], default: [] }, // Rich text (inline)
+  // Bullets tailoring hid for a job (kept, never shown; the editor can restore them)
+  hiddenBullets: { type: [{ type: String, set: richInline }], default: [] },
 });
 
 const educationSchema = new mongoose.Schema({

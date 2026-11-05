@@ -9,7 +9,8 @@ import { findKnownSkills, matchTerm } from "../ats/keywords.js";
 import { matchJobTitle, ROLE_NOUNS } from "../ats/jobTitle.js";
 import { applyOp } from "../ats/optimizationOps.js";
 import resumeToText from "../ats/resumeToText.js";
-import { checkRewrite, repeatedWord } from "../ats/rewriteBullets.js";
+import { checkGermanRewrite, checkRewrite, repeatedWord } from "../ats/rewriteBullets.js";
+import describeDifferences from "./differences.js";
 import { OPTIMIZED_TEMPLATE } from "../ats/optimizeResume.js";
 import { findEvidence, resumeLines, skillMatcher } from "./matchReport.js";
 
@@ -25,16 +26,25 @@ import { findEvidence, resumeLines, skillMatcher } from "./matchReport.js";
 //   3. Bullets: most relevant first within each job, then reworded for the job. The AI rewrites
 //      as many as the strength allows (light: none, balanced: the most relevant half, strong:
 //      every relevant one); by rules, the job's spelling of a skill the bullet already names
-//   4. Projects: most relevant first
+//   4. Projects: the excluded ones left out, the rest most relevant first; Projects go before
+//      Experience when a project matches the job better than any job does
 //   5. Skills: job skills the resume already shows (somewhere other than Skills) are added,
-//      quoting where; then job skills first. Skills the resume doesn't show are never added.
-//   6. Layout: an ATS-friendly template (if it isn't one) and "Fit to one page" on
-// Every generated line passes checkRewrite (the optimizer's safety check): no number, skill,
-// tool, company or title that isn't already in the resume (a bullet may name skills its own
-// job shows, never ones from other jobs). Lines that fail are dropped and logged.
+//      quoting where; then the featured skills first (in the user's order), then the job's
+//      other skills. Skills the resume doesn't show are never added.
+//   6. Layout: the chosen template (else an ATS-friendly one if it isn't one), "Fit to one
+//      page" as chosen, and German section headings for a German copy
+// Bullets beyond the per-job limit that show nothing the job asks for are hidden (moved to the
+// job's hiddenBullets, never deleted). Every generated line passes checkRewrite (the
+// optimizer's safety check; checkGermanRewrite for German): no number, skill, tool, company or
+// title that isn't already in the resume (a bullet may name skills its own job shows, never
+// ones from other jobs). Lines that fail are dropped and logged.
 
 const MODEL = "claude-opus-5-5";
 export const STRENGTHS = ["light", "balanced", "strong"];
+export const LANGUAGES = ["en", "de"];
+export const MAX_FEATURED_SKILLS = 15;
+export const STANDARD_SECTION_ORDER = ["summary", "experience", "education", "skills", "projects", "additional"];
+const GERMAN_HEADINGS = { summary: "Profil", experience: "Berufserfahrung", education: "Ausbildung", skills: "Kenntnisse", projects: "Projekte" };
 const MAX_SUMMARY_CHARACTERS = 700;
 const MAX_FOCUS_WORDS = 8;
 // Layouts (template id prefixes) that aren't ATS-friendly; see client/src/templates/registry.js
@@ -48,17 +58,22 @@ const plain = (html) => htmlToText(String(html ?? "")).replace(/\s+/g, " ").trim
 const escapeRegex = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const sameText = (a, b) => a.replace(/\s+/g, "").toLowerCase() === b.replace(/\s+/g, "").toLowerCase();
 
-const isAtsFriendly = (template, design) =>
+export const isAtsFriendly = (template, design) =>
   Boolean(template) && !NOT_ATS_FRIENDLY.some((layout) => template === layout || template.startsWith(`${layout}-`)) && design?.columns !== 2;
 
 // "1.5+ years", "1,5 years", "8 years", "two years": the number as written ("1.5+", "two")
+// (and "1,5+ Jahre" in a German summary)
 const YEAR_WORDS = "one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty";
-const YEARS = new RegExp(`(?<![\\p{L}\\p{N}.,])(\\d{1,2}(?:[.,]\\d{1,2})?\\s*\\+?|(?:${YEAR_WORDS})\\s*\\+?)\\s*years?(?!\\p{L})`, "giu");
-const yearsIn = (text) => [...String(text ?? "").matchAll(YEARS)].map((match) => match[1].replace(/\s+/g, ""));
+const yearsPattern = (unit) => new RegExp(`(?<![\\p{L}\\p{N}.,])(\\d{1,2}(?:[.,]\\d{1,2})?\\s*\\+?|(?:${YEAR_WORDS})\\s*\\+?)\\s*${unit}(?!\\p{L})`, "giu");
+const YEARS = yearsPattern("years?");
+const YEARS_DE = yearsPattern("(?:Jahren?|Jahre)");
+const yearsIn = (text, pattern = YEARS) => [...String(text ?? "").matchAll(pattern)].map((match) => match[1].replace(/\s+/g, ""));
 export const statedYears = (summary) => yearsIn(summary)[0] ?? null;
+// The same number with either decimal mark ("1.5+" = "1,5+")
+const sameYears = (a, b) => sameText(a.replace(",", "."), b.replace(",", "."));
 // Why a generated summary's years don't match the resume's own, or null
-const yearsProblem = (text, stated) => {
-  const wrong = yearsIn(text).find((years) => !stated || !sameText(years, stated));
+const yearsProblem = (text, stated, language = "en") => {
+  const wrong = [...yearsIn(text), ...(language === "de" ? yearsIn(text, YEARS_DE) : [])].find((years) => !stated || !sameYears(years, stated));
   if (!wrong) return null;
   return stated ? `years don't match the resume: ${wrong} (the resume says ${stated})` : `years the resume doesn't state: ${wrong}`;
 };
@@ -102,9 +117,10 @@ const getClient = () => {
   return client;
 };
 
-async function tailorWithAI({ resumeText, jobDescription, analysis, headlines, years, jobs }) {
+async function tailorWithAI({ resumeText, jobDescription, analysis, headlines, years, jobs, featured, language }) {
   const job = [
     `title: ${analysis.title || "(not stated)"}`,
+    `skills to feature (the candidate's choice, in this order): ${featured.join(", ") || "(none)"}`,
     `must-have skills (most important first): ${analysis.mustHave.join(", ") || "(none)"}`,
     `nice-to-have skills: ${analysis.niceToHave.join(", ") || "(none)"}`,
     `responsibilities:\n${(analysis.responsibilities ?? []).map((line) => `- ${line}`).join("\n") || "(none listed)"}`,
@@ -114,8 +130,15 @@ async function tailorWithAI({ resumeText, jobDescription, analysis, headlines, y
       [`job: ${label}`, `shows: ${skills.join(", ") || "(no known skills)"}`, ...list.map((b) => `- id: ${b.id}\n  rewrite: ${b.selected ? "yes" : "no"}\n  text: ${b.text}`)].join("\n")
     )
     .join("\n\n");
-  const yearsNote = years ? `Write the years only as "${years} years", exactly as the resume states them, or leave them out.` : "The resume's summary states no years of experience: don't state any.";
+  const yearsNote = years
+    ? `Write the years only as "${years} ${language === "de" ? "Jahre" : "years"}", the same number the resume states, or leave them out.`
+    : "The resume's summary states no years of experience: don't state any.";
+  const languageNote =
+    language === "de"
+      ? "Write the headline's focus, the summary and the bullets in German (formal business register). Keep titles, company names and skill names exactly as the resume writes them."
+      : "Write in English.";
   const content = [
+    `<language>${languageNote}</language>`,
     `<job_analysis>\n${job}\n</job_analysis>`,
     `<job_description>\n${jobDescription}\n</job_description>`,
     `<resume>\n${resumeText}\n</resume>`,
@@ -143,11 +166,72 @@ async function tailorWithAI({ resumeText, jobDescription, analysis, headlines, y
 
 // ---------- Tailoring ----------
 
+// What the job cares about, by weight: must-haves 3, nice-to-haves 1, other keywords 1
+//   relevance(text) - the weight of the job's terms a text shows
+//   termsIn(text)   - the must-haves it shows
+export function jobRelevance(analysis) {
+  const terms = [
+    ...analysis.mustHave.map((term) => ({ term, weight: 3 })),
+    ...analysis.niceToHave.map((term) => ({ term, weight: 1 })),
+    ...(analysis.keywords ?? []).map((term) => ({ term, weight: 1 })),
+  ].map((entry) => ({ ...entry, matches: skillMatcher(entry.term) }));
+  return {
+    relevance: (text) => terms.reduce((sum, { matches, weight }) => sum + (matches(text) ? weight : 0), 0),
+    termsIn: (text) => terms.filter(({ matches, weight }) => weight > 1 && matches(text)).map(({ term }) => term),
+  };
+}
+
+// What the options panel offers for a resume and a job (before tailoring):
+//   skills   - the job's skills the resume shows, most relevant first: [{ skill, required, shownIn }]
+//              (shownIn: how many resume lines show it)
+//   projects - [{ name, score }] in the resume's order (score: how much of the job it shows)
+//   jobs     - [{ label, scores }]: each job's bullet scores, highest first (a score of 0 is a
+//              bullet that would be hidden beyond the per-job limit)
+//   projectsFirst - whether Projects would go before Experience
+//   template, atsFriendly, fitOnePage - the resume's current layout
+export function tailoringOptions(resume, analysis) {
+  const lines = resumeLines(resume);
+  const { relevance } = jobRelevance(analysis);
+  const jobOrder = [...analysis.mustHave, ...analysis.niceToHave];
+  const skills = jobOrder
+    .map((skill, index) => ({ skill, index, required: index < analysis.mustHave.length, shownIn: lines.filter((line) => skillMatcher(skill)(line.text)).length }))
+    .filter((entry) => entry.shownIn > 0)
+    .sort((a, b) => Number(b.required) - Number(a.required) || b.shownIn - a.shownIn || a.index - b.index)
+    .map(({ skill, required, shownIn }) => ({ skill, required, shownIn }));
+  const projects = (resume.projects ?? []).map((project) => ({ name: project.name, score: relevance(`${project.name} ${plain(project.description)}`) }));
+  const jobs = (resume.experience ?? []).map((job) => ({ label: jobLabel(job), scores: (job.bullets ?? []).map((bullet) => relevance(plain(bullet))).sort((a, b) => b - a) }));
+  const bestJob = Math.max(0, ...(resume.experience ?? []).map((job) => relevance([job.role, job.subtitle, ...(job.bullets ?? []).map(plain)].filter(Boolean).join("\n"))));
+  return {
+    skills,
+    projects,
+    jobs,
+    projectsFirst: projects.length > 0 && Math.max(0, ...projects.map((project) => project.score)) > bestJob,
+    template: resume.template ?? null,
+    atsFriendly: isAtsFriendly(resume.template, resume.design),
+    fitOnePage: Boolean(resume.design?.fitOnePage),
+  };
+}
+
 // original: a saved resume (plain object); analysis: from analyzeJob
-// options: { jobDescription, useAI, strength: "light" | "balanced" | "strong" }
-// Returns { original, resume, changes, rejectedRewrites: [{ id, section, after, problem }], tailoredWith, strength }
-export default async function tailorResume(original, analysis, { jobDescription, useAI = false, strength = "balanced" } = {}) {
+// options:
+//   jobDescription, useAI
+//   strength          - "light" | "balanced" | "strong" (how many bullets the AI rewrites)
+//   featuredSkills    - the skills to lead with, in order (null: the job's skills the resume shows)
+//   excludedProjects  - project names left out of the copy
+//   maxBulletsPerJob  - bullets per job beyond which irrelevant ones are hidden (null: no limit)
+//   template          - a template id (null: keep it if ATS-friendly, else Classic Navy)
+//   language          - "en" | "de"
+//   fitOnePage        - "Fit to one page" on the copy (default true)
+// Returns { original, resume, changes, rejectedRewrites: [{ id, section, after, problem }],
+//   tailoredWith, strength, language, differences } (differences: see differences.js)
+export default async function tailorResume(
+  original,
+  analysis,
+  { jobDescription, useAI = false, strength = "balanced", featuredSkills = null, excludedProjects = [], maxBulletsPerJob = null, template = null, language = "en", fitOnePage = true } = {}
+) {
   if (!STRENGTHS.includes(strength)) strength = "balanced";
+  if (!LANGUAGES.includes(language)) language = "en";
+  const check = language === "de" ? checkGermanRewrite : checkRewrite;
   const start = {
     ...sanitizeResume(original),
     skillLevels: structuredClone(original.skillLevels ?? []),
@@ -183,15 +267,19 @@ export default async function tailorResume(original, analysis, { jobDescription,
     console.info(`Tailoring dropped a ${section} rewrite (${id}): ${problem}`);
   };
 
-  // What the job cares about, by weight: must-haves 3, nice-to-haves 1, other keywords 1
-  const terms = [
-    ...analysis.mustHave.map((term) => ({ term, weight: 3 })),
-    ...analysis.niceToHave.map((term) => ({ term, weight: 1 })),
-    ...(analysis.keywords ?? []).map((term) => ({ term, weight: 1 })),
-  ].map((entry) => ({ ...entry, matches: skillMatcher(entry.term) }));
-  const relevance = (text) => terms.reduce((sum, { matches, weight }) => sum + (matches(text) ? weight : 0), 0);
-  const termsIn = (text) => terms.filter(({ matches, weight }) => weight > 1 && matches(text)).map(({ term }) => term);
+  const { relevance, termsIn } = jobRelevance(analysis);
   const jobSkillsShown = [...analysis.mustHave, ...analysis.niceToHave].filter((skill) => findEvidence(lines, skill));
+  // The skills to lead with: the user's choice (only ones the resume shows), else the job's
+  // skills the resume shows
+  const featured = Array.isArray(featuredSkills)
+    ? [...new Map(featuredSkills.filter((skill) => typeof skill === "string" && skill.trim() && findEvidence(lines, skill.trim())).map((skill) => [skill.trim().toLowerCase(), skill.trim()])).values()].slice(0, MAX_FEATURED_SKILLS)
+    : jobSkillsShown;
+
+  // ---------- 0. Projects the user left out ----------
+  for (const name of excludedProjects ?? []) {
+    if (!resume.projects.some((project) => project.name === name)) continue;
+    change("projects", name, "(left out of this copy)", "You chose to leave this project out for this job. It's still in your original resume.", { kind: "removeProject", name });
+  }
 
   // ---------- 1. Headline (by rules; the AI's choice replaces it in step 3) ----------
   const titles = [...new Map([start.personalInfo.headline, ...start.experience.map((job) => job.role)].filter(Boolean).map((title) => [title.toLowerCase(), title])).values()];
@@ -226,6 +314,22 @@ export default async function tailorResume(original, analysis, { jobDescription,
     );
   }
 
+  // Beyond the per-job limit, bullets that show nothing the job asks for are hidden (kept in
+  // hiddenBullets, so they can be restored); relevant bullets always stay
+  const limit = Number.isInteger(maxBulletsPerJob) && maxBulletsPerJob > 0 ? maxBulletsPerJob : null;
+  for (const job of limit ? resume.experience : []) {
+    const hide = job.bullets.filter((bullet, index) => index >= limit && relevance(plain(bullet)) === 0);
+    if (!hide.length) continue;
+    change(
+      "experience",
+      `${jobLabel(job)}: ${job.bullets.length} bullets`,
+      `${jobLabel(job)}: ${job.bullets.length - hide.length} bullets (${hide.length} hidden)`,
+      `Over your limit of ${limit} per job, and ${hide.length === 1 ? "it shows" : "they show"} nothing this job asks for: hidden, not deleted. Restore ${hide.length === 1 ? "it" : "them"} in the editor.`,
+      { kind: "hideBullets", jobId: job._id, bullets: hide },
+      { original: hide.map(plain) }
+    );
+  }
+
   // ---------- 3. Headline, summary and bullet wording (AI, checked; rules otherwise) ----------
   const bulletList = [];
   const jobs = resume.experience.map((job) => {
@@ -248,7 +352,7 @@ export default async function tailorResume(original, analysis, { jobDescription,
   const originalSummary = plain(start.summary);
   // Years of experience: only ever exactly as the summary states them ("1.5+", "two")
   const years = statedYears(originalSummary);
-  const ai = useAI ? await tailorWithAI({ resumeText, jobDescription, analysis, headlines: allowedHeadlines, years, jobs }) : null;
+  const ai = useAI ? await tailorWithAI({ resumeText, jobDescription, analysis, headlines: allowedHeadlines, years, jobs, featured, language }) : null;
   const rewritten = new Set();
 
   // Headline: the AI's choice when it's a title the person has held (plus a short focus that
@@ -260,7 +364,7 @@ export default async function tailorResume(original, analysis, { jobDescription,
     const focus = rest.join(" | ").trim();
     if (!focus) return { value: title };
     if (focus.split(/\s+/).length > MAX_FOCUS_WORDS) return { problem: "focus too long" };
-    const problem = checkRewrite(resumeText, `${title} | ${focus}`, knownText);
+    const problem = check(resumeText, `${title} | ${focus}`, knownText);
     return problem ? { problem } : { value: `${title} | ${focus}` };
   };
   let headline = null;
@@ -283,7 +387,7 @@ export default async function tailorResume(original, analysis, { jobDescription,
   const setSummary = (text, reason) =>
     change("summary", originalSummary || "(no summary)", text, reason, { kind: "summary", value: `<p>${escapeHtml(text)}</p>` }, { original: [originalSummary], optimized: [text] });
   const checkSummary = (text) =>
-    (text.length > MAX_SUMMARY_CHARACTERS ? "too long" : null) ?? checkRewrite(resumeText, text, knownText) ?? yearsProblem(text, years);
+    (text.length > MAX_SUMMARY_CHARACTERS ? "too long" : null) ?? check(resumeText, text, knownText) ?? yearsProblem(text, years, language);
 
   let summaryDone = false;
   if (ai?.summary?.trim()) {
@@ -291,13 +395,14 @@ export default async function tailorResume(original, analysis, { jobDescription,
     const problem = checkSummary(text);
     if (problem) reject("summary", "summary", text, problem);
     else {
-      setSummary(text, `Written for this job: leads with ${listOf(jobSkillsShown.slice(0, 3)) || "what it asks for"}, using only facts from your resume.`);
+      setSummary(text, `Written for this job: leads with ${listOf(featured.slice(0, 3)) || "what it asks for"}, using only facts from your resume.`);
       summaryDone = true;
     }
   }
-  if (!summaryDone) {
+  // By rules (English only: a German copy keeps its summary as written when the AI can't help)
+  if (!summaryDone && language === "en") {
     const lead = resume.personalInfo.headline || start.experience[0]?.role;
-    const skills = jobSkillsShown.filter((skill) => findKnownSkills(skill).length).slice(0, 4);
+    const skills = featured.filter((skill) => findKnownSkills(skill).length).slice(0, 4);
     if (lead && skills.length) {
       const opening = `${lead}${years ? ` with ${years} years of experience` : ""} in ${listOf(skills)}.`;
       // Replace the summary's own opening sentence (whole) when it's the same kind of introduction
@@ -315,7 +420,7 @@ export default async function tailorResume(original, analysis, { jobDescription,
     const original = bulletList.find((bullet) => bullet.id === rewrite.id);
     const after = rewrite.after?.trim();
     if (!original?.selected || !after || after === original.text || rewritten.has(original.id)) continue;
-    const problem = checkRewrite(original.text, after, knownText, { allowedSkills: skillsOfJob.get(original.jobId) });
+    const problem = check(original.text, after, knownText, { allowedSkills: skillsOfJob.get(original.jobId) });
     if (problem) {
       reject(rewrite.id, "bullet", after, problem);
       continue;
@@ -366,8 +471,11 @@ export default async function tailorResume(original, analysis, { jobDescription,
       { optimized: [sortedProjects[0].project.name] }
     );
   }
+  // Does a project match the job better than any job does? (Projects then go first, in step 6)
+  const bestProject = Math.max(0, ...rankedProjects.map((entry) => entry.score));
+  const bestJob = Math.max(0, ...resume.experience.map((job) => relevance([job.role, job.subtitle, ...job.bullets.map(plain)].filter(Boolean).join("\n"))));
 
-  // ---------- 5. Skills: add what the resume already shows, then job skills first ----------
+  // ---------- 5. Skills: add what the resume already shows, then featured and job skills first ----------
   const linesOutsideSkills = lines.filter((line) => line.section !== "skills");
   for (const skill of [...analysis.mustHave, ...analysis.niceToHave]) {
     if (resume.skills.some((existing) => skillMatcher(skill)(existing))) continue;
@@ -382,18 +490,34 @@ export default async function tailorResume(original, analysis, { jobDescription,
       { original: [evidence.text], optimized: [skill] }
     );
   }
-  const jobOrder = [...analysis.mustHave, ...analysis.niceToHave];
+  // Featured skills first (in the user's order), then the job's other skills, then the rest
+  const order = [...featured, ...[...analysis.mustHave, ...analysis.niceToHave].filter((skill) => !featured.some((other) => sameText(other, skill)))];
   const skillRank = (skill) => {
-    const index = jobOrder.findIndex((term) => skillMatcher(term)(skill));
+    const index = order.findIndex((term) => skillMatcher(term)(skill));
     return index < 0 ? Infinity : index;
   };
   const sortedSkills = resume.skills.map((skill, index) => ({ skill, index })).sort((a, b) => skillRank(a.skill) - skillRank(b.skill) || a.index - b.index).map((entry) => entry.skill);
   if (sortedSkills.some((skill, i) => skill !== resume.skills[i])) {
-    change("skills", resume.skills.join(", "), sortedSkills.join(", "), "The skills this job asks for are now first.", { kind: "skillOrder", skills: sortedSkills });
+    change(
+      "skills",
+      resume.skills.join(", "),
+      sortedSkills.join(", "),
+      Array.isArray(featuredSkills) ? "The skills you chose to feature are first, then the job's other skills." : "The skills this job asks for are now first.",
+      { kind: "skillOrder", skills: sortedSkills }
+    );
   }
 
-  // ---------- 6. Layout ----------
-  if (!isAtsFriendly(resume.template, resume.design)) {
+  // ---------- 6. Layout (the template first: changing it resets the other design settings) ----------
+  const chosen = typeof template === "string" && /^[a-z0-9-]{1,60}$/.test(template) ? template : null;
+  if (chosen && chosen !== resume.template) {
+    change(
+      "layout",
+      `${resume.template || "Current"} template`,
+      `${chosen} template`,
+      isAtsFriendly(chosen, {}) ? "The template you chose for this job." : "The template you chose for this job (note: it isn't the easiest layout for an ATS to read).",
+      { kind: "layout", template: chosen }
+    );
+  } else if (!chosen && !isAtsFriendly(resume.template, resume.design)) {
     change(
       "layout",
       `${resume.template || "Current"} template${resume.design?.columns === 2 ? ", two columns" : ""}`,
@@ -402,11 +526,40 @@ export default async function tailorResume(original, analysis, { jobDescription,
       { kind: "layout", template: OPTIMIZED_TEMPLATE }
     );
   }
-  if (!resume.design.fitOnePage) {
-    change("layout", "Fit to one page: off", "Fit to one page: on", "Recruiters skim; one page keeps the most relevant experience in view.", { kind: "design", key: "fitOnePage", value: true });
+  const fit = fitOnePage !== false;
+  if (Boolean(resume.design.fitOnePage) !== fit) {
+    change(
+      "layout",
+      `Fit to one page: ${fit ? "off" : "on"}`,
+      `Fit to one page: ${fit ? "on" : "off"}`,
+      fit ? "Recruiters skim; one page keeps the most relevant experience in view." : "You chose not to fit this copy to one page.",
+      { kind: "design", key: "fitOnePage", value: fit }
+    );
+  }
+  const sections = resume.design.sectionOrder ?? STANDARD_SECTION_ORDER;
+  if (resume.projects.length && bestProject > bestJob && sections.indexOf("projects") > sections.indexOf("experience")) {
+    const withoutProjects = sections.filter((id) => id !== "projects");
+    const value = [...withoutProjects.slice(0, withoutProjects.indexOf("experience")), "projects", ...withoutProjects.slice(withoutProjects.indexOf("experience"))];
+    change("layout", "Experience, then Projects", "Projects, then Experience", "Your projects show more of what this job asks for than your jobs do, so they come first.", { kind: "design", key: "sectionOrder", value });
+  }
+  if (language === "de") {
+    change(
+      "layout",
+      "English section headings",
+      "German section headings (Profil, Berufserfahrung, Ausbildung, Kenntnisse, Projekte)",
+      ai ? "This copy is in German." : "This copy is in German. AI is off, so your own text stays as written; only the headings are German.",
+      { kind: "design", key: "sectionHeadings", value: { ...(resume.design.sectionHeadings ?? {}), ...GERMAN_HEADINGS } }
+    );
   }
 
-  return { original: start, resume, changes, rejectedRewrites: rejected, tailoredWith: ai ? "rules+ai" : "rules", strength };
+  const differences = describeDifferences(changes, start, resume, {
+    aiUsed: Boolean(ai),
+    strength,
+    rejected: rejected.length,
+    skillsShown: jobSkillsShown.length,
+    jobSkills: analysis.mustHave.length + analysis.niceToHave.length,
+  });
+  return { original: start, resume, changes, rejectedRewrites: rejected, tailoredWith: ai ? "rules+ai" : "rules", strength, language, differences };
 }
 
 function escapeHtml(text) {

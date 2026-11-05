@@ -28,6 +28,8 @@ import { htmlToText } from "../../utils/richText.js";
 //   design         { key, value }            set one design setting (e.g. fitOnePage)
 //   addBullet      { jobId, value }          add a bullet to a job (a skill the user confirmed)
 //   addProjectText { name, value }           add a sentence to a project's description (the same)
+//   hideBullets    { jobId, bullets }        move these bullets to the job's hiddenBullets (kept)
+//   removeProject  { name }                  leave a project out of the copy (the user excluded it)
 
 // Design settings kept when the layout is changed (none of them affect ATS parsing)
 export const KEPT_DESIGN = ["pageSize", "hiddenSections", "accentColor"];
@@ -123,6 +125,17 @@ export function applyOp(content, op) {
       if (project && !htmlToText(project.description ?? "").includes(op.value)) project.description = `${project.description ?? ""}${paragraph}`;
       break;
     }
+    case "hideBullets": {
+      const job = findJob(content, op.jobId);
+      if (!job) break;
+      const hide = job.bullets.filter((bullet) => op.bullets.some((other) => sameBullet(bullet, other)));
+      job.bullets = job.bullets.filter((bullet) => !hide.includes(bullet));
+      job.hiddenBullets = [...(job.hiddenBullets ?? []), ...hide];
+      break;
+    }
+    case "removeProject":
+      content.projects = content.projects.filter((project) => project.name !== op.name);
+      break;
     case "layout": {
       const headings = content.design.sectionHeadings;
       content.template = op.template;
