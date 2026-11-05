@@ -13,6 +13,7 @@ import ScoreRing from "../components/ats/ScoreRing";
 import { fitTone } from "../components/ats/atsHelpers";
 import TailorOptions from "../components/tailor/TailorOptions";
 import { STRENGTHS, initialChoices, toRequestOptions } from "../components/tailor/tailorChoices";
+import { pageClass } from "../components/ui/pageLayout";
 
 // "Tailor to a job" (/tailor, /tailor/jobs/:jobId). Uses the /api/jobs routes:
 //   1. Paste a job description (or reuse a saved job) and pick the base resume
@@ -149,7 +150,7 @@ function TailorFlow() {
   if (resumes === null) return <Loader text="Loading your resumes..." />;
 
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+    <div className={pageClass()}>
       <div className="flex items-center gap-3">
         <span className="grid size-10 place-items-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
           <Target className="size-5" aria-hidden="true" />
@@ -543,7 +544,7 @@ function JobReport({ jobId }) {
 
   if (failed) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16 text-center">
+      <div className={pageClass("narrow", "text-center")}>
         <p className="font-medium text-slate-900 dark:text-white">We couldn't open this job.</p>
         <Link to="/tailor" className="btn-primary mt-6">
           Tailor to a job
@@ -557,7 +558,7 @@ function JobReport({ jobId }) {
   const setReport = (matchReport, changes = {}) => setJob((previous) => ({ ...previous, matchReport, ...changes }));
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+    <div className={pageClass()}>
       <Link to="/tailor" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
         <ArrowLeft className="size-4" aria-hidden="true" />
         Tailor to a job

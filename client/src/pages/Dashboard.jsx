@@ -12,6 +12,7 @@ import DeleteApplicationModal from "../components/DeleteApplicationModal";
 import EmptyState from "../components/EmptyState";
 import ImportResumeModal from "../components/ImportResumeModal";
 import { clearPendingImport, getPendingImport } from "../utils/resumeFile";
+import { pageClass } from "../components/ui/pageLayout";
 
 // "Good morning" / "Good afternoon" / "Good evening" based on the current hour
 const getGreeting = () => {
@@ -171,7 +172,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className={pageClass()}>
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>

@@ -1,0 +1,174 @@
+{
+  "src/components/ApplicationCard.jsx": {
+    "palette": 16
+  },
+  "src/components/ConfirmModal.jsx": {
+    "palette": 9
+  },
+  "src/components/DeleteApplicationModal.jsx": {
+    "palette": 24
+  },
+  "src/components/EmptyState.jsx": {
+    "palette": 10
+  },
+  "src/components/ErrorBoundary.jsx": {
+    "arbitrary": 1,
+    "palette": 4
+  },
+  "src/components/ImportResumeModal.jsx": {
+    "palette": 57
+  },
+  "src/components/Loader.jsx": {
+    "arbitrary": 1,
+    "palette": 6
+  },
+  "src/components/Modal.jsx": {
+    "palette": 5
+  },
+  "src/components/PasswordInput.jsx": {
+    "palette": 4
+  },
+  "src/components/ResumeCard.jsx": {
+    "arbitrary": 2,
+    "palette": 63
+  },
+  "src/components/ResumePreview.jsx": {
+    "palette": 3
+  },
+  "src/components/ResumeSheet.jsx": {
+    "hex": 1,
+    "arbitrary": 2
+  },
+  "src/components/Switch.jsx": {
+    "palette": 5
+  },
+  "src/components/ThemeToggle.jsx": {
+    "palette": 7
+  },
+  "src/components/ats/AnalyzeProgress.jsx": {
+    "palette": 24
+  },
+  "src/components/ats/AtsResults.jsx": {
+    "arbitrary": 4,
+    "palette": 153
+  },
+  "src/components/ats/CategoryCard.jsx": {
+    "arbitrary": 2,
+    "palette": 41
+  },
+  "src/components/ats/ResumeSnapshot.jsx": {
+    "palette": 2
+  },
+  "src/components/ats/ScoreRing.jsx": {
+    "palette": 6
+  },
+  "src/components/ats/atsHelpers.js": {
+    "palette": 35
+  },
+  "src/components/editor/CollapsibleSection.jsx": {
+    "palette": 10
+  },
+  "src/components/editor/DesignPanel.jsx": {
+    "arbitrary": 4,
+    "palette": 78
+  },
+  "src/components/editor/ExperienceForm.jsx": {
+    "palette": 13
+  },
+  "src/components/editor/ItemsEditor.jsx": {
+    "palette": 12
+  },
+  "src/components/editor/LayoutCard.jsx": {
+    "arbitrary": 3,
+    "palette": 39
+  },
+  "src/components/editor/ListEditor.jsx": {
+    "palette": 32
+  },
+  "src/components/editor/PersonalInfoForm.jsx": {
+    "arbitrary": 1
+  },
+  "src/components/editor/PhotoCropModal.jsx": {
+    "palette": 6
+  },
+  "src/components/editor/PhotoUpload.jsx": {
+    "palette": 30
+  },
+  "src/components/editor/RichTextEditor.jsx": {
+    "palette": 23
+  },
+  "src/components/editor/SectionOrderList.jsx": {
+    "palette": 29
+  },
+  "src/components/editor/SkillsForm.jsx": {
+    "palette": 30
+  },
+  "src/components/editor/SummaryForm.jsx": {
+    "palette": 4
+  },
+  "src/components/editor/TemplatePicker.jsx": {
+    "arbitrary": 1,
+    "palette": 33
+  },
+  "src/components/landing/HeroSheet.jsx": {
+    "arbitrary": 8,
+    "palette": 5
+  },
+  "src/components/landing/InkNavbar.jsx": {
+    "arbitrary": 3,
+    "palette": 15
+  },
+  "src/components/landing/TemplateStrip.jsx": {
+    "arbitrary": 5,
+    "palette": 6
+  },
+  "src/components/landing/Wordmark.jsx": {
+    "arbitrary": 1,
+    "palette": 2
+  },
+  "src/components/tailor/TailorOptions.jsx": {
+    "palette": 65
+  },
+  "src/pages/AtsChecker.jsx": {
+    "palette": 103
+  },
+  "src/pages/AtsReview.jsx": {
+    "arbitrary": 1,
+    "palette": 94
+  },
+  "src/pages/CoverLetter.jsx": {
+    "arbitrary": 5,
+    "palette": 99
+  },
+  "src/pages/Dashboard.jsx": {
+    "arbitrary": 1,
+    "palette": 24
+  },
+  "src/pages/Editor.jsx": {
+    "arbitrary": 2,
+    "palette": 113
+  },
+  "src/pages/ForgotPassword.jsx": {
+    "palette": 30
+  },
+  "src/pages/Landing.jsx": {
+    "arbitrary": 21,
+    "palette": 44
+  },
+  "src/pages/Login.jsx": {
+    "palette": 20
+  },
+  "src/pages/NotFound.jsx": {
+    "palette": 10
+  },
+  "src/pages/Register.jsx": {
+    "palette": 16
+  },
+  "src/pages/ResetPassword.jsx": {
+    "palette": 22
+  },
+  "src/pages/Tailor.jsx": {
+    "arbitrary": 4,
+    "palette": 233
+  }
+}

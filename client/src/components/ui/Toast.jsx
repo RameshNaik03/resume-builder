@@ -1,6 +1,6 @@
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
 
-// "Quiet professional" toast card (Phase UI-0: shown at /dev/ui, not used by pages yet).
+// "Quiet professional" toast card.
 // react-hot-toast positions and times it: toast.custom((t) => <Toast t={t} tone="success" message="..." />)
 // (or `t` left out for a static preview). One line, an icon in the tone's colour, a close button.
 const TONES = {

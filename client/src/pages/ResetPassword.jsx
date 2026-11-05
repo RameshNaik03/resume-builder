@@ -7,6 +7,7 @@ import api from "../api/axios";
 import getErrorMessage from "../utils/getErrorMessage";
 import usePageTitle from "../hooks/usePageTitle";
 import PasswordInput from "../components/PasswordInput";
+import { pageClass } from "../components/ui/pageLayout";
 
 // What to show when the link itself is bad (the server sends one of these codes)
 const LINK_ERRORS = {
@@ -50,7 +51,7 @@ export default function ResetPassword() {
 
   if (linkError) {
     return (
-      <div className="flex justify-center px-4 py-16">
+      <div className={pageClass("narrow")}>
         <div className="card w-full max-w-md p-8 text-center" role="alert">
           <LinkIcon className="mx-auto size-10 text-red-500 dark:text-red-400" aria-hidden="true" />
           <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">{linkError.title}</h1>
@@ -69,7 +70,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="flex justify-center px-4 py-16">
+    <div className={pageClass("narrow")}>
       <div className="card w-full max-w-md p-8">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Choose a new password</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">After saving, log in with your new password.</p>

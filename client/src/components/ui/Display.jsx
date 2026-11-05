@@ -1,6 +1,6 @@
 import { AlertTriangle, CheckCircle2, Info, XCircle } from "lucide-react";
 
-// "Quiet professional" display components (Phase UI-0: shown at /dev/ui, not used by pages yet):
+// "Quiet professional" display components:
 // Card, Badge, Alert, Tooltip, EmptyState, PageHeader and StatCard.
 
 // A surface with a thin border. interactive: lifts slightly on hover (a whole-card link).

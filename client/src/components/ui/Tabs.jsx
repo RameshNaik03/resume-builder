@@ -1,6 +1,6 @@
 import { useRef } from "react";
 
-// "Quiet professional" tabs (Phase UI-0: shown at /dev/ui, not used by pages yet).
+// "Quiet professional" tabs.
 //   variant "underline" - page-level views (Report / What the ATS sees)
 //   variant "segmented" - a compact switch inside a card (Content / Design, Upload / My resumes)
 // tabs: [{ id, label, count? }]; value / onChange: the selected id. Arrow keys move between tabs.

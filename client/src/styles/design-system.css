@@ -1,0 +1,133 @@
+/* "Quiet professional": the app's design system and its only source of styling.
+   Raw values are CSS variables (light on :root and .light, dark on .dark); Tailwind maps them to
+   utilities with @theme inline, so `bg-canvas`, `text-fg`, `border-line`, `shadow-raised`,
+   `font-title` and the rest read the variable where they're used (a .light or .dark wrapper
+   switches its subtree). Components: src/components/ui. Reference: /dev/ui (dev only).
+   Page code uses these tokens only: no raw hex colours, arbitrary values or Tailwind palette
+   colours (scripts/check-styles.mjs, run by npm run lint). */
+
+:root,
+.light {
+  --canvas: #f8f6f1; /* Page background */
+  --surface: #fffdf9; /* Cards, inputs, dialogs */
+  --surface-2: #f1eee7; /* Quiet fills: segmented controls, hovers */
+  --fg: #1c1b19; /* Text and icons */
+  --fg-muted: #625d55; /* Secondary text (6:1 on canvas) */
+  --fg-subtle: #8b857b; /* Placeholders and disabled text only */
+  --line: #e5e0d6; /* Borders and dividers */
+  --line-strong: #cfc8bb; /* Input borders, hover borders */
+  --accent: #2b4a6f; /* Ink blue: primary actions, links, focus, selection */
+  --accent-strong: #213a58; /* Accent hover / pressed */
+  --accent-soft: #e6ecf3; /* Selected rows, accent badges */
+  --on-accent: #ffffff; /* Text on the accent */
+  --success: #2f6b3f;
+  --success-soft: #e8f1e9;
+  --warning: #8a5a12;
+  --warning-soft: #f7eedb;
+  --danger: #a3392b;
+  --danger-soft: #f8e6e2;
+  --elevation-soft: 0 1px 2px rgb(28 27 25 / 0.04), 0 1px 3px rgb(28 27 25 / 0.04);
+  --elevation-raised: 0 2px 4px rgb(28 27 25 / 0.04), 0 8px 24px -6px rgb(28 27 25 / 0.1);
+  --elevation-overlay: 0 4px 8px rgb(28 27 25 / 0.05), 0 24px 48px -12px rgb(28 27 25 / 0.22);
+  color-scheme: light;
+}
+
+.dark {
+  --canvas: #151412;
+  --surface: #1d1c19;
+  --surface-2: #26241f;
+  --fg: #ece7dd;
+  --fg-muted: #a8a196;
+  --fg-subtle: #79736a;
+  --line: #312e29;
+  --line-strong: #46423b;
+  --accent: #9cb7d8;
+  --accent-strong: #b8cce5;
+  --accent-soft: #1d2633;
+  --on-accent: #0e1726;
+  --success: #8cc79a;
+  --success-soft: #1c2b20;
+  --warning: #e0b45f;
+  --warning-soft: #2f2616;
+  --danger: #ef9a8b;
+  --danger-soft: #34201c;
+  --elevation-soft: 0 1px 2px rgb(0 0 0 / 0.3);
+  --elevation-raised: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -6px rgb(0 0 0 / 0.45);
+  --elevation-overlay: 0 24px 48px -12px rgb(0 0 0 / 0.6);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --shadow-soft: var(--elevation-soft);
+  --shadow-raised: var(--elevation-raised);
+  --shadow-overlay: var(--elevation-overlay);
+}
+
+@theme {
+  /* A refined serif for large page headings only; Inter (font-sans) for everything else */
+  --font-title: "Newsreader", "Iowan Old Style", Georgia, serif;
+}
+
+/* The type scale: serif for page-level headings, Inter for the rest */
+@utility type-display {
+  font-family: var(--font-title);
+  font-size: 2.75rem; /* 44px */
+  line-height: 1.12;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+@utility type-h1 {
+  font-family: var(--font-title);
+  font-size: 2.125rem; /* 34px */
+  line-height: 1.18;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+@utility type-h2 {
+  font-family: var(--font-title);
+  font-size: 1.625rem; /* 26px */
+  line-height: 1.25;
+  font-weight: 500;
+}
+@utility type-h3 {
+  font-size: 1.0625rem; /* 17px, Inter */
+  line-height: 1.5;
+  font-weight: 600;
+}
+@utility type-body {
+  font-size: 0.9375rem; /* 15px: forms, cards, lists */
+  line-height: 1.6;
+}
+@utility type-small {
+  font-size: 0.8125rem; /* 13px: help text, metadata */
+  line-height: 1.5;
+}
+@utility type-label {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.4;
+  font-weight: 500;
+}
+@utility type-eyebrow {
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}

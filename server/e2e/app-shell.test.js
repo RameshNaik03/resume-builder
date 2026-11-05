@@ -1,0 +1,72 @@
+// Browser test of the AppShell (the top navigation of every page but the landing page):
+//   logged out: Log in / Sign up; logged in: the main links (the current one marked), the
+//   dark mode toggle, and the account menu (name, email, Log out). On a phone the main links
+//   move into the account menu, which opens and closes from the keyboard too.
+//
+// Run: node --test e2e/app-shell.test.js (in server/; part of npm run test:e2e)
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { APP, logIn, startStack } from "./helpers.js";
+
+test("AppShell", async (t) => {
+  const { browser, register } = await startStack(t, "appshell");
+  const token = await register("shell");
+  const page = await browser.newPage();
+  await page.setViewport({ width: 1280, height: 800 });
+  const bar = () => page.$eval("header", (header) => header.innerText);
+  const visible = (selector) => page.$$eval(selector, (elements) => elements.filter((element) => element.offsetParent !== null).map((element) => element.textContent.trim()));
+
+  await t.test("logged out: Log in and Sign up, no app links", async () => {
+    await logIn(page, null);
+    await page.goto(`${APP}/login`, { waitUntil: "networkidle0" });
+    const text = await bar();
+    assert.match(text, /Log in/);
+    assert.match(text, /Sign up/);
+    assert.doesNotMatch(text, /Dashboard/);
+  });
+
+  await t.test("logged in: the main links, with the current page marked", async () => {
+    await logIn(page, token);
+    await page.goto(`${APP}/dashboard`, { waitUntil: "networkidle0" });
+    assert.deepEqual(await visible('nav[aria-label="Main"] a'), ["Dashboard", "Tailor to a job", "ATS checker"]);
+    assert.equal(await page.$eval('nav[aria-label="Main"] a[aria-current="page"]', (a) => a.textContent), "Dashboard");
+    await page.click('nav[aria-label="Main"] a[href="/tailor"]');
+    await page.waitForFunction(() => location.pathname === "/tailor");
+    assert.equal(await page.$eval('nav[aria-label="Main"] a[aria-current="page"]', (a) => a.textContent), "Tailor to a job");
+  });
+
+  await t.test("the dark mode toggle switches the theme and remembers it", async () => {
+    const dark = () => page.evaluate(() => document.documentElement.classList.contains("dark"));
+    const before = await dark();
+    await page.click('header button[aria-label^="Switch to"]');
+    assert.equal(await dark(), !before);
+    assert.equal(await page.evaluate(() => localStorage.getItem("theme")), before ? "light" : "dark");
+  });
+
+  await t.test("the account menu: name and email, Escape closes it, Log out logs out", async () => {
+    await page.click('button[aria-label="Account menu"]');
+    const menu = await page.$eval('[role="menu"]', (element) => element.innerText);
+    assert.match(menu, /Test User/);
+    assert.match(menu, /@example\.com/);
+    assert.equal(await page.evaluate(() => document.activeElement.textContent.trim()), "Log out", "the first visible item has focus");
+    await page.keyboard.press("Escape");
+    assert.equal(await page.$('[role="menu"]'), null, "closed");
+    assert.equal(await page.evaluate(() => document.activeElement.getAttribute("aria-label")), "Account menu", "focus back on the trigger");
+
+    await page.click('button[aria-label="Account menu"]');
+    await page.evaluate(() => [...document.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent.trim() === "Log out").click());
+    await page.waitForFunction(() => location.pathname === "/" && !localStorage.getItem("token"), { timeout: 10000 });
+  });
+
+  await t.test("on a phone the main links are in the account menu", async () => {
+    await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+    await logIn(page, token);
+    await page.goto(`${APP}/dashboard`, { waitUntil: "networkidle0" });
+    assert.deepEqual(await visible('nav[aria-label="Main"] a'), [], "no links in the bar");
+    await page.$eval('button[aria-label="Account menu"]', (button) => button.click());
+    assert.deepEqual(await visible('[role="menuitem"]'), ["Dashboard", "Tailor to a job", "ATS checker", "Log out"]);
+    await page.evaluate(() => [...document.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent.trim() === "ATS checker").click());
+    await page.waitForFunction(() => location.pathname === "/ats-checker");
+    assert.equal(await page.$('[role="menu"]'), null, "the menu closes after choosing");
+  });
+});

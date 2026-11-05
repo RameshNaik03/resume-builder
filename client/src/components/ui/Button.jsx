@@ -1,6 +1,6 @@
 import { Loader2 } from "lucide-react";
 
-// The "quiet professional" button (Phase UI-0: shown at /dev/ui, not used by pages yet).
+// The "quiet professional" button.
 //   variant - "primary" (one per view: the main action), "secondary", "ghost" (toolbars),
 //             "danger" (destructive, after a confirmation), "link" (inline text action)
 //   size    - "sm" (32px: cards, toolbars), "md" (36px: default), "lg" (44px: page actions)

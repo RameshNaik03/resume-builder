@@ -1,12 +1,13 @@
 import { Link } from "react-router-dom";
 import usePageTitle from "../hooks/usePageTitle";
+import { pageClass } from "../components/ui/pageLayout";
 
 // Shown for any URL that doesn't match a route
 export default function NotFound() {
   usePageTitle("Page not found");
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center px-4 py-16">
+    <div className={pageClass("narrow", "text-center")}>
       <div className="text-center">
         <p className="bg-linear-to-r from-blue-600 via-indigo-600 to-cyan-500 bg-clip-text dark:from-blue-400 dark:via-indigo-400 dark:to-cyan-300 text-7xl font-extrabold tracking-tight text-transparent sm:text-8xl">
           404

@@ -16,6 +16,7 @@ import Loader from "../components/Loader";
 import ConfirmModal from "../components/ConfirmModal";
 import ResumePreview from "../components/ResumePreview";
 import RichTextEditor from "../components/editor/RichTextEditor";
+import { pageClass } from "../components/ui/pageLayout";
 
 // Cover letters (/cover-letters/new?job=<jobId> and /cover-letters/:id), via /api/cover-letters:
 //   new    - generate a letter for a tailored job: tone, length, language, the recipient (name and
@@ -288,7 +289,7 @@ function NewLetter() {
 
   if (failed) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16 text-center">
+      <div className={pageClass("narrow", "text-center")}>
         <p className="font-medium text-slate-900 dark:text-white">Choose a job first: cover letters are written for a tailored resume and its job.</p>
         <Link to="/tailor" className="btn-primary mt-6">
           Tailor to a job
@@ -300,7 +301,7 @@ function NewLetter() {
   const role = [job.analysis.title, job.analysis.company].filter(Boolean).join(" – ") || "this job";
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+    <div className={pageClass()}>
       <Link to={`/tailor/jobs/${jobId}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
         <ArrowLeft className="size-4" aria-hidden="true" />
         Back to the match report
@@ -462,7 +463,7 @@ function LetterEditor({ id }) {
 
   if (failed) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16 text-center">
+      <div className={pageClass("narrow", "text-center")}>
         <p className="font-medium text-slate-900 dark:text-white">We couldn't open this cover letter.</p>
         <Link to="/dashboard" className="btn-primary mt-6">
           Back to dashboard

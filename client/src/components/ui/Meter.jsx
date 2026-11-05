@@ -1,4 +1,4 @@
-// "Quiet professional" meters (Phase UI-0: shown at /dev/ui, not used by pages yet).
+// "Quiet professional" meters.
 // tone: "accent" (a job match), or "auto" to colour by the ATS scale (70+ success, 50-69
 // warning, else danger). Colour is never the only signal: the number and label are always shown.
 const toneFor = (value, tone) => (tone !== "auto" ? tone : value >= 70 ? "success" : value >= 50 ? "warning" : "danger");

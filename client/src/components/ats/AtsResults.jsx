@@ -16,6 +16,7 @@ import {
 import toast from "../../utils/toast";
 import ScoreRing from "./ScoreRing";
 import CategoryCard from "./CategoryCard";
+import { pageClass } from "../ui/pageLayout";
 
 const CTA_THRESHOLD = 70; // Below this score, offer an ATS-friendly version
 
@@ -327,7 +328,7 @@ export default function AtsResults({ result, onReset, onGenerate, generating }) 
   const { file } = result;
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className={pageClass()}>
       <button
         type="button"
         onClick={onReset}

@@ -1,11 +1,13 @@
 @import "tailwindcss";
+@import "./styles/design-system.css";
 
 /* Dark mode is switched by a "dark" class on <html> (see utils/theme.js),
    so "dark:" utilities follow the toggle instead of only the system setting */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Fonts are loaded in index.html.
-   font-sans (Inter) is the default; font-display (Plus Jakarta Sans) is for big headings. */
+/* Fonts are loaded in index.html. font-sans (Inter) is the default and font-title (Newsreader,
+   styles/design-system.css) is for page headings; font-display (Plus Jakarta Sans) and the
+   "Paper & Ink" fonts below are legacy, removed as their pages move to the design system. */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -71,132 +73,6 @@
   }
 }
 
-/* ---------- "Quiet professional" design system (Phase UI-0) ----------
-   Proposed tokens for the whole app, shown at /dev/ui (dev only). No page uses them yet.
-   Colours: warm off-white canvas, near-black ink, one accent (ink blue) used sparingly, muted
-   secondary text, thin lines. Each has a dark-mode value below (.dark), and .light restores
-   the light values inside a dark page (for side-by-side previews). */
-@theme {
-  --color-canvas: #f8f6f1; /* Page background */
-  --color-surface: #fffdf9; /* Cards, inputs, dialogs */
-  --color-surface-2: #f1eee7; /* Quiet fills: segmented controls, table headers, hovers */
-  --color-fg: #1c1b19; /* Text and icons */
-  --color-fg-muted: #625d55; /* Secondary text (6:1 on canvas) */
-  --color-fg-subtle: #8b857b; /* Placeholders and disabled text only (not for reading) */
-  --color-line: #e5e0d6; /* Borders and dividers */
-  --color-line-strong: #cfc8bb; /* Input borders, hover borders */
-  --color-accent: #2b4a6f; /* Primary actions, links, focus, selection */
-  --color-accent-strong: #213a58; /* Accent hover / pressed */
-  --color-accent-soft: #e6ecf3; /* Selected rows, accent badges */
-  --color-on-accent: #ffffff; /* Text on the accent */
-  --color-success: #2f6b3f;
-  --color-success-soft: #e8f1e9;
-  --color-warning: #8a5a12;
-  --color-warning-soft: #f7eedb;
-  --color-danger: #a3392b;
-  --color-danger-soft: #f8e6e2;
-
-  /* A refined serif for large page headings only; Inter for everything else */
-  --font-title: "Newsreader", "Iowan Old Style", Georgia, serif;
-
-  /* Thin borders do most of the work; shadows only lift what floats */
-  --shadow-soft: 0 1px 2px rgb(28 27 25 / 0.04), 0 1px 3px rgb(28 27 25 / 0.04);
-  --shadow-raised: 0 2px 4px rgb(28 27 25 / 0.04), 0 8px 24px -6px rgb(28 27 25 / 0.1);
-  --shadow-overlay: 0 4px 8px rgb(28 27 25 / 0.05), 0 24px 48px -12px rgb(28 27 25 / 0.22);
-}
-.dark {
-  --color-canvas: #151412;
-  --color-surface: #1d1c19;
-  --color-surface-2: #26241f;
-  --color-fg: #ece7dd;
-  --color-fg-muted: #a8a196;
-  --color-fg-subtle: #79736a;
-  --color-line: #312e29;
-  --color-line-strong: #46423b;
-  --color-accent: #9cb7d8;
-  --color-accent-strong: #b8cce5;
-  --color-accent-soft: #1d2633;
-  --color-on-accent: #0e1726;
-  --color-success: #8cc79a;
-  --color-success-soft: #1c2b20;
-  --color-warning: #e0b45f;
-  --color-warning-soft: #2f2616;
-  --color-danger: #ef9a8b;
-  --color-danger-soft: #34201c;
-  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -6px rgb(0 0 0 / 0.45);
-  --shadow-overlay: 0 24px 48px -12px rgb(0 0 0 / 0.6);
-}
-.light {
-  --color-canvas: #f8f6f1;
-  --color-surface: #fffdf9;
-  --color-surface-2: #f1eee7;
-  --color-fg: #1c1b19;
-  --color-fg-muted: #625d55;
-  --color-fg-subtle: #8b857b;
-  --color-line: #e5e0d6;
-  --color-line-strong: #cfc8bb;
-  --color-accent: #2b4a6f;
-  --color-accent-strong: #213a58;
-  --color-accent-soft: #e6ecf3;
-  --color-on-accent: #ffffff;
-  --color-success: #2f6b3f;
-  --color-success-soft: #e8f1e9;
-  --color-warning: #8a5a12;
-  --color-warning-soft: #f7eedb;
-  --color-danger: #a3392b;
-  --color-danger-soft: #f8e6e2;
-  --shadow-soft: 0 1px 2px rgb(28 27 25 / 0.04), 0 1px 3px rgb(28 27 25 / 0.04);
-  --shadow-raised: 0 2px 4px rgb(28 27 25 / 0.04), 0 8px 24px -6px rgb(28 27 25 / 0.1);
-  --shadow-overlay: 0 4px 8px rgb(28 27 25 / 0.05), 0 24px 48px -12px rgb(28 27 25 / 0.22);
-}
-
-/* The type scale: serif for page-level headings, Inter for the rest */
-@utility type-display {
-  font-family: var(--font-title);
-  font-size: 2.75rem; /* 44px */
-  line-height: 1.12;
-  font-weight: 500;
-  letter-spacing: -0.015em;
-}
-@utility type-h1 {
-  font-family: var(--font-title);
-  font-size: 2.125rem; /* 34px */
-  line-height: 1.18;
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-@utility type-h2 {
-  font-family: var(--font-title);
-  font-size: 1.625rem; /* 26px */
-  line-height: 1.25;
-  font-weight: 500;
-}
-@utility type-h3 {
-  font-size: 1.0625rem; /* 17px, Inter */
-  line-height: 1.5;
-  font-weight: 600;
-}
-@utility type-body {
-  font-size: 0.9375rem; /* 15px: forms, cards, lists */
-  line-height: 1.6;
-}
-@utility type-small {
-  font-size: 0.8125rem; /* 13px: help text, metadata */
-  line-height: 1.5;
-}
-@utility type-label {
-  font-size: 0.875rem; /* 14px */
-  line-height: 1.4;
-  font-weight: 500;
-}
-@utility type-eyebrow {
-  font-size: 0.75rem; /* 12px */
-  line-height: 1.4;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-}
-
 /* "Night ink": the same tokens, inverted, so every bg-paper / text-ink follows dark mode */
 .dark {
   --color-paper: #141414;
@@ -244,46 +120,41 @@
 }
 
 @layer base {
-  :root {
-    color-scheme: light;
-  }
-  :root.dark {
-    color-scheme: dark; /* Dark scrollbars and form controls */
-  }
+  /* color-scheme (dark scrollbars and form controls) is set with the tokens */
   body {
-    @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100;
+    @apply bg-canvas font-sans text-fg antialiased;
   }
 }
 
-/* Small set of reusable classes so every page looks consistent */
+/* The shared classes pages already use, drawn from the design system tokens (new code uses
+   the components in src/components/ui instead) */
 @layer components {
-  /* Shared button base */
   .btn-primary,
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-60;
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-not-allowed disabled:opacity-50;
   }
   .btn-primary {
-    @apply bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400;
+    @apply bg-accent text-on-accent shadow-soft hover:bg-accent-strong;
   }
   .btn-secondary {
-    @apply border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800;
+    @apply border border-line-strong bg-surface text-fg hover:border-fg-subtle hover:bg-surface-2;
   }
   .card {
-    @apply rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900;
+    @apply rounded-xl border border-line bg-surface shadow-soft;
   }
   .label {
-    @apply mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-300;
+    @apply mb-1.5 block text-sm font-medium text-fg;
   }
   .input {
-    @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 aria-invalid:border-red-500 aria-invalid:focus:ring-red-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:placeholder:text-slate-500;
+    @apply w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-fg outline-none transition-colors placeholder:text-fg-subtle hover:border-fg-subtle focus:border-accent focus:ring-3 focus:ring-accent/15 aria-invalid:border-danger aria-invalid:focus:ring-danger/15;
   }
   .field-error {
-    @apply mt-1.5 text-sm text-red-600 dark:text-red-400;
+    @apply mt-1.5 text-sm text-danger;
   }
 
   /* Rich text editor (Tiptap): looks like .input, with the toolbar inside the border */
   .rich-editor {
-    @apply w-full rounded-lg border border-slate-300 bg-white text-sm shadow-sm transition focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100;
+    @apply w-full rounded-lg border border-line-strong bg-surface text-sm text-fg transition-colors focus-within:border-accent focus-within:ring-3 focus-within:ring-accent/15;
   }
   .rich-editor .ProseMirror {
     @apply px-3 py-2 outline-none;
@@ -292,12 +163,12 @@
     @apply mt-2;
   }
   .rich-editor .ProseMirror a {
-    @apply text-indigo-600 underline dark:text-indigo-400;
+    @apply text-accent underline;
   }
   /* Placeholder text while the editor is empty */
   .rich-editor .ProseMirror p.is-editor-empty:first-child::before {
     content: attr(data-placeholder);
-    @apply pointer-events-none float-left h-0 text-slate-400 dark:text-slate-500;
+    @apply pointer-events-none float-left h-0 text-fg-subtle;
   }
 
   /* Rich text inside resume templates (preview, thumbnails and PDF) */

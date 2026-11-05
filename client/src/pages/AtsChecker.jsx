@@ -12,6 +12,7 @@ import Modal from "../components/Modal";
 import AnalyzeProgress from "../components/ats/AnalyzeProgress";
 import { ANALYZE_STEPS } from "../components/ats/atsHelpers";
 import AtsResults, { Disclaimer } from "../components/ats/AtsResults";
+import { pageClass } from "../components/ui/pageLayout";
 
 const MIN_JOB_WORDS = 30; // Same minimum as the server (when a job description is given)
 const countWords = (text) => text.trim().split(/\s+/).filter(Boolean).length;
@@ -308,7 +309,7 @@ export default function AtsChecker() {
 
   // ---------- Input view ----------
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+    <div className={pageClass()}>
       <div className="max-w-2xl">
         <p className="inline-flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700 dark:border-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-300">
           <Sparkles className="size-3.5" aria-hidden="true" />

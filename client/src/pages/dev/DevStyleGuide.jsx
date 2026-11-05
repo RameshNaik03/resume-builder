@@ -12,11 +12,10 @@ import Toast from "../../components/ui/Toast";
 import { ProgressBar, ScoreRing } from "../../components/ui/Meter";
 import ResumeThumbnail from "../../components/ui/ResumeThumbnail";
 
-// Development only (/dev/ui): the proposed "quiet professional" design system, for review
-// before any page changes (Phase UI-0). Tokens live in index.css; components in components/ui.
-// The page follows the light/dark toggle at the top; the colour section shows both themes.
+// Development only (/dev/ui): the "quiet professional" design system: its tokens
+// (styles/design-system.css) and components (components/ui). The page follows the light/dark
+// toggle at the top; the colour section shows both themes.
 
-const SERIF_FONT = "https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400..600&display=swap";
 const SECTIONS = [
   ["principles", "Principles"],
   ["colors", "Colour"],
@@ -65,12 +64,8 @@ export default function DevStyleGuide() {
   const theme = useSyncExternalStore(subscribe, getTheme);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // The serif is only loaded here until pages adopt it
   useEffect(() => {
-    const link = Object.assign(document.createElement("link"), { rel: "stylesheet", href: SERIF_FONT });
-    document.head.appendChild(link);
     document.title = "Design system · dev";
-    return () => link.remove();
   }, []);
 
   return (
@@ -90,7 +85,7 @@ export default function DevStyleGuide() {
 
         <main className="min-w-0 space-y-20">
           <PageHeader
-            eyebrow="Phase UI-0 · for review"
+            eyebrow="Design system · dev only"
             title="Quiet professional"
             description="One design system for every page: a warm off-white canvas, near-black ink, one ink-blue accent used sparingly, thin lines and generous space, so the resume is always the most colourful thing on screen."
             actions={
@@ -433,7 +428,7 @@ function ColorPanel({ themeClass, label }) {
   const [values, setValues] = useState({});
   useEffect(() => {
     const style = getComputedStyle(ref.current);
-    setValues(Object.fromEntries(COLOR_TOKENS.map(([name]) => [name, style.getPropertyValue(`--color-${name}`).trim()])));
+    setValues(Object.fromEntries(COLOR_TOKENS.map(([name]) => [name, style.getPropertyValue(`--${name}`).trim()])));
   }, []);
 
   return (
@@ -445,7 +440,7 @@ function ColorPanel({ themeClass, label }) {
           const ratio = TEXT_TOKENS.has(name) && /^#[0-9a-f]{6}$/i.test(value) && values.canvas ? contrast(value, values.canvas) : null;
           return (
             <li key={name} className="flex items-center gap-3">
-              <span className="size-9 shrink-0 rounded-lg border border-line" style={{ background: `var(--color-${name})` }} />
+              <span className="size-9 shrink-0 rounded-lg border border-line" style={{ background: `var(--${name})` }} />
               <span className="min-w-0 type-small">
                 <code className="text-fg">{name}</code> <span className="text-fg-subtle">{value}</span>
                 <span className="block truncate text-fg-muted">

@@ -6,6 +6,7 @@ import { useAuth } from "../context/AuthContext";
 import getErrorMessage from "../utils/getErrorMessage";
 import usePageTitle from "../hooks/usePageTitle";
 import PasswordInput from "../components/PasswordInput";
+import { pageClass } from "../components/ui/pageLayout";
 
 export default function Login() {
   usePageTitle("Log in");
@@ -30,7 +31,7 @@ export default function Login() {
   };
 
   return (
-    <div className="flex justify-center px-4 py-16">
+    <div className={pageClass("narrow")}>
       <div className="card w-full max-w-md p-8">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome back</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Log in to continue building your resumes.</p>

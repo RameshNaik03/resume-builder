@@ -10,6 +10,7 @@ import Loader from "../components/Loader";
 import ScoreRing from "../components/ats/ScoreRing";
 import ResumeSnapshot from "../components/ats/ResumeSnapshot";
 import { gradeFor } from "../components/ats/atsHelpers";
+import { pageClass } from "../components/ui/pageLayout";
 
 // Review screen for the ATS optimizer's result (/ats/review/:resumeId): the score before and
 // after, the original and optimized resume side by side, and every change to accept or reject.
@@ -179,7 +180,7 @@ export default function AtsReview() {
 
   if (loadError) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16 text-center">
+      <div className={pageClass("narrow", "text-center")}>
         <p className="text-slate-700 dark:text-slate-300">{loadError}</p>
         <Link to="/dashboard" className="btn-secondary mt-4">
           Back to the dashboard
@@ -193,7 +194,7 @@ export default function AtsReview() {
   }
   if (!review) {
     return (
-      <div className="mx-auto max-w-xl px-4 py-16 text-center">
+      <div className={pageClass("narrow", "text-center")}>
         <p className="text-slate-700 dark:text-slate-300">This resume wasn't created by the ATS optimizer, so there's nothing to review.</p>
         <Link to={`/editor/${id}`} className="btn-primary mt-4">
           Open in editor
@@ -206,7 +207,7 @@ export default function AtsReview() {
   const reviewedCount = changes.filter((c) => c.status !== "pending").length;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div className={pageClass()}>
       <Link to="/ats-checker" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
         <ArrowLeft className="size-4" aria-hidden="true" />
         ATS checker

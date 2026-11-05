@@ -5,6 +5,7 @@ import { MailCheck } from "lucide-react";
 import api from "../api/axios";
 import getErrorMessage from "../utils/getErrorMessage";
 import usePageTitle from "../hooks/usePageTitle";
+import { pageClass } from "../components/ui/pageLayout";
 
 export default function ForgotPassword() {
   usePageTitle("Forgot password");
@@ -29,7 +30,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="flex justify-center px-4 py-16">
+    <div className={pageClass("narrow")}>
       <div className="card w-full max-w-md p-8">
         {sentTo ? (
           <div className="text-center">

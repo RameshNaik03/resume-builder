@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 
-// "Quiet professional" dialog (Phase UI-0: shown at /dev/ui, not used by pages yet).
+// "Quiet professional" dialog.
 // A plain panel over a dimmed page (no blur): title, optional description, content and a
 // footer of actions (cancel first, the main action last). Closes on Escape, the backdrop or
 // the close button, focuses the first action, and stops the page behind from scrolling.

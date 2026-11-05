@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "lint": "oxlint && node scripts/check-styles.mjs",
+    "preview": "vite preview",
+    "test": "node --test scripts/*.test.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

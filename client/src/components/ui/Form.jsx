@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { ChevronDown } from "lucide-react";
 
-// "Quiet professional" form controls (Phase UI-0: shown at /dev/ui, not used by pages yet).
+// "Quiet professional" form controls.
 // Field wraps any control with its label, help text and error, and links them for screen
 // readers; the controls share one look: 36px tall, a thin border, the accent focus ring.
 
