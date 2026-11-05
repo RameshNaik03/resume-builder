@@ -4,7 +4,7 @@ import TemplateRenderer from "../../templates/TemplateRenderer";
 import { TEMPLATES, TIERS } from "../../templates/registry";
 import ResumeSheet from "../../components/ResumeSheet";
 import usePageTitle from "../../hooks/usePageTitle";
-import galleryResume from "./galleryResume";
+import galleryResume from "../../templates/galleryResume";
 
 const A4_WIDTH_PX = 794; // 210mm at 96 DPI
 

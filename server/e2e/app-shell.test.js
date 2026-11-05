@@ -16,9 +16,9 @@ test("AppShell", async (t) => {
   const bar = () => page.$eval("header", (header) => header.innerText);
   const visible = (selector) => page.$$eval(selector, (elements) => elements.filter((element) => element.offsetParent !== null).map((element) => element.textContent.trim()));
 
-  await t.test("logged out: Log in and Sign up, no app links", async () => {
+  await t.test("logged out (the landing page): Log in and Sign up, no app links", async () => {
     await logIn(page, null);
-    await page.goto(`${APP}/login`, { waitUntil: "networkidle0" });
+    await page.goto(`${APP}/`, { waitUntil: "networkidle0" });
     const text = await bar();
     assert.match(text, /Log in/);
     assert.match(text, /Sign up/);

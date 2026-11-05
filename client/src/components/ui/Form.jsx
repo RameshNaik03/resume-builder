@@ -1,5 +1,5 @@
-import { useId } from "react";
-import { ChevronDown } from "lucide-react";
+import { useId, useState } from "react";
+import { ChevronDown, Eye, EyeOff } from "lucide-react";
 
 // "Quiet professional" form controls.
 // Field wraps any control with its label, help text and error, and links them for screen
@@ -8,17 +8,22 @@ import { ChevronDown } from "lucide-react";
 const CONTROL =
   "w-full rounded-lg border border-line-strong bg-surface px-3 text-[0.9375rem] text-fg placeholder:text-fg-subtle transition-colors outline-none hover:border-fg-subtle focus:border-accent focus:ring-3 focus:ring-accent/15 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-fg-subtle aria-invalid:border-danger aria-invalid:focus:ring-danger/15";
 
-// label, help, error, optional ("(optional)" after the label); children(id, describedBy)
-export function Field({ label, help, error, optional = false, children }) {
+// label, help, error, optional ("(optional)" after the label), aside (e.g. a "Forgot password?"
+// link at the end of the label row); children({ id, aria-describedby, aria-invalid }) renders
+// the control, e.g. {(props) => <Input {...props} {...register("email")} />}
+export function Field({ label, help, error, optional = false, aside, children }) {
   const id = useId();
   const helpId = help ? `${id}-help` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   return (
     <div>
-      <label htmlFor={id} className="mb-1.5 block type-label text-fg">
-        {label}
-        {optional && <span className="font-normal text-fg-muted"> (optional)</span>}
-      </label>
+      <div className="mb-1.5 flex items-baseline justify-between gap-3">
+        <label htmlFor={id} className="type-label text-fg">
+          {label}
+          {optional && <span className="font-normal text-fg-muted"> (optional)</span>}
+        </label>
+        {aside}
+      </div>
       {children({ id, "aria-describedby": [helpId, errorId].filter(Boolean).join(" ") || undefined, "aria-invalid": error ? true : undefined })}
       {help && !error && (
         <p id={helpId} className="mt-1.5 type-small text-fg-muted">
@@ -34,8 +39,29 @@ export function Field({ label, help, error, optional = false, children }) {
   );
 }
 
-export function Input({ className = "", ...props }) {
-  return <input className={`${CONTROL} h-9 ${className}`} {...props} />;
+// controlSize: "md" (36px) or "lg" (40px: short forms such as sign-in)
+const HEIGHTS = { md: "h-9", lg: "h-10" };
+export function Input({ controlSize = "md", className = "", ...props }) {
+  return <input className={`${CONTROL} ${HEIGHTS[controlSize]} ${className}`} {...props} />;
+}
+
+// A password input with a button to show or hide what was typed (the same props as Input)
+export function PasswordInput({ controlSize = "md", className = "", ...props }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className="relative">
+      <Input {...props} controlSize={controlSize} type={visible ? "text" : "password"} className={`pr-10 ${className}`} />
+      <button
+        type="button"
+        onClick={() => setVisible((value) => !value)}
+        aria-label={visible ? "Hide password" : "Show password"}
+        aria-pressed={visible}
+        className="absolute inset-y-0 right-0 grid w-10 place-items-center rounded-r-lg text-fg-muted transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-accent"
+      >
+        {visible ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}
+      </button>
+    </div>
+  );
 }
 
 export function Textarea({ className = "", rows = 4, ...props }) {

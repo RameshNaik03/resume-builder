@@ -5,8 +5,9 @@ import toast from "../utils/toast";
 import { useAuth } from "../context/AuthContext";
 import getErrorMessage from "../utils/getErrorMessage";
 import usePageTitle from "../hooks/usePageTitle";
-import PasswordInput from "../components/PasswordInput";
-import { pageClass } from "../components/ui/pageLayout";
+import AuthCard from "../components/ui/AuthCard";
+import Button from "../components/ui/Button";
+import { Field, Input, PasswordInput } from "../components/ui/Form";
 
 export default function Register() {
   usePageTitle("Sign up");
@@ -33,95 +34,85 @@ export default function Register() {
   };
 
   return (
-    <div className={pageClass("narrow")}>
-      <div className="card w-full max-w-md p-8">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create your account</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Start building your resume in minutes.</p>
-
-        {serverError && (
-          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300" role="alert">
-            {serverError}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-5" noValidate>
-          <div>
-            <label htmlFor="name" className="label">Full name</label>
-            <input
-              id="name"
+    <AuthCard
+      title="Create your account"
+      description="Start building your resume in a few minutes."
+      error={serverError}
+      footer={
+        <>
+          Already have an account?{" "}
+          <Button as={Link} to="/login" variant="link">
+            Log in
+          </Button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+        <Field label="Full name" error={errors.name?.message}>
+          {(props) => (
+            <Input
+              {...props}
               type="text"
               autoComplete="name"
-              placeholder="Ramesh Naik"
-              className="input"
-              aria-invalid={errors.name ? "true" : "false"}
+              placeholder="Priya Raman"
+              controlSize="lg"
               {...register("name", {
                 required: "Name is required",
                 validate: (value) => value.trim().length > 0 || "Name is required",
                 maxLength: { value: 50, message: "Name must be 50 characters or less" },
               })}
             />
-            {errors.name && <p className="field-error">{errors.name.message}</p>}
-          </div>
+          )}
+        </Field>
 
-          <div>
-            <label htmlFor="email" className="label">Email</label>
-            <input
-              id="email"
+        <Field label="Email" error={errors.email?.message}>
+          {(props) => (
+            <Input
+              {...props}
               type="email"
               autoComplete="email"
               placeholder="you@example.com"
-              className="input"
-              aria-invalid={errors.email ? "true" : "false"}
+              controlSize="lg"
               {...register("email", {
                 required: "Email is required",
                 pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Please enter a valid email" },
               })}
             />
-            {errors.email && <p className="field-error">{errors.email.message}</p>}
-          </div>
+          )}
+        </Field>
 
-          <div>
-            <label htmlFor="password" className="label">Password</label>
+        <Field label="Password" help="At least 6 characters." error={errors.password?.message}>
+          {(props) => (
             <PasswordInput
-              id="password"
+              {...props}
               autoComplete="new-password"
-              placeholder="At least 6 characters"
-              aria-invalid={errors.password ? "true" : "false"}
+              controlSize="lg"
               {...register("password", {
                 required: "Password is required",
                 minLength: { value: 6, message: "Password must be at least 6 characters" },
               })}
             />
-            {errors.password && <p className="field-error">{errors.password.message}</p>}
-          </div>
+          )}
+        </Field>
 
-          <div>
-            <label htmlFor="confirmPassword" className="label">Confirm password</label>
+        <Field label="Confirm password" error={errors.confirmPassword?.message}>
+          {(props) => (
             <PasswordInput
-              id="confirmPassword"
+              {...props}
               autoComplete="new-password"
-              placeholder="Repeat your password"
-              aria-invalid={errors.confirmPassword ? "true" : "false"}
+              controlSize="lg"
               {...register("confirmPassword", {
                 required: "Please confirm your password",
                 validate: (value) => value === getValues("password") || "Passwords do not match",
               })}
             />
-            {errors.confirmPassword && <p className="field-error">{errors.confirmPassword.message}</p>}
-          </div>
+          )}
+        </Field>
 
-          <button type="submit" className="btn-primary w-full py-2.5" disabled={isSubmitting}>
-            {isSubmitting ? "Creating account..." : "Create account"}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-          Already have an account?{" "}
-          <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
-            Log in
-          </Link>
-        </p>
-      </div>
-    </div>
+        <Button type="submit" variant="primary" size="lg" className="w-full" loading={isSubmitting}>
+          {isSubmitting ? "Creating account..." : "Create account"}
+        </Button>
+      </form>
+    </AuthCard>
   );
 }

@@ -7,7 +7,7 @@
 //                          runs its step (a failed step is reported, not thrown) and scrolls
 //                          through it so scroll-in sections show
 import { APP, logIn, sleep } from "./helpers.js";
-import galleryResume from "../../client/src/pages/dev/galleryResume.js";
+import galleryResume from "../../client/src/templates/galleryResume.js";
 
 export const JOB = `Senior Frontend Engineer
 Lumen Health is hiring a Senior Frontend Engineer to build our patient web app.

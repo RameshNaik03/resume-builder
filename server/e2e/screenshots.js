@@ -3,7 +3,7 @@
 // review, a tailored job and a cover letter (the pages and data: e2e/pageTour.js).
 //
 // Run: node e2e/screenshots.js [output folder] [name filter] (in server/; default folder:
-// <temp>/resume-builder-screens; the filter keeps pages whose name contains it, e.g. "dev-ui")
+// <temp>/resume-builder-screens; the filter is a pattern for page names, e.g. "dev-ui" or "0[1-6]")
 // SLICES=1 also saves each page in screen-height pieces (readable at full size).
 // Uses the browser tests' stack (e2e/helpers.js): the same ports and browser settings.
 import fs from "node:fs";
@@ -28,7 +28,7 @@ async function main() {
   fs.mkdirSync(OUT, { recursive: true });
   const { browser, api, register } = await startStack(context, "screenshots");
   const token = await register("screens");
-  const pages = tourPages(await seedTour(api, token)).filter((entry) => entry.name.includes(FILTER));
+  const pages = tourPages(await seedTour(api, token)).filter((entry) => new RegExp(FILTER).test(entry.name));
 
   for (const viewport of VIEWPORTS) {
     const page = await browser.newPage();

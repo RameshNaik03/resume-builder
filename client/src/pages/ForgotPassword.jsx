@@ -5,7 +5,9 @@ import { MailCheck } from "lucide-react";
 import api from "../api/axios";
 import getErrorMessage from "../utils/getErrorMessage";
 import usePageTitle from "../hooks/usePageTitle";
-import { pageClass } from "../components/ui/pageLayout";
+import AuthCard from "../components/ui/AuthCard";
+import Button from "../components/ui/Button";
+import { Field, Input } from "../components/ui/Form";
 
 export default function ForgotPassword() {
   usePageTitle("Forgot password");
@@ -29,74 +31,61 @@ export default function ForgotPassword() {
     }
   };
 
-  return (
-    <div className={pageClass("narrow")}>
-      <div className="card w-full max-w-md p-8">
-        {sentTo ? (
-          <div className="text-center">
-            <MailCheck className="mx-auto size-10 text-indigo-600 dark:text-indigo-400" aria-hidden="true" />
-            <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">Check your email</h1>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400" role="status">
-              If an account exists for <span className="font-medium text-slate-700 dark:text-slate-200">{sentTo}</span>,
-              we've sent a reset link. Check your inbox and spam folder.
+  const footer = (
+    <>
+      Remembered it?{" "}
+      <Button as={Link} to="/login" variant="link">
+        Back to log in
+      </Button>
+    </>
+  );
+
+  if (sentTo) {
+    return (
+      <AuthCard
+        icon={MailCheck}
+        title="Check your email"
+        description={
+          <div role="status">
+            <p>
+              If an account exists for <span className="font-medium text-fg">{sentTo}</span>, we've sent a link to reset your password. Check your inbox and spam folder.
             </p>
-            <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+            <p className="mt-3">
               The link expires in 15 minutes. Didn't get it?{" "}
-              <button
-                type="button"
-                onClick={() => setSentTo("")}
-                className="font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
-              >
-                try again
-              </button>
-              .
+              <Button variant="link" onClick={() => setSentTo("")}>
+                Try again
+              </Button>
             </p>
           </div>
-        ) : (
-          <>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Forgot your password?</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Enter your email and we'll send you a link to choose a new one.
-            </p>
+        }
+        footer={footer}
+      />
+    );
+  }
 
-            {serverError && (
-              <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300" role="alert">
-                {serverError}
-              </div>
-            )}
+  return (
+    <AuthCard title="Forgot your password?" description="Enter your email and we'll send you a link to choose a new one." error={serverError} footer={footer}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+        <Field label="Email" error={errors.email?.message}>
+          {(props) => (
+            <Input
+              {...props}
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              controlSize="lg"
+              {...register("email", {
+                required: "Email is required",
+                pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Please enter a valid email" },
+              })}
+            />
+          )}
+        </Field>
 
-            <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-5" noValidate>
-              <div>
-                <label htmlFor="email" className="label">Email</label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
-                  className="input"
-                  aria-invalid={errors.email ? "true" : "false"}
-                  {...register("email", {
-                    required: "Email is required",
-                    pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Please enter a valid email" },
-                  })}
-                />
-                {errors.email && <p className="field-error">{errors.email.message}</p>}
-              </div>
-
-              <button type="submit" className="btn-primary w-full py-2.5" disabled={isSubmitting}>
-                {isSubmitting ? "Sending..." : "Send reset link"}
-              </button>
-            </form>
-          </>
-        )}
-
-        <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-          Remembered it?{" "}
-          <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
-            Back to log in
-          </Link>
-        </p>
-      </div>
-    </div>
+        <Button type="submit" variant="primary" size="lg" className="w-full" loading={isSubmitting}>
+          {isSubmitting ? "Sending..." : "Send reset link"}
+        </Button>
+      </form>
+    </AuthCard>
   );
 }

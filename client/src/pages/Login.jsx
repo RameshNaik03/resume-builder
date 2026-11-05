@@ -5,8 +5,9 @@ import toast from "../utils/toast";
 import { useAuth } from "../context/AuthContext";
 import getErrorMessage from "../utils/getErrorMessage";
 import usePageTitle from "../hooks/usePageTitle";
-import PasswordInput from "../components/PasswordInput";
-import { pageClass } from "../components/ui/pageLayout";
+import AuthCard from "../components/ui/AuthCard";
+import Button from "../components/ui/Button";
+import { Field, Input, PasswordInput } from "../components/ui/Form";
 
 export default function Login() {
   usePageTitle("Log in");
@@ -31,64 +32,52 @@ export default function Login() {
   };
 
   return (
-    <div className={pageClass("narrow")}>
-      <div className="card w-full max-w-md p-8">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Welcome back</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Log in to continue building your resumes.</p>
-
-        {serverError && (
-          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300" role="alert">
-            {serverError}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-5" noValidate>
-          <div>
-            <label htmlFor="email" className="label">Email</label>
-            <input
-              id="email"
+    <AuthCard
+      title="Welcome back"
+      description="Log in to continue with your resumes."
+      error={serverError}
+      footer={
+        <>
+          Don't have an account?{" "}
+          <Button as={Link} to="/register" variant="link">
+            Sign up
+          </Button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+        <Field label="Email" error={errors.email?.message}>
+          {(props) => (
+            <Input
+              {...props}
               type="email"
               autoComplete="email"
               placeholder="you@example.com"
-              className="input"
-              aria-invalid={errors.email ? "true" : "false"}
+              controlSize="lg"
               {...register("email", {
                 required: "Email is required",
                 pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "Please enter a valid email" },
               })}
             />
-            {errors.email && <p className="field-error">{errors.email.message}</p>}
-          </div>
+          )}
+        </Field>
 
-          <div>
-            <div className="flex items-center justify-between">
-              <label htmlFor="password" className="label">Password</label>
-              <Link to="/forgot-password" className="mb-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
-                Forgot password?
-              </Link>
-            </div>
-            <PasswordInput
-              id="password"
-              autoComplete="current-password"
-              placeholder="••••••••"
-              aria-invalid={errors.password ? "true" : "false"}
-              {...register("password", { required: "Password is required" })}
-            />
-            {errors.password && <p className="field-error">{errors.password.message}</p>}
-          </div>
+        <Field
+          label="Password"
+          error={errors.password?.message}
+          aside={
+            <Button as={Link} to="/forgot-password" variant="link" className="type-small">
+              Forgot password?
+            </Button>
+          }
+        >
+          {(props) => <PasswordInput {...props} autoComplete="current-password" controlSize="lg" {...register("password", { required: "Password is required" })} />}
+        </Field>
 
-          <button type="submit" className="btn-primary w-full py-2.5" disabled={isSubmitting}>
-            {isSubmitting ? "Logging in..." : "Log in"}
-          </button>
-        </form>
-
-        <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
-          Don't have an account?{" "}
-          <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
-            Sign up
-          </Link>
-        </p>
-      </div>
-    </div>
+        <Button type="submit" variant="primary" size="lg" className="w-full" loading={isSubmitting}>
+          {isSubmitting ? "Logging in..." : "Log in"}
+        </Button>
+      </form>
+    </AuthCard>
   );
 }

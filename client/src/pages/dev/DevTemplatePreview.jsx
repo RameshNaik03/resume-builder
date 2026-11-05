@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import ResumePreview from "../../components/ResumePreview";
 import { TEMPLATES } from "../../templates/registry";
 import usePageTitle from "../../hooks/usePageTitle";
-import galleryResume from "./galleryResume";
+import galleryResume from "../../templates/galleryResume";
 
 // Development only (/dev/templates/:templateId): one template at full size, every page,
 // paginated exactly like the editor preview. ?photo=0 hides the sample photo; ?long=1 uses a

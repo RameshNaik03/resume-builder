@@ -2,11 +2,11 @@ import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import AppShell from "./components/ui/AppShell";
+import AuthLayout from "./components/ui/AuthLayout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
 import Landing from "./pages/Landing";
 import Loader from "./components/Loader";
-import ErrorBoundary from "./components/ErrorBoundary";
 
 // Every page except the landing page is loaded only when it's opened, so the first visit
 // downloads much less JavaScript (the editor alone brings the rich text editor, crop tool
@@ -35,27 +35,22 @@ export default function App() {
   return (
     <>
       <Routes>
-        {/* The landing page has its own top bar (everyone; its buttons point logged-in users to the dashboard) */}
-        <Route
-          path="/"
-          element={
-            <ErrorBoundary>
-              <Landing />
-            </ErrorBoundary>
-          }
-        />
-
-        {/* Every other page: inside the AppShell (the top navigation; it also catches page errors) */}
-        <Route element={<AppShell />}>
-          <Route path="/ats-checker" element={page(<AtsChecker />)} />
-
-          {/* Only for logged-out users (logged-in users go to the dashboard) */}
+        {/* Sign-in pages: only for logged-out users (logged-in users go to the dashboard), in the
+            AuthLayout (the wordmark above one card, no navigation) */}
+        <Route element={<AuthLayout />}>
           <Route element={<PublicRoute />}>
             <Route path="/login" element={page(<Login />)} />
             <Route path="/register" element={page(<Register />)} />
             <Route path="/forgot-password" element={page(<ForgotPassword />)} />
             <Route path="/reset-password/:token" element={page(<ResetPassword />)} />
           </Route>
+        </Route>
+
+        {/* Every other page: inside the AppShell (the top navigation; it also catches page errors) */}
+        <Route element={<AppShell />}>
+          {/* Everyone (its buttons point logged-in users to the dashboard) */}
+          <Route path="/" element={<Landing />} />
+          <Route path="/ats-checker" element={page(<AtsChecker />)} />
 
           {/* Only for logged-in users */}
           <Route element={<ProtectedRoute />}>
@@ -83,9 +78,9 @@ export default function App() {
         toastOptions={{
           duration: 3000,
           className: "type-body",
-          style: { background: "var(--surface)", color: "var(--fg)", border: "1px solid var(--line)", boxShadow: "var(--elevation-raised)", borderRadius: "0.75rem" },
-          success: { iconTheme: { primary: "var(--success)", secondary: "var(--surface)" } },
-          error: { iconTheme: { primary: "var(--danger)", secondary: "var(--surface)" } },
+          style: { background: "var(--ds-surface)", color: "var(--ds-fg)", border: "1px solid var(--ds-line)", boxShadow: "var(--ds-elevation-raised)", borderRadius: "0.75rem" },
+          success: { iconTheme: { primary: "var(--ds-success)", secondary: "var(--ds-surface)" } },
+          error: { iconTheme: { primary: "var(--ds-danger)", secondary: "var(--ds-surface)" } },
         }}
       />
     </>

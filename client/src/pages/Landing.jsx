@@ -1,283 +1,159 @@
-import { useEffect } from "react";
 import { Link } from "react-router-dom";
+import { ArrowRight, Gauge, LayoutTemplate, Target } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import usePageTitle from "../hooks/usePageTitle";
 import { TEMPLATES } from "../templates/registry";
-import InkNavbar from "../components/landing/InkNavbar";
-import HeroSheet from "../components/landing/HeroSheet";
-import TemplateStrip from "../components/landing/TemplateStrip";
-import Wordmark from "../components/landing/Wordmark";
+import galleryResume from "../templates/galleryResume";
+import Button from "../components/ui/Button";
+import Wordmark from "../components/ui/Wordmark";
+import ResumeThumbnail from "../components/ui/ResumeThumbnail";
+
+// The home page (inside the AppShell, so it shares the top bar and logo with every page).
+// Calm and static: a serif headline, one primary action, real template thumbnails, how it
+// works, what makes the app different, and a footer. The only motion is a gentle fade-in on
+// load, skipped with reduced motion.
 
 const CURRENT_YEAR = new Date().getFullYear();
-const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-tomato";
+const SECTION = "mx-auto w-full max-w-6xl px-4 sm:px-8";
+// The hero's three thumbnails: a full sample resume in three templates, the middle one in front
+const HERO = [
+  { id: "elegant-serif-forest", width: 210, className: "-mr-28 mt-12 hidden sm:block" },
+  { id: "classic-navy", width: 300, className: "relative z-10" },
+  { id: "executive-burgundy", width: 210, className: "-ml-28 mt-12 hidden sm:block" },
+].map((entry) => ({ ...entry, resume: galleryResume(entry.id, false) }));
 
-// ---------- Tiny line illustrations (ink strokes, currentColor) ----------
+const STEPS = [
+  { title: "Write", text: "Fill in one section at a time while your page takes shape beside you. Everything saves as you type." },
+  { title: "Choose a template", text: `Pick from ${TEMPLATES.length} professional templates. Your words stay put; only the typesetting changes.` },
+  { title: "Check and send", text: "See how an applicant tracking system reads it, tailor it to the job, and download a clean PDF." },
+];
 
-const lineArt = {
-  fill: "none",
-  stroke: "currentColor",
-  strokeWidth: 1.5,
-  strokeLinecap: "round",
-  strokeLinejoin: "round",
-  "aria-hidden": true,
-};
-
-function PenNib() {
-  return (
-    <svg viewBox="0 0 64 64" className="size-14" {...lineArt}>
-      <path d="M32 6 46 30 32 58 18 30Z" />
-      <path d="M32 58V36" />
-      <circle cx="32" cy="32" r="3.5" />
-      <path d="M8 58h20" className="text-tomato" stroke="currentColor" />
-    </svg>
-  );
-}
-
-function TypeSpecimen() {
-  return (
-    <svg viewBox="0 0 64 64" className="size-14" {...lineArt}>
-      <rect x="6" y="10" width="34" height="44" />
-      <path d="M14 42 23 20l9 22M17 35h12" />
-      <path d="M48 14v36M44 14h8M44 50h8" />
-      <circle cx="56" cy="32" r="2" className="text-tomato" fill="currentColor" stroke="none" />
-    </svg>
-  );
-}
-
-function PaperPlane() {
-  return (
-    <svg viewBox="0 0 64 64" className="size-14" {...lineArt}>
-      <path d="M6 30 58 8 46 54 30 38Z" />
-      <path d="M58 8 30 38v16l8-10" />
-      <path d="M4 50c8-2 12-6 16-12" className="text-tomato" stroke="currentColor" strokeDasharray="2 4" />
-    </svg>
-  );
-}
-
-// "Your story, set in ink." with a hand-drawn red stroke under "ink"
-function Headline() {
-  return (
-    <h1 className="font-ink-serif text-[clamp(3.25rem,9vw,7.5rem)] leading-[0.92] font-semibold tracking-[-0.03em] text-ink [font-variation-settings:'opsz'_144]">
-      Your story,
-      <br />
-      set in{" "}
-      <span className="relative inline-block italic">
-        ink
-        <svg
-          viewBox="0 0 200 24"
-          preserveAspectRatio="none"
-          className="absolute -bottom-[0.12em] left-[-6%] h-[0.22em] w-[112%] overflow-visible text-tomato"
-          aria-hidden="true"
-        >
-          <path
-            d="M3 15C40 7 86 5 124 8c24 2 46 5 73 2"
-            pathLength="1"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="7"
-            strokeLinecap="round"
-            strokeDasharray="1"
-            className="motion-safe:animate-ink-draw"
-          />
-        </svg>
-      </span>
-      .
-    </h1>
-  );
-}
-
-function SectionLabel({ number, children }) {
-  return (
-    <p className="font-ink-mono text-xs uppercase tracking-[0.2em] text-ink/60">
-      <span className="text-tomato">{number}</span> — {children}
-    </p>
-  );
-}
+const DIFFERENCES = [
+  {
+    icon: Gauge,
+    title: "Honest ATS scoring",
+    text: "A score out of 100 from rules you can read, with every check explained and what to fix first. No black box and no scare tactics.",
+  },
+  {
+    icon: Target,
+    title: "Tailoring without invented facts",
+    text: "Your resume is reordered and reworded around each job, but nothing is added that it doesn't already show. Missing skills are listed for you to decide.",
+  },
+  {
+    icon: LayoutTemplate,
+    title: "Professional templates",
+    text: "Typeset like a printed page, with the ATS-friendly layouts clearly marked. The PDF you download matches the preview exactly.",
+  },
+];
 
 export default function Landing() {
-  usePageTitle("Your story, set in ink");
+  usePageTitle("Clear, honest resumes");
   const { user } = useAuth();
   const buildPath = user ? "/dashboard" : "/register";
 
-  // Scroll-in: mark each [data-reveal] element "shown" the first time it comes into view.
-  // (The fade itself is CSS in index.css, and is skipped with reduced motion.)
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            entry.target.dataset.reveal = "shown";
-            observer.unobserve(entry.target);
-          }
-        }
-      },
-      { rootMargin: "0px 0px -10% 0px" }
-    );
-    document.querySelectorAll("[data-reveal]").forEach((element) => observer.observe(element));
-    return () => observer.disconnect();
-  }, []);
-
-  const steps = [
-    {
-      number: "01",
-      title: "Build",
-      Illustration: PenNib,
-      text: "Write section by section while the page sets itself beside you. Autosave keeps every word.",
-    },
-    {
-      number: "02",
-      title: "Style",
-      Illustration: TypeSpecimen,
-      text: `Try any of ${TEMPLATES.length} templates. Your words stay put. Only the typesetting changes.`,
-    },
-    {
-      number: "03",
-      title: "Send",
-      Illustration: PaperPlane,
-      text: "Check it against the job description, then download a clean PDF that ATS software can read.",
-    },
-  ];
-
   return (
-    <div className="relative isolate min-h-svh overflow-x-clip bg-paper font-ink-sans text-ink selection:bg-tomato selection:text-carbon">
-      {/* Paper grain over everything (decorative) */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-paper-grain opacity-[0.28] mix-blend-multiply dark:opacity-[0.07] dark:mix-blend-screen"
-      />
-
-      <InkNavbar />
-
-      <main>
-        {/* ---------- Hero ---------- */}
-        <section className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-16 px-5 pt-14 pb-24 sm:px-8 lg:grid-cols-[1.2fr_0.8fr] lg:gap-20 lg:pt-24 lg:pb-32">
-          <div className="min-w-0" data-reveal>
-            <p className="font-ink-mono text-xs uppercase tracking-[0.2em] text-ink/60">
-              Resume builder <span className="text-tomato">/</span> ATS checker <span className="text-tomato">/</span> PDF
-            </p>
-            <div className="mt-8">
-              <Headline />
-            </div>
-            <p className="mt-8 max-w-md text-lg leading-relaxed text-ink/75">
-              Write it once, set it beautifully, and check it against the job before you hit send. Free, and quietly
-              careful about the details.
-            </p>
-            <div className="mt-10 flex flex-col items-start gap-6 sm:flex-row sm:items-center sm:gap-8">
-              <Link
-                to={buildPath}
-                className={`border-2 border-carbon bg-tomato px-7 py-3.5 font-medium text-carbon shadow-[4px_4px_0_0_var(--color-ink)] transition hover:-translate-x-px hover:-translate-y-px hover:shadow-[5px_5px_0_0_var(--color-ink)] active:translate-x-1 active:translate-y-1 active:shadow-none ${focusRing}`}
-              >
-                Start my resume
-              </Link>
-              <Link
-                to="/ats-checker"
-                className={`group text-ink underline decoration-ink/30 decoration-1 underline-offset-[6px] transition hover:decoration-tomato hover:decoration-2 ${focusRing}`}
-              >
-                Check my resume against a job{" "}
-                <span aria-hidden="true" className="inline-block transition-transform motion-safe:group-hover:translate-x-1">
-                  →
-                </span>
-              </Link>
-            </div>
+    <>
+      {/* ---------- Hero ---------- */}
+      <section className={`${SECTION} grid items-center gap-14 pt-14 pb-20 sm:pt-20 lg:grid-cols-2 lg:gap-16 lg:pt-24 lg:pb-28`}>
+        <div className="motion-safe:animate-fade-in">
+          <p className="type-eyebrow text-fg-muted">Resume builder · ATS checker · Job tailoring</p>
+          <h1 className="mt-5 type-hero text-balance text-fg">A resume that's clear, honest and ready to send.</h1>
+          <p className="mt-6 max-w-lg text-lg leading-relaxed text-fg-muted">
+            Write it once, set it in a professional template, and check it against the job before you apply. Free to use.
+          </p>
+          <div className="mt-9 flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-7">
+            <Button as={Link} to={buildPath} variant="primary" size="lg">
+              Build my resume
+            </Button>
+            <Link to="/ats-checker" className="group inline-flex items-center gap-1.5 rounded-sm type-label text-fg underline decoration-line-strong underline-offset-4 hover:decoration-fg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent">
+              Check my resume against a job
+              <ArrowRight className="size-4 transition-transform motion-safe:group-hover:translate-x-0.5" aria-hidden="true" />
+            </Link>
           </div>
+        </div>
 
-          {/* Slightly lower than the headline, for an off-balance, hand-placed feel.
-              min-w-0: the scaled A4 page inside is 794px wide before scaling, which would otherwise widen this column. */}
-          <div className="min-w-0 lg:mt-16" data-reveal>
-            <HeroSheet />
-            <p className="mt-8 text-center font-ink-mono text-[11px] uppercase tracking-wider text-ink/60 lg:text-left">
-              Live preview — drawn by the same template engine as the editor
-            </p>
-          </div>
-        </section>
-
-        {/* ---------- 01 Build / 02 Style / 03 Send ---------- */}
-        <section className="border-y border-ink/15">
-          <div className="mx-auto grid max-w-7xl divide-y divide-ink/15 md:grid-cols-3 md:divide-x md:divide-y-0">
-            {steps.map(({ number, title, Illustration, text }, index) => (
-              <div
-                key={number}
-                data-reveal
-                style={{ transitionDelay: `${index * 120}ms` }}
-                className="px-5 py-12 sm:px-8 md:py-16"
-              >
-                <SectionLabel number={number}>{title}</SectionLabel>
-                <div className="mt-8 text-ink/80">
-                  <Illustration />
-                </div>
-                <h2 className="mt-6 font-ink-serif text-3xl font-semibold tracking-tight">{title}</h2>
-                <p className="mt-3 max-w-xs leading-relaxed text-ink/70">{text}</p>
-              </div>
+        {/* Three real templates, filled with a sample resume: static, the middle one in front */}
+        <figure className="motion-safe:animate-fade-in">
+          <div className="flex items-start justify-center" aria-hidden="true">
+            {HERO.map(({ id, width, className, resume }) => (
+              <ResumeThumbnail key={id} resume={resume} templateId={id} width={width} className={className} />
             ))}
           </div>
-        </section>
+          <figcaption className="mt-8 text-center type-small text-fg-muted">Real templates, drawn by the same engine as your PDF.</figcaption>
+        </figure>
+      </section>
 
-        {/* ---------- Templates strip ---------- */}
-        <section id="templates" className="scroll-mt-6 py-24">
-          <div className="mx-auto max-w-7xl px-5 sm:px-8" data-reveal>
-            <SectionLabel number="04">Templates</SectionLabel>
-            <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <h2 className="max-w-xl font-ink-serif text-4xl font-semibold tracking-tight sm:text-5xl">
-                Same story, <span className="italic">different type.</span>
-              </h2>
-              <p className="max-w-sm text-ink/70">
-                Every template below is rendered live from the real template set, filled with a sample resume.
-              </p>
-            </div>
-          </div>
-          <div className="mt-12" data-reveal>
-            <TemplateStrip />
-          </div>
-        </section>
+      {/* ---------- How it works ---------- */}
+      <section aria-labelledby="how-it-works" className="border-t border-line">
+        <div className={`${SECTION} py-20 sm:py-24`}>
+          <h2 id="how-it-works" className="type-h2 text-fg">
+            How it works
+          </h2>
+          <ol className="mt-10 grid gap-10 md:grid-cols-3 md:gap-8">
+            {STEPS.map((step, index) => (
+              <li key={step.title} className="border-t border-line pt-5">
+                <p className="font-title text-3xl text-fg-subtle tabular-nums" aria-hidden="true">
+                  {index + 1}
+                </p>
+                <h3 className="mt-3 type-h3 text-fg">
+                  <span className="sr-only">Step {index + 1}: </span>
+                  {step.title}
+                </h3>
+                <p className="mt-2 type-body text-fg-muted">{step.text}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
 
-        {/* ---------- Pull quote ---------- */}
-        <section className="border-t border-ink/15">
-          <figure className="mx-auto max-w-5xl px-5 py-24 sm:px-8 sm:py-32 lg:pl-32" data-reveal>
-            <span className="block font-ink-serif text-8xl leading-none text-tomato" aria-hidden="true">
-              “
-            </span>
-            <blockquote className="-mt-6 font-ink-serif text-[clamp(2rem,5vw,3.75rem)] leading-[1.1] font-normal tracking-tight italic text-balance">
-              Recruiters spend seconds on a resume. Make them count.
-            </blockquote>
-            <div className="mt-10 flex items-center gap-4">
-              <span className="h-px w-16 bg-ink/40" aria-hidden="true" />
-              <Link
-                to={buildPath}
-                className={`font-ink-mono text-xs uppercase tracking-[0.2em] text-ink hover:text-tomato ${focusRing}`}
-              >
-                Start writing →
-              </Link>
-            </div>
-          </figure>
-        </section>
-      </main>
+      {/* ---------- What makes it different ---------- */}
+      <section aria-labelledby="different" className="border-t border-line bg-surface-2">
+        <div className={`${SECTION} py-20 sm:py-24`}>
+          <h2 id="different" className="type-h2 text-fg">
+            What makes it different
+          </h2>
+          <p className="mt-3 max-w-2xl type-body text-fg-muted">A resume tool that keeps to the facts: yours.</p>
+          <ul className="mt-10 grid gap-6 md:grid-cols-3">
+            {DIFFERENCES.map(({ icon: Icon, title, text }) => (
+              <li key={title} className="rounded-xl border border-line bg-surface p-6 shadow-soft">
+                <span className="grid size-10 place-items-center rounded-full bg-surface-2 text-fg">
+                  <Icon className="size-5" aria-hidden="true" />
+                </span>
+                <h3 className="mt-5 type-h3 text-fg">{title}</h3>
+                <p className="mt-2 type-body text-fg-muted">{text}</p>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-12">
+            <Button as={Link} to={buildPath} variant="primary" size="lg">
+              Build my resume
+            </Button>
+          </div>
+        </div>
+      </section>
 
       {/* ---------- Footer ---------- */}
-      <footer className="border-t-2 border-ink">
-        <div className="mx-auto flex max-w-7xl flex-col gap-8 px-5 py-12 sm:px-8 md:flex-row md:items-end md:justify-between">
+      <footer className="border-t border-line">
+        <div className={`${SECTION} flex flex-col gap-6 py-10 sm:flex-row sm:items-center sm:justify-between`}>
           <div>
-            <Wordmark className="text-3xl" />
-            <p className="mt-3 font-ink-mono text-[11px] uppercase tracking-wider text-ink/60">
-              Set in Fraunces & Inter Tight
-            </p>
+            <Wordmark />
+            <p className="mt-1 type-small text-fg-muted">Clear, honest resumes. © {CURRENT_YEAR}</p>
           </div>
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-8 gap-y-3 text-sm">
-            <Link to={buildPath} className={`text-ink/75 hover:text-ink ${focusRing}`}>
-              Builder
+          <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 type-label">
+            <Link to={buildPath} className="text-fg-muted hover:text-fg">
+              Build my resume
             </Link>
-            <a href="#templates" className={`text-ink/75 hover:text-ink ${focusRing}`}>
-              Templates
-            </a>
-            <Link to="/ats-checker" className={`text-ink/75 hover:text-ink ${focusRing}`}>
-              ATS Checker
+            <Link to="/ats-checker" className="text-fg-muted hover:text-fg">
+              ATS checker
             </Link>
-            <Link to="/login" className={`text-ink/75 hover:text-ink ${focusRing}`}>
-              Log in
-            </Link>
+            {!user && (
+              <Link to="/login" className="text-fg-muted hover:text-fg">
+                Log in
+              </Link>
+            )}
           </nav>
-          <p className="font-ink-mono text-[11px] uppercase tracking-wider text-ink/60">© {CURRENT_YEAR} ResumeCraft</p>
         </div>
       </footer>
-    </div>
+    </>
   );
 }

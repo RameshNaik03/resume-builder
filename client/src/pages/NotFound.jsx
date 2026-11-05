@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import usePageTitle from "../hooks/usePageTitle";
+import Button from "../components/ui/Button";
 import { pageClass } from "../components/ui/pageLayout";
 
 // Shown for any URL that doesn't match a route
@@ -8,18 +10,12 @@ export default function NotFound() {
 
   return (
     <div className={pageClass("narrow", "text-center")}>
-      <div className="text-center">
-        <p className="bg-linear-to-r from-blue-600 via-indigo-600 to-cyan-500 bg-clip-text dark:from-blue-400 dark:via-indigo-400 dark:to-cyan-300 text-7xl font-extrabold tracking-tight text-transparent sm:text-8xl">
-          404
-        </p>
-        <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">Page not found</h1>
-        <p className="mx-auto mt-2 max-w-sm text-slate-500 dark:text-slate-400">
-          The page you're looking for doesn't exist or may have been moved.
-        </p>
-        <Link to="/" className="btn-primary mt-8 px-6 py-2.5">
-          ← Back to home
-        </Link>
-      </div>
+      <p className="type-eyebrow text-fg-muted">Error 404</p>
+      <h1 className="mt-3 type-h1 text-fg">This page doesn't exist</h1>
+      <p className="mt-3 type-body text-fg-muted">The link may be old, or the address mistyped. Everything you've saved is still where you left it.</p>
+      <Button as={Link} to="/" variant="primary" icon={ArrowLeft} className="mt-8">
+        Back to home
+      </Button>
     </div>
   );
 }

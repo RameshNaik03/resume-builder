@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import toast from "../utils/toast";
 import { LinkIcon } from "lucide-react";
+import toast from "../utils/toast";
 import api from "../api/axios";
 import getErrorMessage from "../utils/getErrorMessage";
 import usePageTitle from "../hooks/usePageTitle";
-import PasswordInput from "../components/PasswordInput";
-import { pageClass } from "../components/ui/pageLayout";
+import AuthCard from "../components/ui/AuthCard";
+import Button from "../components/ui/Button";
+import { Field, PasswordInput } from "../components/ui/Form";
 
 // What to show when the link itself is bad (the server sends one of these codes)
 const LINK_ERRORS = {
@@ -20,6 +21,12 @@ const LINK_ERRORS = {
     text: "It may have already been used, or it was copied incompletely. Request a new one to reset your password.",
   },
 };
+
+const backToLogin = (
+  <Button as={Link} to="/login" variant="link">
+    Back to log in
+  </Button>
+);
 
 // Opened from the link in the "forgot password" email: /reset-password/:token
 export default function ResetPassword() {
@@ -51,72 +58,51 @@ export default function ResetPassword() {
 
   if (linkError) {
     return (
-      <div className={pageClass("narrow")}>
-        <div className="card w-full max-w-md p-8 text-center" role="alert">
-          <LinkIcon className="mx-auto size-10 text-red-500 dark:text-red-400" aria-hidden="true" />
-          <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">{linkError.title}</h1>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{linkError.text}</p>
-          <Link to="/forgot-password" className="btn-primary mt-6 w-full py-2.5">
+      <div role="alert">
+        <AuthCard icon={LinkIcon} title={linkError.title} description={linkError.text} footer={backToLogin}>
+          <Button as={Link} to="/forgot-password" variant="primary" size="lg" className="w-full">
             Request a new link
-          </Link>
-          <p className="mt-6 text-sm text-slate-500 dark:text-slate-400">
-            <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300">
-              Back to log in
-            </Link>
-          </p>
-        </div>
+          </Button>
+        </AuthCard>
       </div>
     );
   }
 
   return (
-    <div className={pageClass("narrow")}>
-      <div className="card w-full max-w-md p-8">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Choose a new password</h1>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">After saving, log in with your new password.</p>
-
-        {serverError && (
-          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/50 dark:text-red-300" role="alert">
-            {serverError}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-5" noValidate>
-          <div>
-            <label htmlFor="password" className="label">New password</label>
+    <AuthCard title="Choose a new password" description="After saving, log in with your new password." error={serverError} footer={backToLogin}>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+        <Field label="New password" help="At least 6 characters." error={errors.password?.message}>
+          {(props) => (
             <PasswordInput
-              id="password"
+              {...props}
               autoComplete="new-password"
-              placeholder="At least 6 characters"
-              aria-invalid={errors.password ? "true" : "false"}
+              controlSize="lg"
               {...register("password", {
                 required: "Password is required",
                 minLength: { value: 6, message: "Password must be at least 6 characters" },
               })}
             />
-            {errors.password && <p className="field-error">{errors.password.message}</p>}
-          </div>
+          )}
+        </Field>
 
-          <div>
-            <label htmlFor="confirmPassword" className="label">Confirm new password</label>
+        <Field label="Confirm new password" error={errors.confirmPassword?.message}>
+          {(props) => (
             <PasswordInput
-              id="confirmPassword"
+              {...props}
               autoComplete="new-password"
-              placeholder="Repeat your password"
-              aria-invalid={errors.confirmPassword ? "true" : "false"}
+              controlSize="lg"
               {...register("confirmPassword", {
                 required: "Please confirm your password",
                 validate: (value) => value === getValues("password") || "Passwords do not match",
               })}
             />
-            {errors.confirmPassword && <p className="field-error">{errors.confirmPassword.message}</p>}
-          </div>
+          )}
+        </Field>
 
-          <button type="submit" className="btn-primary w-full py-2.5" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : "Save new password"}
-          </button>
-        </form>
-      </div>
-    </div>
+        <Button type="submit" variant="primary" size="lg" className="w-full" loading={isSubmitting}>
+          {isSubmitting ? "Saving..." : "Save new password"}
+        </Button>
+      </form>
+    </AuthCard>
   );
 }

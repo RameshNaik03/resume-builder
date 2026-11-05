@@ -7,8 +7,10 @@ import { getTheme, setTheme, subscribe } from "../../utils/theme";
 import ErrorBoundary from "../ErrorBoundary";
 import Button from "./Button";
 import Menu from "./Menu";
+import Wordmark from "./Wordmark";
 
-// The frame of every page except the landing page: one top navigation and the page below it.
+// The frame of every page except the sign-in pages (see AuthLayout): one top navigation and
+// the page below it.
 //   Logged in:  the wordmark, Dashboard / Tailor to a job / ATS checker, the dark mode toggle and
 //               the user menu (name, email, log out). Below 768px the links move into the menu.
 //   Logged out: the wordmark, the dark mode toggle, Log in and Sign up.
@@ -54,9 +56,7 @@ function TopBar() {
   return (
     <header className="sticky top-0 z-20 border-b border-line bg-canvas">
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-8">
-        <Link to={user ? "/dashboard" : "/"} className="shrink-0 rounded-sm font-title text-xl font-medium text-fg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent">
-          ResumeCraft
-        </Link>
+        <Wordmark to={user ? "/dashboard" : "/"} />
 
         {user && (
           <nav aria-label="Main" className="hidden items-center gap-1 md:flex">

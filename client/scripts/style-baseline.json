@@ -25,9 +25,6 @@
   "src/components/Modal.jsx": {
     "palette": 5
   },
-  "src/components/PasswordInput.jsx": {
-    "palette": 4
-  },
   "src/components/ResumeCard.jsx": {
     "arbitrary": 2,
     "palette": 63
@@ -41,9 +38,6 @@
   },
   "src/components/Switch.jsx": {
     "palette": 5
-  },
-  "src/components/ThemeToggle.jsx": {
-    "palette": 7
   },
   "src/components/ats/AnalyzeProgress.jsx": {
     "palette": 24
@@ -110,22 +104,6 @@
     "arbitrary": 1,
     "palette": 33
   },
-  "src/components/landing/HeroSheet.jsx": {
-    "arbitrary": 8,
-    "palette": 5
-  },
-  "src/components/landing/InkNavbar.jsx": {
-    "arbitrary": 3,
-    "palette": 15
-  },
-  "src/components/landing/TemplateStrip.jsx": {
-    "arbitrary": 5,
-    "palette": 6
-  },
-  "src/components/landing/Wordmark.jsx": {
-    "arbitrary": 1,
-    "palette": 2
-  },
   "src/components/tailor/TailorOptions.jsx": {
     "palette": 65
   },
@@ -147,25 +125,6 @@
   "src/pages/Editor.jsx": {
     "arbitrary": 2,
     "palette": 113
-  },
-  "src/pages/ForgotPassword.jsx": {
-    "palette": 30
-  },
-  "src/pages/Landing.jsx": {
-    "arbitrary": 21,
-    "palette": 44
-  },
-  "src/pages/Login.jsx": {
-    "palette": 20
-  },
-  "src/pages/NotFound.jsx": {
-    "palette": 10
-  },
-  "src/pages/Register.jsx": {
-    "palette": 16
-  },
-  "src/pages/ResetPassword.jsx": {
-    "palette": 22
   },
   "src/pages/Tailor.jsx": {
     "arbitrary": 4,

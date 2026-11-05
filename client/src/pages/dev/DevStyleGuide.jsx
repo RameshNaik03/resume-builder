@@ -428,7 +428,7 @@ function ColorPanel({ themeClass, label }) {
   const [values, setValues] = useState({});
   useEffect(() => {
     const style = getComputedStyle(ref.current);
-    setValues(Object.fromEntries(COLOR_TOKENS.map(([name]) => [name, style.getPropertyValue(`--${name}`).trim()])));
+    setValues(Object.fromEntries(COLOR_TOKENS.map(([name]) => [name, style.getPropertyValue(`--ds-${name}`).trim()])));
   }, []);
 
   return (
@@ -440,7 +440,7 @@ function ColorPanel({ themeClass, label }) {
           const ratio = TEXT_TOKENS.has(name) && /^#[0-9a-f]{6}$/i.test(value) && values.canvas ? contrast(value, values.canvas) : null;
           return (
             <li key={name} className="flex items-center gap-3">
-              <span className="size-9 shrink-0 rounded-lg border border-line" style={{ background: `var(--${name})` }} />
+              <span className="size-9 shrink-0 rounded-lg border border-line" style={{ background: `var(--ds-${name})` }} />
               <span className="min-w-0 type-small">
                 <code className="text-fg">{name}</code> <span className="text-fg-subtle">{value}</span>
                 <span className="block truncate text-fg-muted">

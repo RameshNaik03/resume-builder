@@ -1,4 +1,5 @@
-// A fictional, realistic resume for the dev template gallery (/dev/templates).
+// A fictional, realistic resume for the dev template gallery (/dev/templates) and the landing
+// page's template thumbnails.
 // It fills every section, including job subtitles and two "additional" sections, and is
 // long enough that most layouts run onto a second page, so pagination can be compared too.
 
