@@ -132,6 +132,16 @@ test("applications: options, hidden bullets, versions and deleting", async (t) =
 
   // A cover letter and a confirmed skill on the first version, which is then replaced
   const letter = (await call("POST", "/cover-letters", token, { resumeId: first.resume._id, jobId: first.jobId, title: "Letter", body: "<p>Hello</p>" })).body;
+  const northwindPlace = first.places.jobs[0];
+  r = await call("POST", "/jobs/confirm-skill", token, {
+    jobId: first.jobId,
+    skill: "CI/CD",
+    note: "Set up CI/CD pipelines for Datastream",
+    placement: "bullet",
+    target: { type: "job", id: northwindPlace.id },
+    bullet: "Set up CI/CD pipelines for Datastream",
+  });
+  await check("a confirmed skill's bullet naming the job's company (not an employer) -> 400", r.status === 400 && /job's company in your own work: Datastream/.test(r.body.message), r.body.message);
   r = await call("POST", "/jobs/confirm-skill", token, { jobId: first.jobId, skill: "CI/CD", note: "Set up CI/CD pipelines at Northwind", placement: "skills" });
   await check("(setup) CI/CD confirmed on the first version", r.status === 200, r.body);
   const counts = async () => ({ jobs: await Job.countDocuments(), resumes: await Resume.countDocuments(), letters: await CoverLetter.countDocuments() });

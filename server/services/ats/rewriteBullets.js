@@ -82,6 +82,44 @@ export function checkRewrite(before, after, resumeText, { allowedSkills = [] } =
   return null;
 }
 
+// The hiring company (from the job description) in generated text, unless the resume really
+// lists it as an employer (employers: the resume's experience companies). Returns why not, or null.
+//   part "mention" - a summary or a letter's motivation, opening or close: it may name the
+//                    company (the one being applied to), but never as somewhere the person worked
+//   part "work"    - a bullet, a headline or a letter's body (the person's past work): never at all
+// English and German: "at Datastream, I built", "As Engineer at Datastream, I", "my role at
+// Datastream", "worked for Datastream", "Datastream, where I", "Bei Datastream habe ich",
+// "meine Zeit bei Datastream", "bei Datastream gearbeitet", "Datastream, wo ich"
+export function companyProblem(text, company, { employers = [], part = "work" } = {}) {
+  const name = String(company ?? "").trim();
+  if (!name) return null;
+  const sameCompany = (employer) => {
+    const a = String(employer ?? "").trim().toLowerCase();
+    return Boolean(a) && (a === name.toLowerCase() || a.startsWith(`${name.toLowerCase()} `) || name.toLowerCase().startsWith(`${a} `));
+  };
+  if (employers.some(sameCompany)) return null;
+  const c = `${escapeRegex(name)}(?![\\p{L}\\p{N}])`;
+  if (!new RegExp(`(?<![\\p{L}\\p{N}])${c}`, "iu").test(text)) return null;
+  if (part === "work") return `the job's company in your own work: ${name}`;
+  const PAST = "habe|hatte|war|bin|arbeitete|entwickelte|leitete|baute|betreute|verantwortete";
+  const employer = [
+    `\\b(?:worked|working|interned|employed|served)\\b[^.!?]{0,40}?\\b(?:at|for|with)\\s+${c}`,
+    // "I was an intern at", "have been a developer with" (not "I was excited to apply for the role at")
+    `\\b(?:was|were|been)\\s+(?!excited|keen|eager|interested|thrilled|drawn|happy|glad|delighted|pleased)(?:an?\\s+|the\\s+)?(?:[\\p{L}-]+\\s+){0,3}?(?:at|for|with)\\s+${c}`,
+    `\\b(?:my|our)\\s+(?:role|time|job|work|position|internship|tenure|years?)\\b[^.!?]{0,40}?\\b(?:at|with)\\s+${c}`,
+    `(?:^|[.!?]\\s+)(?:at|with)\\s+${c}\\s*,?\\s+(?:I|we)\\b`,
+    `\\bas\\s+(?!your\\b|the\\s+next\\b|its\\s+next\\b)[^.!?,]{1,60}?\\s+at\\s+${c}\\s*,\\s*(?:I|we)\\b`,
+    `${c}\\s*,\\s*where\\s+(?:I|we)\\b`,
+    `\\bbei\\s+${c}\\s*,?\\s+(?:${PAST})\\b`,
+    `\\b(?:meine[rnm]?|unsere[rnm]?)\\s+(?:Rolle|Zeit|Tätigkeit|Stelle|Position|Arbeit|Praktikum|Jahre)\\b[^.!?]{0,40}?\\bbei\\s+${c}`,
+    `\\b(?:gearbeitet|tätig|beschäftigt|angestellt)\\b[^.!?]{0,40}?\\b(?:bei|für)\\s+${c}`,
+    `\\b(?:bei|für)\\s+${c}[^.!?]{0,40}?\\b(?:gearbeitet|tätig|beschäftigt|angestellt)(?![\\p{L}])`,
+    `\\bals\\s+[^.!?,]{1,60}?\\s+bei\\s+${c}\\s+(?:${PAST})\\b`,
+    `${c}\\s*,\\s*wo\\s+ich\\b`,
+  ];
+  return employer.some((pattern) => new RegExp(pattern, "iu").test(text)) ? `the job's company as your employer: ${name}` : null;
+}
+
 // Names after "bei" (an employer), "als" (a title), "an der" (a university) and their English
 // forms: in German every noun is capitalised, so only these count ("für Anwendungsdaten" is a noun)
 const PROPER_NAME_AFTER = /\b(?:[Aa]t|[Aa]s|[Bb]ei|[Aa]ls|[Aa]n der)\s+((?:[A-ZÄÖÜ][\w&.'-]*)(?:\s+[A-ZÄÖÜ][\w&.'-]*){0,3})/g;

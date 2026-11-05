@@ -11,7 +11,8 @@ import { startFakeClaude } from "./helpers/fakeClaude.js";
 import tailorResume, { splitSentences, statedYears } from "../services/jobs/tailorResume.js";
 import { analyzeJobWithRules } from "../services/jobs/analyzeJob.js";
 import matchReport from "../services/jobs/matchReport.js";
-import { checkGermanRewrite, checkRewrite } from "../services/ats/rewriteBullets.js";
+import { checkGermanRewrite, checkRewrite, companyProblem } from "../services/ats/rewriteBullets.js";
+import { checkLetter } from "../services/coverLetters/generateLetter.js";
 import { buildContent } from "../services/ats/optimizationOps.js";
 import describeDifferences, { changedShare } from "../services/jobs/differences.js";
 import resumeToText from "../services/ats/resumeToText.js";
@@ -237,6 +238,27 @@ test("AI tailoring: different jobs get different resumes", async (t) => {
   );
   await check("  ...but a name after 'bei' that the resume doesn't have is still dropped", /new name: Google/.test(checkGermanRewrite("Designed MongoDB schemas", "Entwarf MongoDB-Schemas bei Google", resumeToText(RESUME))));
 
+  // The job's company (Datastream): fine in the summary as the company applied to, never in a
+  // bullet or as an employer, unless the resume lists it
+  answer = (content) => ({
+    headline: "Full Stack Developer | Node.js",
+    summary: "Full Stack Developer with 1.5+ years building RESTful APIs with Node.js and MongoDB, ready to bring that work to Datastream.",
+    bullets: [{ id: idOf(content, "Designed MongoDB"), after: "Designed MongoDB schemas for Datastream-style application data.", reason: "Names the company." }],
+  });
+  const named = await run(BACKEND);
+  await check("company: named in the summary as the company applied to -> kept", plain(named.resume.summary).endsWith("ready to bring that work to Datastream."), named.rejectedRewrites);
+  await check("  ...in a bullet -> dropped", named.rejectedRewrites.some((r) => r.section === "bullet" && r.problem === "the job's company in your own work: Datastream"), named.rejectedRewrites);
+  answer = () => ({ headline: "", summary: "Full Stack Developer with 1.5+ years. At Datastream, I built RESTful APIs with Node.js.", bullets: [] });
+  const claimed = await run(BACKEND);
+  await check("  ...as an employer in the summary -> dropped", claimed.rejectedRewrites.some((r) => r.section === "summary" && r.problem === "the job's company as your employer: Datastream"), claimed.rejectedRewrites);
+  answer = () => ({ headline: "", summary: "Full Stack Entwickler mit 1,5+ Jahren. Bei Datastream habe ich RESTful APIs mit Node.js gebaut.", bullets: [] });
+  const claimedDe = await tailorResume(RESUME, analyzeJobWithRules(BACKEND), { jobDescription: BACKEND, useAI: true, language: "de" });
+  await check("  ...in German too ('Bei Datastream habe ich')", claimedDe.rejectedRewrites.some((r) => r.section === "summary" && /as your employer: Datastream/.test(r.problem)), claimedDe.rejectedRewrites);
+  answer = (content) => ({ headline: "", summary: "", bullets: [{ id: idOf(content, "Designed MongoDB"), after: "Designed MongoDB schemas for Datastream application data.", reason: "Real employer." }] });
+  const worked = { ...RESUME, experience: [{ ...RESUME.experience[0], company: "Datastream" }, RESUME.experience[1]] };
+  const real = await tailorResume(worked, analyzeJobWithRules(BACKEND), { jobDescription: BACKEND, useAI: true, strength: "strong" });
+  await check("  ...unless the resume lists it as an employer", bulletsOf(real.resume).includes("Designed MongoDB schemas for Datastream application data."), real.rejectedRewrites);
+
   // Unsafe headline and summary: dropped with reasons, the rules' versions are used instead
   answer = () => ({ headline: "Senior Backend Engineer", summary: "Full Stack Developer with 5+ years of experience in Node.js and MongoDB.", bullets: [] });
   const unsafe = await run(BACKEND);
@@ -307,4 +329,45 @@ test("tailoring options: skills, projects, bullets, template, language, one page
     sparse.reasons.some((reason) => reason.startsWith("2 AI rewrites were dropped")) && sparse.reasons.some((reason) => reason.includes("only 1 of the job's 10 skills")),
     sparse.reasons
   );
+});
+
+test("the job's company: mentioned, never as an employer or in your own work (English and German)", async (t) => {
+  const check = checker(t);
+  const mention = (text, employers = []) => companyProblem(text, "Datastream", { employers, part: "mention" });
+  const work = (text, employers = []) => companyProblem(text, "Datastream", { employers, part: "work" });
+  const EMPLOYER = "the job's company as your employer: Datastream";
+
+  // Summaries and letter mentions: the company applied to is fine
+  for (const text of [
+    "Backend developer ready to bring Node.js and MongoDB experience to Datastream.",
+    "I was excited to apply for the Backend Developer role at Datastream.",
+    "I'd welcome the chance to talk about how I could help Datastream.",
+    "für die Stelle als Backend Developer bei Datastream bringe ich Erfahrung mit Node.js mit.",
+    "Diese Erfahrung möchte ich als Backend Developer bei Datastream einbringen.",
+  ]) await check(`mention ok: "${text}"`, mention(text) === null, mention(text));
+
+  // ...but never as somewhere the person worked
+  for (const text of [
+    "At Datastream, I built RESTful APIs.",
+    "I worked for Datastream on its payment APIs.",
+    "As Backend Engineer at Datastream, I led the API team.",
+    "I was an intern at Datastream for a year.",
+    "In my role at Datastream I designed schemas.",
+    "I learned a lot at Datastream, where I built queues.",
+    "Bei Datastream habe ich RESTful APIs gebaut.",
+    "In meiner Zeit bei Datastream entstanden viele APIs.",
+    "Ich habe zwei Jahre für Datastream gearbeitet.",
+    "Als Entwickler bei Datastream habe ich Schemas entworfen.",
+    "Datastream, wo ich APIs gebaut habe, war spannend.",
+  ]) await check(`employer claim dropped: "${text}"`, mention(text) === EMPLOYER, mention(text));
+
+  await check("own work (bullets, headline, letter body): any mention is dropped", work("Designed schemas for Datastream-scale data") === "the job's company in your own work: Datastream");
+  await check("  a different company is not this check's business", work("Designed schemas at Northwind") === null && mention("At Northwind, I built APIs.") === null);
+  await check("the resume lists Datastream as an employer: all fine", work("Designed schemas at Datastream", ["Datastream GmbH"]) === null && mention("At Datastream, I built APIs.", ["Datastream"]) === null);
+
+  // Cover letters: the body is own work; the opening, motivation and close may name it
+  const facts = { allowedText: `${resumeToText(RESUME)}\nBackend Developer\nDatastream`, company: "Datastream", employers: ["Northwind", "Brightpath"] };
+  await check("letter: an opening naming the company -> fine", checkLetter("The Backend Developer role at Datastream calls for Node.js, which I use daily.", facts, "en") === null, checkLetter("The Backend Developer role at Datastream calls for Node.js, which I use daily.", facts, "en"));
+  await check("letter: a body paragraph naming it -> dropped", checkLetter("I built RESTful APIs in Node.js like the ones Datastream runs.", facts, "en", "work") === "the job's company in your own work: Datastream");
+  await check("letter: a German body claiming it as employer -> dropped", checkLetter("Bei Datastream habe ich mit Node.js gearbeitet.", facts, "de") === EMPLOYER);
 });

@@ -8,7 +8,7 @@ import { baseResumeOf, defaultTitle, deleteApplications, versionsFor } from "../
 import matchReport from "../services/jobs/matchReport.js";
 import { isAIEnabled } from "../services/ats/aiReview.js";
 import { applyOp } from "../services/ats/optimizationOps.js";
-import { checkRewrite } from "../services/ats/rewriteBullets.js";
+import { checkRewrite, companyProblem } from "../services/ats/rewriteBullets.js";
 import resumeToText from "../services/ats/resumeToText.js";
 import scoreContent from "../services/ats/scoreContent.js";
 import { containsAnyTerm } from "../services/ats/keywords.js";
@@ -379,7 +379,8 @@ export const confirmSkill = async (req, res) => {
       throw new Error("Please choose one of your jobs or projects for the bullet.");
     }
     const ownText = `${note}\n${skill}\n${resumeToText(content)}`;
-    const problem = checkRewrite(ownText, bullet, ownText);
+    // Never the job's own company in a bullet (unless the resume lists it as an employer)
+    const problem = companyProblem(bullet, job.analysis?.company, { employers: (content.experience ?? []).map((entry) => entry.company) }) ?? checkRewrite(ownText, bullet, ownText);
     if (problem) {
       res.status(400);
       throw new Error(`The bullet adds something that isn't in your note or resume (${problem}). Please keep to what you wrote.`);
