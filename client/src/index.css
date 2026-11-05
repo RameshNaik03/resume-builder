@@ -71,6 +71,132 @@
   }
 }
 
+/* ---------- "Quiet professional" design system (Phase UI-0) ----------
+   Proposed tokens for the whole app, shown at /dev/ui (dev only). No page uses them yet.
+   Colours: warm off-white canvas, near-black ink, one accent (ink blue) used sparingly, muted
+   secondary text, thin lines. Each has a dark-mode value below (.dark), and .light restores
+   the light values inside a dark page (for side-by-side previews). */
+@theme {
+  --color-canvas: #f8f6f1; /* Page background */
+  --color-surface: #fffdf9; /* Cards, inputs, dialogs */
+  --color-surface-2: #f1eee7; /* Quiet fills: segmented controls, table headers, hovers */
+  --color-fg: #1c1b19; /* Text and icons */
+  --color-fg-muted: #625d55; /* Secondary text (6:1 on canvas) */
+  --color-fg-subtle: #8b857b; /* Placeholders and disabled text only (not for reading) */
+  --color-line: #e5e0d6; /* Borders and dividers */
+  --color-line-strong: #cfc8bb; /* Input borders, hover borders */
+  --color-accent: #2b4a6f; /* Primary actions, links, focus, selection */
+  --color-accent-strong: #213a58; /* Accent hover / pressed */
+  --color-accent-soft: #e6ecf3; /* Selected rows, accent badges */
+  --color-on-accent: #ffffff; /* Text on the accent */
+  --color-success: #2f6b3f;
+  --color-success-soft: #e8f1e9;
+  --color-warning: #8a5a12;
+  --color-warning-soft: #f7eedb;
+  --color-danger: #a3392b;
+  --color-danger-soft: #f8e6e2;
+
+  /* A refined serif for large page headings only; Inter for everything else */
+  --font-title: "Newsreader", "Iowan Old Style", Georgia, serif;
+
+  /* Thin borders do most of the work; shadows only lift what floats */
+  --shadow-soft: 0 1px 2px rgb(28 27 25 / 0.04), 0 1px 3px rgb(28 27 25 / 0.04);
+  --shadow-raised: 0 2px 4px rgb(28 27 25 / 0.04), 0 8px 24px -6px rgb(28 27 25 / 0.1);
+  --shadow-overlay: 0 4px 8px rgb(28 27 25 / 0.05), 0 24px 48px -12px rgb(28 27 25 / 0.22);
+}
+.dark {
+  --color-canvas: #151412;
+  --color-surface: #1d1c19;
+  --color-surface-2: #26241f;
+  --color-fg: #ece7dd;
+  --color-fg-muted: #a8a196;
+  --color-fg-subtle: #79736a;
+  --color-line: #312e29;
+  --color-line-strong: #46423b;
+  --color-accent: #9cb7d8;
+  --color-accent-strong: #b8cce5;
+  --color-accent-soft: #1d2633;
+  --color-on-accent: #0e1726;
+  --color-success: #8cc79a;
+  --color-success-soft: #1c2b20;
+  --color-warning: #e0b45f;
+  --color-warning-soft: #2f2616;
+  --color-danger: #ef9a8b;
+  --color-danger-soft: #34201c;
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -6px rgb(0 0 0 / 0.45);
+  --shadow-overlay: 0 24px 48px -12px rgb(0 0 0 / 0.6);
+}
+.light {
+  --color-canvas: #f8f6f1;
+  --color-surface: #fffdf9;
+  --color-surface-2: #f1eee7;
+  --color-fg: #1c1b19;
+  --color-fg-muted: #625d55;
+  --color-fg-subtle: #8b857b;
+  --color-line: #e5e0d6;
+  --color-line-strong: #cfc8bb;
+  --color-accent: #2b4a6f;
+  --color-accent-strong: #213a58;
+  --color-accent-soft: #e6ecf3;
+  --color-on-accent: #ffffff;
+  --color-success: #2f6b3f;
+  --color-success-soft: #e8f1e9;
+  --color-warning: #8a5a12;
+  --color-warning-soft: #f7eedb;
+  --color-danger: #a3392b;
+  --color-danger-soft: #f8e6e2;
+  --shadow-soft: 0 1px 2px rgb(28 27 25 / 0.04), 0 1px 3px rgb(28 27 25 / 0.04);
+  --shadow-raised: 0 2px 4px rgb(28 27 25 / 0.04), 0 8px 24px -6px rgb(28 27 25 / 0.1);
+  --shadow-overlay: 0 4px 8px rgb(28 27 25 / 0.05), 0 24px 48px -12px rgb(28 27 25 / 0.22);
+}
+
+/* The type scale: serif for page-level headings, Inter for the rest */
+@utility type-display {
+  font-family: var(--font-title);
+  font-size: 2.75rem; /* 44px */
+  line-height: 1.12;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+@utility type-h1 {
+  font-family: var(--font-title);
+  font-size: 2.125rem; /* 34px */
+  line-height: 1.18;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+@utility type-h2 {
+  font-family: var(--font-title);
+  font-size: 1.625rem; /* 26px */
+  line-height: 1.25;
+  font-weight: 500;
+}
+@utility type-h3 {
+  font-size: 1.0625rem; /* 17px, Inter */
+  line-height: 1.5;
+  font-weight: 600;
+}
+@utility type-body {
+  font-size: 0.9375rem; /* 15px: forms, cards, lists */
+  line-height: 1.6;
+}
+@utility type-small {
+  font-size: 0.8125rem; /* 13px: help text, metadata */
+  line-height: 1.5;
+}
+@utility type-label {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.4;
+  font-weight: 500;
+}
+@utility type-eyebrow {
+  font-size: 0.75rem; /* 12px */
+  line-height: 1.4;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
 /* "Night ink": the same tokens, inverted, so every bg-paper / text-ink follows dark mode */
 .dark {
   --color-paper: #141414;

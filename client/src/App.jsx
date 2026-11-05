@@ -26,6 +26,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 // routes don't exist there and their code is left out of the bundle
 const DevTemplates = import.meta.env.DEV ? lazy(() => import("./pages/dev/DevTemplates")) : null;
 const DevTemplatePreview = import.meta.env.DEV ? lazy(() => import("./pages/dev/DevTemplatePreview")) : null;
+const DevStyleGuide = import.meta.env.DEV ? lazy(() => import("./pages/dev/DevStyleGuide")) : null;
 
 // Shown while a page's code downloads
 const page = (element, text = "Loading...") => <Suspense fallback={<Loader text={text} />}>{element}</Suspense>;
@@ -67,6 +68,8 @@ export default function App() {
             {/* Development only: every template side by side (not linked anywhere) */}
             {import.meta.env.DEV && <Route path="/dev/templates" element={page(<DevTemplates />)} />}
             {import.meta.env.DEV && <Route path="/dev/templates/:templateId" element={page(<DevTemplatePreview />)} />}
+            {/* Development only: the proposed design system (Phase UI-0) */}
+            {import.meta.env.DEV && <Route path="/dev/ui" element={page(<DevStyleGuide />)} />}
 
             {/* Any other URL */}
             <Route path="*" element={page(<NotFound />)} />
