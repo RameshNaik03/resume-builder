@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import { getTemplate } from "../templates/registry";
 import { resolveDesign, usedFontIds } from "../templates/design";
 import { getPrintFonts } from "../templates/fonts";

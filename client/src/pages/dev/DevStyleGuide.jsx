@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import toast from "react-hot-toast";
+import toast from "../../utils/toast";
 import { ArrowLeft, Download, FileText, Moon, Plus, Search, Sun, Target, Trash2, Upload } from "lucide-react";
 import { getTheme, setTheme, subscribe } from "../../utils/theme";
 import { SAMPLE_RESUME } from "../../templates/sampleResume";

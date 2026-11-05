@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
 import { AlertTriangle, ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import api from "../api/axios";
 import usePageTitle from "../hooks/usePageTitle";
 import getErrorMessage from "../utils/getErrorMessage";

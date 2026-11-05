@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, Minus, Plus, Target, X } from "lucide-react";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import api from "../api/axios";
 import usePageTitle from "../hooks/usePageTitle";
 import getErrorMessage from "../utils/getErrorMessage";

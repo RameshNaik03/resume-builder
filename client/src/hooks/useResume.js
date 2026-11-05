@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import api from "../api/axios";
 import getErrorMessage from "../utils/getErrorMessage";
 

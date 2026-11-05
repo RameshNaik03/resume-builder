@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import api from "../api/axios";
 import getErrorMessage from "../utils/getErrorMessage";
 import { TEMPLATES } from "../templates/registry";

@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import { useAuth } from "../context/AuthContext";
 import Logo from "./Logo";
 import ThemeToggle from "./ThemeToggle";

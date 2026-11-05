@@ -189,4 +189,13 @@ test("Cover letters", async (t) => {
     await clickText('[data-testid="application-card"] a', "Job description");
     await page.waitForFunction(() => document.querySelector("#job-description")?.open && document.querySelector("#job-description").innerText.includes("Familiarity with GraphQL"), { timeout: 10000 });
   });
+
+  // React's dev mode loads a page twice; both loads fail here, and the message must show once
+  await t.test("a letter that doesn't exist: one toast, not two", async () => {
+    await page.goto(`${APP}/cover-letters/0123456789abcdef01234567`, { waitUntil: "networkidle0" });
+    await page.waitForFunction(() => document.body.innerText.includes("We couldn't open this cover letter."), { timeout: 10000 });
+    await sleep(500);
+    const shown = await page.evaluate(() => document.body.innerText.split("Cover letter not found").length - 1);
+    assert.equal(shown, 1, `"Cover letter not found" shown ${shown} times`);
+  });
 });

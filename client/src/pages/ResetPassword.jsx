@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
-import toast from "react-hot-toast";
+import toast from "../utils/toast";
 import { LinkIcon } from "lucide-react";
 import api from "../api/axios";
 import getErrorMessage from "../utils/getErrorMessage";
