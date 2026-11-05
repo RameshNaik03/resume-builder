@@ -494,8 +494,8 @@ function LetterEditor({ id }) {
       </div>
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-2">
-        {/* Left: the letter */}
-        <div className="space-y-4">
+        {/* Left: the letter (min-w-0: grid columns may shrink below the A4 preview's width) */}
+        <div className="min-w-0 space-y-4">
           {placeholders.length > 0 && (
             <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200" data-testid="letter-placeholders">
               <p className="font-semibold">
@@ -584,8 +584,8 @@ function LetterEditor({ id }) {
           </section>
         </div>
 
-        {/* Right: live preview */}
-        <div>
+        {/* Right: live preview (scaled to the column's width) */}
+        <div className="min-w-0">
           <div className="lg:sticky lg:top-36 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:p-1">
             <p className="mb-3 hidden text-xs font-medium tracking-wider text-slate-400 uppercase lg:block dark:text-slate-500">Live preview · {getTemplate(resume.template).name}</p>
             {fit?.fitStatus && !fit.fitStatus.pending && !fit.fitStatus.fits && (
