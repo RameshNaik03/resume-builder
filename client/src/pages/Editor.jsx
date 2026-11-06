@@ -4,9 +4,8 @@ import { useReactToPrint } from "react-to-print";
 import { ArrowLeft, Download, LayoutTemplate } from "lucide-react";
 import toast from "../utils/toast";
 import { getTemplate } from "../templates/registry";
-import { resolveDesign, usedFontIds } from "../templates/design";
-import { getPrintFonts } from "../templates/fonts";
-import printPageStyle from "../utils/printPageStyle";
+import { resolveDesign } from "../templates/design";
+import printPageStyle, { printWhenFontsReady, reportPrintError } from "../utils/printPageStyle";
 import useResume from "../hooks/useResume";
 import usePageTitle from "../hooks/usePageTitle";
 import { placeholdersIn } from "../utils/placeholders";
@@ -99,21 +98,13 @@ export default function Editor() {
     [templateId, design]
   );
   const pageSize = resolvedDesign?.pageSize ?? "A4";
-  const fontIds = resolvedDesign ? usedFontIds(resolvedDesign).join(",") : "";
-  const [printFonts, setPrintFonts] = useState([]);
-  useEffect(() => {
-    let ignore = false;
-    getPrintFonts(fontIds ? fontIds.split(",") : []).then((fonts) => !ignore && setPrintFonts(fonts));
-    return () => {
-      ignore = true;
-    };
-  }, [fontIds]);
 
   const handleDownloadPdf = useReactToPrint({
     contentRef: printRef,
     documentTitle: resume?.title?.trim() || "Resume",
     pageStyle: printPageStyle(pageSize),
-    fonts: printFonts, // react-to-print waits for these font files before printing
+    print: printWhenFontsReady(() => resume?.title?.trim() || "Resume"), // Waits for the fonts in use, then prints
+    onPrintError: reportPrintError, // Never fail silently
   });
 
   // Ctrl+S / Cmd+S saves instead of opening the browser's "Save page" dialog

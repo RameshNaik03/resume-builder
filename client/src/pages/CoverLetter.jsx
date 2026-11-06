@@ -7,10 +7,9 @@ import api from "../api/axios";
 import usePageTitle from "../hooks/usePageTitle";
 import getErrorMessage from "../utils/getErrorMessage";
 import { toPlainText } from "../utils/richText";
-import printPageStyle from "../utils/printPageStyle";
+import printPageStyle, { printWhenFontsReady, reportPrintError } from "../utils/printPageStyle";
 import { getTemplate } from "../templates/registry";
-import { resolveDesign, usedFontIds } from "../templates/design";
-import { getPrintFonts } from "../templates/fonts";
+import { resolveDesign } from "../templates/design";
 import { letterPlaceholders } from "../templates/prepareLetter";
 import Loader from "../components/Loader";
 import ConfirmModal from "../components/ConfirmModal";
@@ -398,16 +397,13 @@ function LetterEditor({ id }) {
 
   // PDF: the hidden printed copy in ResumePreview, with the template's fonts
   const resolved = useMemo(() => (resume ? resolveDesign(getTemplate(resume.template), resume.design).resolved : null), [resume]);
-  const fontIds = resolved ? usedFontIds(resolved).join(",") : "";
-  const [printFonts, setPrintFonts] = useState([]);
-  useEffect(() => {
-    let ignore = false;
-    getPrintFonts(fontIds ? fontIds.split(",") : []).then((fonts) => !ignore && setPrintFonts(fonts));
-    return () => {
-      ignore = true;
-    };
-  }, [fontIds]);
-  const print = useReactToPrint({ contentRef: printRef, documentTitle: letter?.title || "Cover letter", pageStyle: printPageStyle(resolved?.pageSize ?? "A4"), fonts: printFonts });
+  const print = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: letter?.title || "Cover letter",
+    pageStyle: printPageStyle(resolved?.pageSize ?? "A4"),
+    print: printWhenFontsReady(() => letter?.title || "Cover letter"), // Waits for the fonts in use, then prints
+    onPrintError: reportPrintError,
+  });
   const download = async () => {
     await save();
     if (placeholders.length) setConfirm("download");
