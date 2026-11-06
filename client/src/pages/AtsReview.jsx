@@ -1,16 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, PenLine, RefreshCw, X } from "lucide-react";
+import { ArrowRight, Check, PenLine, RefreshCw, X } from "lucide-react";
 import toast from "../utils/toast";
 import api from "../api/axios";
 import usePageTitle from "../hooks/usePageTitle";
 import getErrorMessage from "../utils/getErrorMessage";
 import { findPlaceholders, placeholdersIn } from "../utils/placeholders";
 import Loader from "../components/Loader";
-import ScoreRing from "../components/ats/ScoreRing";
 import ResumeSnapshot from "../components/ats/ResumeSnapshot";
 import { gradeFor } from "../components/ats/atsHelpers";
 import { pageClass } from "../components/ui/pageLayout";
+import { Alert, Card, PageHeader } from "../components/ui/Display";
+import { ScoreRing } from "../components/ui/Meter";
+import { Checkbox } from "../components/ui/Form";
+import Button from "../components/ui/Button";
+import BackLink from "../components/ui/BackLink";
 
 // Review screen for the ATS optimizer's result (/ats/review/:resumeId): the score before and
 // after, the original and optimized resume side by side, and every change to accept or reject.
@@ -43,18 +47,21 @@ function WithPlaceholders({ text }) {
   );
 }
 
+// Accept / Reject for one change: pressed shows the decision in its status colour
+const DECISION_STYLES = { accepted: "border-success/40 bg-success-soft text-success", rejected: "border-danger/40 bg-danger-soft text-danger" };
+
 // locked: the resume was edited in the editor since the review, so decisions are read-only
 function ChangeItem({ change, onDecide, busy, locked }) {
   const { status } = change;
-  const button = (target, label, Icon, activeClass) => (
+  const button = (target, label, Icon) => (
     <button
       type="button"
       onClick={() => onDecide([{ id: change.id, status: target }])}
       disabled={busy || locked || status === target || (target === "rejected" && change.revertible === false)}
       aria-pressed={status === target}
       title={target === "rejected" && change.revertible === false ? "Your original file's layout can't be recreated" : undefined}
-      className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-medium transition disabled:cursor-not-allowed ${
-        status === target ? activeClass : "border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+      className={`inline-flex h-7 items-center gap-1 rounded-md border px-2.5 text-xs font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent disabled:cursor-not-allowed ${
+        status === target ? DECISION_STYLES[target] : "border-line-strong text-fg-muted hover:bg-surface-2 hover:text-fg disabled:opacity-50"
       }`}
     >
       <Icon className="size-3.5" aria-hidden="true" />
@@ -65,21 +72,21 @@ function ChangeItem({ change, onDecide, busy, locked }) {
   return (
     <li className={`py-4 ${status === "rejected" ? "opacity-70" : ""}`} data-change={change.id}>
       <div className="flex flex-wrap items-start justify-between gap-2">
-        <p className="min-w-0 flex-1 text-sm">
-          <span className="text-rose-700 line-through decoration-rose-400 dark:text-rose-300">{change.before}</span>
-          <ArrowRight className="mx-1.5 inline size-3.5 text-slate-400" aria-label="changed to" />
-          <span className="font-medium text-emerald-700 dark:text-emerald-300">
+        <p className="min-w-0 flex-1 type-small">
+          <span className="text-danger line-through">{change.before}</span>
+          <ArrowRight className="mx-1.5 inline size-3.5 text-fg-subtle" aria-label="changed to" />
+          <span className="font-medium text-success">
             <WithPlaceholders text={change.after} />
           </span>
         </p>
         <span className="sr-only">Status: {STATUS_LABELS[status]}</span>
         <div className="flex shrink-0 gap-1.5">
-          {button("accepted", "Accept", Check, "border-emerald-500 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300")}
-          {button("rejected", "Reject", X, "border-rose-500 bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300")}
+          {button("accepted", "Accept", Check)}
+          {button("rejected", "Reject", X)}
         </div>
       </div>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{change.reason}</p>
-      {status === "rejected" && <p className="mt-1 text-xs font-medium text-rose-600 dark:text-rose-400">Undone in your optimized resume.</p>}
+      <p className="mt-1 type-small text-fg-muted">{change.reason}</p>
+      {status === "rejected" && <p className="mt-1 type-small font-medium text-danger">Undone in your optimized resume.</p>}
     </li>
   );
 }
@@ -181,10 +188,10 @@ export default function AtsReview() {
   if (loadError) {
     return (
       <div className={pageClass("narrow", "text-center")}>
-        <p className="text-slate-700 dark:text-slate-300">{loadError}</p>
-        <Link to="/dashboard" className="btn-secondary mt-4">
+        <p className="type-body text-fg-muted">{loadError}</p>
+        <Button as={Link} to="/dashboard" className="mt-4">
           Back to the dashboard
-        </Link>
+        </Button>
       </div>
     );
   }
@@ -195,10 +202,10 @@ export default function AtsReview() {
   if (!review) {
     return (
       <div className={pageClass("narrow", "text-center")}>
-        <p className="text-slate-700 dark:text-slate-300">This resume wasn't created by the ATS optimizer, so there's nothing to review.</p>
-        <Link to={`/editor/${id}`} className="btn-primary mt-4">
+        <p className="type-body text-fg-muted">This resume wasn't created by the ATS optimizer, so there's nothing to review.</p>
+        <Button as={Link} to={`/editor/${id}`} variant="primary" className="mt-4">
           Open in editor
-        </Link>
+        </Button>
       </div>
     );
   }
@@ -208,165 +215,166 @@ export default function AtsReview() {
 
   return (
     <div className={pageClass()}>
-      <Link to="/ats-checker" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
-        <ArrowLeft className="size-4" aria-hidden="true" />
-        ATS checker
-      </Link>
+      {/* ---------- Header and scores ---------- */}
+      <PageHeader
+        back={
+          <div className="mb-3">
+            <BackLink to="/ats-checker">ATS checker</BackLink>
+          </div>
+        }
+        title="Review your ATS-optimized resume"
+        description={`${resume.title} · ${reviewedCount} of ${changes.length} changes reviewed · your original stays as it was`}
+        actions={
+          <>
+            <Button icon={RefreshCw} onClick={rescore} loading={rescoring} disabled={busy}>
+              {rescoring ? "Scoring..." : "Re-score"}
+            </Button>
+            <Button variant="primary" icon={PenLine} onClick={openEditor}>
+              Open in editor
+            </Button>
+          </>
+        }
+      />
 
-      {/* ---------- Scores ---------- */}
-      <section className="card mt-4 p-6">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+      <Card className="mt-6">
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-display text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">Review your ATS-optimized resume</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {resume.title} · {reviewedCount} of {changes.length} changes reviewed · your original stays as it was
-            </p>
-            <p className="mt-4 text-lg font-semibold text-slate-900 dark:text-white" data-testid="improvement">
+            <p className="type-h2 text-fg tabular-nums" data-testid="improvement">
               {scores.before} → {scores.after}
-              <span className={improvement >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}>
+              <span className={improvement >= 0 ? "text-success" : "text-danger"}>
                 , {improvement >= 0 ? "+" : ""}
                 {improvement} points
               </span>
             </p>
             {current && current.score !== scores.after && (
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300" data-testid="current-score">
-                Current score with your choices: <span className="font-semibold">{current.score}</span> ({current.grade})
+              <p className="mt-1 type-small text-fg-muted" data-testid="current-score">
+                Current score with your choices: <span className="font-medium text-fg">{current.score}</span> ({current.grade})
               </p>
             )}
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button type="button" onClick={rescore} disabled={rescoring || busy} className="btn-secondary">
-                <RefreshCw className={`size-4 ${rescoring ? "animate-spin" : ""}`} aria-hidden="true" />
-                {rescoring ? "Scoring..." : "Re-score"}
-              </button>
-              <button type="button" onClick={openEditor} className="btn-primary">
-                <PenLine className="size-4" aria-hidden="true" />
-                Open in editor
-              </button>
-            </div>
           </div>
-          <div className="flex items-center justify-center gap-2 sm:gap-6">
+          <div className="flex items-center justify-center gap-3 sm:gap-6">
             <div className="text-center">
-              <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">Original</p>
-              <ScoreRing score={scores.before} grade={gradeFor(scores.before)} compact />
+              <p className="mb-2 type-eyebrow text-fg-muted">Original</p>
+              <ScoreRing value={scores.before} label={gradeFor(scores.before)} name="ATS score" size="compact" animate />
             </div>
-            <ArrowRight className="size-6 text-slate-400" aria-hidden="true" />
+            <ArrowRight className="size-5 text-fg-subtle" aria-hidden="true" />
             <div className="text-center">
-              <p className="mb-1 text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">Optimized</p>
-              <ScoreRing score={scores.after} grade={gradeFor(scores.after)} compact />
+              <p className="mb-2 type-eyebrow text-fg-muted">Optimized</p>
+              <ScoreRing value={scores.after} label={gradeFor(scores.after)} name="ATS score" size="compact" animate />
             </div>
           </div>
         </div>
-      </section>
+      </Card>
 
       {placeholders.length > 0 && (
-        <p className="mt-4 rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900 dark:border-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-100" role="status">
-          <span className="font-semibold">
-            Fill in {placeholders.length} placeholder{placeholders.length === 1 ? "" : "s"}
-          </span>{" "}
-          like <mark className="ats-placeholder">{placeholders[0]}</mark> with your real numbers, or remove them. Never send a resume with a placeholder
-          or a number you can't back up.
-        </p>
+        <div className="mt-4">
+          <Alert tone="warning" role="status" title={`Fill in ${placeholders.length} placeholder${placeholders.length === 1 ? "" : "s"}`}>
+            Replace placeholders like <mark className="ats-placeholder text-fg">{placeholders[0]}</mark> with your real numbers, or remove them. Never send a resume with a placeholder or a number you can't
+            back up.
+          </Alert>
+        </div>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {/* ---------- Changes ---------- */}
         <div className="min-w-0 space-y-6">
-          <section className="card p-6" aria-labelledby="changes-title">
+          <Card as="section" aria-labelledby="changes-title">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 id="changes-title" className="font-semibold text-slate-900 dark:text-white">
-                Changes ({changes.length})
+              <h2 id="changes-title" className="type-h3 text-fg">
+                Changes <span className="font-normal text-fg-muted tabular-nums">({changes.length})</span>
               </h2>
               <div className="flex gap-2">
-                <button type="button" onClick={() => decideAll("accepted")} disabled={busy || locked} className="btn-secondary px-3 py-1.5 text-xs">
-                  <Check className="size-3.5" aria-hidden="true" />
+                <Button size="sm" icon={Check} onClick={() => decideAll("accepted")} disabled={busy || locked}>
                   Accept all
-                </button>
-                <button type="button" onClick={() => decideAll("rejected")} disabled={busy || locked} className="btn-secondary px-3 py-1.5 text-xs">
-                  <X className="size-3.5" aria-hidden="true" />
+                </Button>
+                <Button size="sm" icon={X} onClick={() => decideAll("rejected")} disabled={busy || locked}>
                   Reject all
-                </button>
+                </Button>
               </div>
             </div>
             {locked ? (
-              <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100" role="status" data-testid="review-locked">
-                You've edited this resume since the review, so changes can no longer be accepted or rejected here.{" "}
-                <Link to="/ats-checker" className="font-semibold underline">
-                  Run the ATS check again
-                </Link>{" "}
-                to get a fresh review.
-              </p>
+              <div className="mt-3" data-testid="review-locked">
+                <Alert tone="warning" role="status">
+                  You've edited this resume since the review, so changes can no longer be accepted or rejected here.{" "}
+                  <Link to="/ats-checker" className="font-medium text-fg underline">
+                    Run the ATS check again
+                  </Link>{" "}
+                  to get a fresh review.
+                </Alert>
+              </div>
             ) : (
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Rejecting a change undoes it in your optimized resume. You can change your mind any time.</p>
+              <p className="mt-1 type-small text-fg-muted">Rejecting a change undoes it in your optimized resume. You can change your mind any time.</p>
             )}
 
             {groups.map(({ section, items }) => (
               <div key={section} className="mt-5">
-                <h3 className="text-xs font-semibold tracking-wide text-slate-500 uppercase dark:text-slate-400">{SECTION_LABELS[section] ?? section}</h3>
-                <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                <h3 className="type-eyebrow text-fg-muted">{SECTION_LABELS[section] ?? section}</h3>
+                <ul className="divide-y divide-line">
                   {items.map((change) => (
                     <ChangeItem key={change.id} change={change} onDecide={decide} busy={busy} locked={locked} />
                   ))}
                 </ul>
               </div>
             ))}
-            {changes.length === 0 && <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">The optimizer found nothing to change.</p>}
-          </section>
+            {changes.length === 0 && <p className="mt-4 type-small text-fg-muted">The optimizer found nothing to change.</p>}
+          </Card>
 
           {(skills.length > 0 || otherTerms.length > 0) && (
-            <section className="card p-6" aria-labelledby="skills-title">
-              <h2 id="skills-title" className="font-semibold text-slate-900 dark:text-white">
+            <Card as="section" aria-labelledby="skills-title">
+              <h2 id="skills-title" className="type-h3 text-fg">
                 Skills to consider adding if you have them
               </h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                The job asks for these, but your resume doesn't show them. Tick only the ones you really have; they're added to your Skills.
-              </p>
+              <p className="mt-1 type-small text-fg-muted">The job asks for these, but your resume doesn't show them. Tick only the ones you really have; they're added to your Skills.</p>
               {skills.length > 0 && (
                 <ul className="mt-4 grid gap-2 sm:grid-cols-2">
                   {skills.map((skill) => (
-                    <li key={skill.term}>
-                      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
-                        <input
-                          type="checkbox"
-                          checked={review.selectedSkills?.includes(skill.term) ?? false}
-                          onChange={() => toggleSkill(skill.term)}
-                          disabled={busy}
-                          className="size-4 accent-indigo-600"
-                        />
-                        <span className="text-slate-800 dark:text-slate-200">{skill.term}</span>
-                        {skill.required && <span className="ml-auto text-xs text-slate-500 dark:text-slate-400">required</span>}
-                      </label>
+                    <li key={skill.term} className="rounded-lg border border-line px-3 py-2">
+                      <Checkbox
+                        label={skill.term}
+                        description={skill.required ? "Required by the job" : undefined}
+                        checked={review.selectedSkills?.includes(skill.term) ?? false}
+                        onChange={() => toggleSkill(skill.term)}
+                        disabled={busy}
+                      />
                     </li>
                   ))}
                 </ul>
               )}
               {otherTerms.length > 0 && (
-                <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">
-                  Words from the job you could use where they're true for you: {otherTerms.map((term) => `"${term.term}"`).join(", ")}.
-                </p>
+                <p className="mt-4 type-small text-fg-muted">Words from the job you could use where they're true for you: {otherTerms.map((term) => `"${term.term}"`).join(", ")}.</p>
               )}
-            </section>
+            </Card>
           )}
         </div>
 
         {/* ---------- Side by side ---------- */}
-        <section className="min-w-0 lg:sticky lg:top-4 lg:self-start" aria-label="Original and optimized resume">
+        <section className="min-w-0 lg:sticky lg:top-20 lg:self-start" aria-label="Original and optimized resume">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <h2 className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">Original</h2>
+              <h2 className="mb-2 type-label text-fg">Original</h2>
               <ResumeSnapshot resume={original} highlights={highlights.original} tone="old" />
-              {!review.original.template && (
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Your file's content, shown in the new template (its own layout isn't shown).</p>
-              )}
+              {!review.original.template && <p className="mt-2 type-small text-fg-muted">Your file's content, shown in the new template (its own layout isn't shown).</p>}
             </div>
             <div>
-              <h2 className="mb-2 text-sm font-semibold text-slate-700 dark:text-slate-300">Optimized</h2>
+              <h2 className="mb-2 type-label text-fg">Optimized</h2>
               <ResumeSnapshot resume={resume} highlights={highlights.optimized} tone="new" />
             </div>
           </div>
-          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-            <span className="ats-changed-new px-1">Green</span>: changed or added. <span className="ats-changed-old px-1">Red</span>: what it replaced.{" "}
-            <mark className="ats-placeholder">Yellow</mark>: a placeholder to fill in.
-          </p>
+          {/* The legend: swatches of the highlight colours (they sit on the white page, not on the app) */}
+          <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 type-small text-fg-muted">
+            <li className="flex items-center gap-1.5">
+              <span className="ats-changed-new inline-block size-3" aria-hidden="true" />
+              Changed or added
+            </li>
+            <li className="flex items-center gap-1.5">
+              <span className="ats-changed-old inline-block size-3" aria-hidden="true" />
+              What it replaced
+            </li>
+            <li className="flex items-center gap-1.5">
+              <mark className="ats-placeholder inline-block size-3" aria-hidden="true" />
+              A placeholder to fill in
+            </li>
+          </ul>
         </section>
       </div>
     </div>

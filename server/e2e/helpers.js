@@ -1,4 +1,4 @@
-import { execSync, spawn } from "node:child_process";
+import { execFileSync, execSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -66,9 +66,14 @@ async function waitForUrl(url, label, child) {
   throw new Error(`${label} didn't start at ${url}:\n${child.output}`);
 }
 
+// The API and Vite processes this run started and hasn't stopped yet (stopped on exit too)
+const liveChildren = new Set();
+
 // Starts a long-running command; its output is kept for error messages
 function start(command, args, options) {
   const child = spawn(command, args, { ...options, shell: process.platform === "win32", detached: process.platform !== "win32" });
+  liveChildren.add(child);
+  cleanUpOnExit();
   child.output = "";
   child.stdout.on("data", (chunk) => (child.output += chunk));
   child.stderr.on("data", (chunk) => (child.output += chunk));
@@ -77,6 +82,7 @@ function start(command, args, options) {
 
 // Stops a process and everything it started (Vite runs under npx and a shell)
 function stop(child) {
+  liveChildren.delete(child);
   if (!child || child.exitCode !== null) return;
   try {
     if (process.platform === "win32") execSync(`taskkill /pid ${child.pid} /T /F`, { stdio: "ignore" });
@@ -86,7 +92,84 @@ function stop(child) {
   }
 }
 
+// ---------- The browser's processes ----------
+// Each run gives its browser its own profile folder, so every process that browser starts (the
+// main one, renderers, GPU, crashpad...) has that folder on its command line. Cleanup stops
+// exactly those, and nothing else: not your own browser, nor another run's. It runs after
+// browser.close() (which can hang, fail, or miss processes when Edge's launcher hands over to
+// another process), when a test fails, and when the run exits or is interrupted.
+
+// The ids of the browser processes whose command line mentions `profileDir`
+export function browserProcessIds(profileDir) {
+  try {
+    if (process.platform === "win32") {
+      const script = `Get-CimInstance Win32_Process -Filter "Name='msedge.exe' OR Name='chrome.exe'" | Where-Object { $_.CommandLine -and $_.CommandLine.Contains('${profileDir.replace(/'/g, "''")}') } | ForEach-Object { $_.ProcessId }`;
+      const output = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], { encoding: "utf8", timeout: 30000 });
+      return output.split(/\s+/).filter(Boolean).map(Number);
+    }
+    return execFileSync("pgrep", ["-f", profileDir], { encoding: "utf8" }).split(/\s+/).filter(Boolean).map(Number);
+  } catch {
+    return []; // pgrep exits with 1 when nothing matched
+  }
+}
+
+// Stops the processes whose command line mentions `profileDir` (synchronous, so it also works
+// in an "exit" handler), then deletes the folder
+export function killBrowserProcesses(profileDir) {
+  for (const pid of browserProcessIds(profileDir)) {
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      // Already gone (stopping the main process often ends its helpers too)
+    }
+  }
+  // Windows may hold the files for a moment after the processes stop
+  fs.rmSync(profileDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+}
+
+// browser.close(), but give up after `ms` (the processes are stopped by profile folder anyway)
+const closeWithin = (browser, ms) => Promise.race([browser.close().catch(() => {}), sleep(ms)]);
+
+// Profile folders of browsers this run started and hasn't cleaned up yet
+const liveProfiles = new Set();
+let exitHandlersAdded = false;
+function cleanUpOnExit() {
+  if (exitHandlersAdded) return;
+  exitHandlersAdded = true;
+  const cleanAll = () => {
+    for (const dir of liveProfiles) killBrowserProcesses(dir);
+    liveProfiles.clear();
+    for (const child of liveChildren) stop(child);
+  };
+  process.on("exit", cleanAll);
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"]) {
+    process.once(signal, () => {
+      cleanAll();
+      process.exit(130);
+    });
+  }
+}
+
+// Launches the headless browser with its own profile folder; `register(cleanup)` is called
+// before launching, so the processes are stopped even when the launch itself fails
+export async function launchBrowser(register) {
+  const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), "resume-builder-e2e-profile-"));
+  liveProfiles.add(profileDir);
+  cleanUpOnExit();
+  let browser;
+  register(async () => {
+    if (browser) await closeWithin(browser, 5000);
+    killBrowserProcesses(profileDir);
+    liveProfiles.delete(profileDir);
+  });
+  // CI runners (Linux) don't allow Chrome's sandbox, so it's turned off there (CI is set by GitHub Actions)
+  const args = ["--no-first-run", "--disable-extensions", ...(process.env.CI ? ["--no-sandbox"] : [])];
+  browser = await puppeteer.launch({ executablePath: findBrowser(), headless: true, userDataDir: profileDir, args });
+  return browser;
+}
+
 // Starts the API, Vite and a browser for the test `t`. Returns { browser, register, api(...) }.
+// Everything is stopped in t.after, which also runs when a test fails.
 export async function startStack(t, name) {
   for (const port of [API_PORT, CLIENT_PORT]) {
     if (await portInUse(port)) throw new Error(`Port ${port} is already in use. Stop what's running there, or set API_PORT / CLIENT_PORT.`);
@@ -117,9 +200,9 @@ export async function startStack(t, name) {
     env: { ...process.env, VITE_API_URL: API },
   });
 
-  let browser;
+  let closeBrowser = async () => {};
   t.after(async () => {
-    await browser?.close().catch(() => {});
+    await closeBrowser();
     stop(vite);
     stop(apiProcess);
     await db.drop();
@@ -127,9 +210,7 @@ export async function startStack(t, name) {
 
   await waitForUrl(`${API}/health`, "The API", apiProcess);
   await waitForUrl(APP, "Vite", vite);
-  // CI runners (Linux) don't allow Chrome's sandbox, so it's turned off there (CI is set by GitHub Actions)
-  const args = ["--no-first-run", "--disable-extensions", ...(process.env.CI ? ["--no-sandbox"] : [])];
-  browser = await puppeteer.launch({ executablePath: findBrowser(), headless: true, args });
+  const browser = await launchBrowser((cleanup) => (closeBrowser = cleanup));
 
   return {
     browser,

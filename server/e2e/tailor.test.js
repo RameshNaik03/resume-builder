@@ -87,8 +87,13 @@ test("Tailor to a job", async (t) => {
   });
 
   await t.test("check the analysis: move a skill and remove one", async () => {
-    await page.click('button[aria-label="Move to nice-to-have: Docker"]');
-    await page.click('button[aria-label="Remove REST APIs"]');
+    // A skill chip opens a small menu: move it to the other list, or remove it
+    const chipAction = async (skill, action) => {
+      await page.click(`button[aria-label="Change ${skill}"]`);
+      await page.evaluate((label) => [...document.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent.trim() === label).click(), action);
+    };
+    await chipAction("Docker", "Move to nice-to-have");
+    await chipAction("REST APIs", "Remove");
     const must = await textOf('[data-testid="must-have"]');
     const nice = await textOf('[data-testid="nice-to-have"]');
     assert.ok(!must.includes("Docker") && nice.includes("Docker"), "Docker moved to nice-to-have");
@@ -123,9 +128,10 @@ test("Tailor to a job", async (t) => {
     const ring = await textOf('[data-testid="match-score"]');
     assert.ok(ring.includes(fitLabel(await score())), `the ring should say "${fitLabel(await score())}": ${ring}`);
     assert.ok(!/match$|Partial|Weak/m.test(ring.replace("% match", "")), "no ATS-style labels");
-    // Neutral blue/indigo tones, not the ATS red/orange/green
+    // The match's own scale (the accent, or neutral for a stretch role), not the ATS red/orange/green
     const stroke = await page.$eval('[data-testid="match-score"] circle:last-of-type', (el) => el.getAttribute("class"));
-    assert.match(stroke, /stroke-(indigo|sky)-/);
+    assert.match(stroke, /^stroke-(accent|fg-subtle)$/);
+    assert.doesNotMatch(stroke, /stroke-(success|warning|danger)/);
     assert.match(await textOf('[data-testid="breakdown"]'), /Must-haves\s*3 of 4/); // Node.js, Kafka, PostgreSQL of 4 (Docker moved, REST APIs removed)
 
     // The evidence quote shows on hover

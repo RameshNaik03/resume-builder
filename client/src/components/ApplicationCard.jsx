@@ -18,7 +18,7 @@ export default function ApplicationCard({ job, resume, selected = false, onSelec
       title={name}
       meta={`${job.company || "Company not stated"} · tailored ${timeAgo(job.createdAt)}`}
       badge={
-        <Badge tone="accent">
+        <Badge tone={fitTone(job.score).tone}>
           {job.score}% · {fitTone(job.score).label}
         </Badge>
       }

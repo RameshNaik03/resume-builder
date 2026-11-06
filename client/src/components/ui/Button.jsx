@@ -16,7 +16,7 @@ const VARIANTS = {
   ghost: "rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg",
   ghostDanger: "rounded-lg text-fg-muted hover:bg-danger-soft hover:text-danger", // A quiet remove / delete icon in a row
   danger: "rounded-lg border border-danger/30 bg-surface text-danger hover:bg-danger-soft",
-  link: "rounded-sm text-accent underline-offset-4 hover:underline",
+  link: "rounded-sm text-accent underline-offset-4 hover:underline [&_svg]:size-4",
 };
 const SIZES = {
   sm: "h-8 px-3 text-[0.8125rem] [&_svg]:size-3.5",

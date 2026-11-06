@@ -31,7 +31,7 @@ export default function DevTemplatePreview() {
 
   if (!template) {
     return (
-      <p className="p-8 text-slate-700 dark:text-slate-300">
+      <p className="p-8 type-body text-fg">
         Unknown template "{templateId}". <Link to="/dev/templates" className="underline">Back to the gallery</Link>
       </p>
     );
@@ -41,8 +41,8 @@ export default function DevTemplatePreview() {
     <div className="mx-auto max-w-[842px] px-4 py-8">
       <div className="mb-4 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white">{template.name}</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <h1 className="type-h2 text-fg">{template.name}</h1>
+          <p className="type-small text-fg-muted">
             {template.id} · {template.tier} · {template.atsFriendly ? "ATS-friendly" : "not ATS-friendly"}
           </p>
         </div>

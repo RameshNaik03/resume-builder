@@ -1,19 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, Check, Minus, Plus, Target, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Trash2 } from "lucide-react";
 import toast from "../utils/toast";
 import api from "../api/axios";
 import usePageTitle from "../hooks/usePageTitle";
 import getErrorMessage from "../utils/getErrorMessage";
 import timeAgo from "../utils/timeAgo";
 import Loader from "../components/Loader";
-import Modal from "../components/Modal";
 import DeleteApplicationModal from "../components/DeleteApplicationModal";
-import ScoreRing from "../components/ats/ScoreRing";
 import { fitTone } from "../components/ats/atsHelpers";
 import TailorOptions from "../components/tailor/TailorOptions";
 import { STRENGTHS, initialChoices, toRequestOptions } from "../components/tailor/tailorChoices";
 import { pageClass } from "../components/ui/pageLayout";
+import { Alert, Badge, Card, CardHeader, PageHeader } from "../components/ui/Display";
+import { Field, Radio, Select, Textarea } from "../components/ui/Form";
+import { ScoreRing } from "../components/ui/Meter";
+import Button from "../components/ui/Button";
+import BackLink from "../components/ui/BackLink";
+import Dialog from "../components/ui/Dialog";
+import Menu from "../components/ui/Menu";
+import StepProgress from "../components/ui/StepProgress";
 
 // "Tailor to a job" (/tailor, /tailor/jobs/:jobId). Uses the /api/jobs routes:
 //   1. Paste a job description (or reuse a saved job) and pick the base resume
@@ -151,138 +157,126 @@ function TailorFlow() {
 
   return (
     <div className={pageClass()}>
-      <div className="flex items-center gap-3">
-        <span className="grid size-10 place-items-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400">
-          <Target className="size-5" aria-hidden="true" />
-        </span>
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Tailor to a job</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">A copy of your resume aimed at one job. Your original stays as it is.</p>
-        </div>
-      </div>
-      <HonestNote />
-      <Steps current={step === "input" ? 0 : step === "check" ? 1 : 2} />
+      <PageHeader title="Tailor to a job" description="A copy of your resume aimed at one job. Your original stays as it is." />
+      <div className="mt-6 space-y-6">
+        <HonestNote />
+        <Steps current={step === "input" ? 0 : step === "check" ? 1 : 2} />
 
-      {step === "input" && (
-        <section className="card mt-6 space-y-5 p-5 sm:p-6" aria-labelledby="step-input">
-          <h2 id="step-input" className="font-semibold text-slate-900 dark:text-white">
-            1. The job and your resume
-          </h2>
+        {step === "input" && (
+          <Card as="section" aria-labelledby="step-input">
+            <CardHeader title={<span id="step-input">1. The job and your resume</span>} />
+            <div className="space-y-5">
+              {jobs.length > 0 && (
+                <Field id="saved-job" label="Use a saved job" optional>
+                  {(props) => (
+                    <Select {...props} defaultValue="" onChange={(event) => loadSavedJob(event.target.value)} disabled={busy}>
+                      <option value="">Paste a new job description below</option>
+                      {jobs.map((job) => (
+                        <option key={job._id} value={job._id}>
+                          {jobTitleOf(job)} · {job.score}% · {fitTone(job.score).label}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </Field>
+              )}
 
-          {jobs.length > 0 && (
-            <div>
-              <label htmlFor="saved-job" className="label">
-                Use a saved job <span className="font-normal text-slate-400">(optional)</span>
-              </label>
-              <select id="saved-job" className="input" defaultValue="" onChange={(event) => loadSavedJob(event.target.value)} disabled={busy}>
-                <option value="">Paste a new job description below</option>
-                {jobs.map((job) => (
-                  <option key={job._id} value={job._id}>
-                    {jobTitleOf(job)} · {job.score}% · {fitTone(job.score).label}
-                  </option>
-                ))}
-              </select>
+              <Field
+                id="job-description"
+                label="Job description"
+                help={words < MIN_JOB_WORDS ? `${words} words. Paste the full description (at least ${MIN_JOB_WORDS} words).` : `${words} words`}
+              >
+                {(props) => (
+                  <Textarea {...props} rows={10} placeholder="Paste the whole job ad: the role, what you'd do and the requirements." value={description} onChange={(event) => setDescription(event.target.value)} />
+                )}
+              </Field>
+
+              {resumes.length ? (
+                <Field id="base-resume" label="Resume to tailor">
+                  {(props) => (
+                    <Select {...props} value={resumeId} onChange={(event) => setResumeId(event.target.value)}>
+                      {resumes.map((resume) => (
+                        <option key={resume._id} value={resume._id}>
+                          {resume.title}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </Field>
+              ) : (
+                <Alert tone="info" title="You don't have a resume yet">
+                  <Link to="/dashboard" className="font-medium text-accent hover:underline">
+                    Create one first
+                  </Link>
+                  , then come back to tailor it.
+                </Alert>
+              )}
+
+              <div className="flex justify-end">
+                <Button variant="primary" onClick={analyze} disabled={!canAnalyze} loading={busy}>
+                  {busy ? "Reading the job..." : "Analyze job"}
+                  {!busy && <ArrowRight className="size-4" aria-hidden="true" />}
+                </Button>
+              </div>
             </div>
-          )}
+          </Card>
+        )}
 
-          <div>
-            <label htmlFor="job-description" className="label">
-              Job description
-            </label>
-            <textarea
-              id="job-description"
-              rows={10}
-              className="input"
-              placeholder="Paste the whole job ad: the role, what you'd do and the requirements."
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-            />
-            <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400" aria-live="polite">
-              {words < MIN_JOB_WORDS ? `${words} words. Paste the full description (at least ${MIN_JOB_WORDS} words).` : `${words} words`}
-            </p>
-          </div>
+        {step === "check" && analysis && (
+          <AnalysisCheck
+            analysis={analysis}
+            onChange={setAnalysis}
+            aiEnabled={aiEnabled}
+            resume={resumes.find((resume) => resume._id === resumeId)}
+            options={options}
+            choices={choices}
+            onChoices={(patch) => setChoices((current) => ({ ...current, ...patch }))}
+            onUseResume={setResumeId}
+            onBack={() => setStep("input")}
+            onTailor={() => (options?.existingVersions.length ? setAskVersion(true) : tailor())}
+          />
+        )}
+        {askVersion && options && <VersionChoice versions={options.existingVersions} onReplace={() => tailor(options.existingVersions[0].jobId)} onNew={() => tailor()} onCancel={() => setAskVersion(false)} />}
 
-          <div>
-            <label htmlFor="base-resume" className="label">
-              Resume to tailor
-            </label>
-            {resumes.length ? (
-              <select id="base-resume" className="input" value={resumeId} onChange={(event) => setResumeId(event.target.value)}>
-                {resumes.map((resume) => (
-                  <option key={resume._id} value={resume._id}>
-                    {resume.title}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                You don't have a resume yet. <Link to="/dashboard" className="font-medium text-indigo-600 dark:text-indigo-400">Create one first</Link>.
-              </p>
-            )}
-          </div>
+        {step === "tailoring" && <StepProgress headingLevel="h2" title="Tailoring your resume" steps={TAILOR_STEPS} current={progress} />}
 
-          <div className="flex justify-end">
-            <button type="button" onClick={analyze} disabled={!canAnalyze} className="btn-primary">
-              {busy ? "Reading the job..." : "Analyze job"}
-              <ArrowRight className="size-4" aria-hidden="true" />
-            </button>
-          </div>
-        </section>
-      )}
-
-      {step === "check" && analysis && (
-        <AnalysisCheck
-          analysis={analysis}
-          onChange={setAnalysis}
-          aiEnabled={aiEnabled}
-          resume={resumes.find((resume) => resume._id === resumeId)}
-          options={options}
-          choices={choices}
-          onChoices={(patch) => setChoices((current) => ({ ...current, ...patch }))}
-          onUseResume={setResumeId}
-          onBack={() => setStep("input")}
-          onTailor={() => (options?.existingVersions.length ? setAskVersion(true) : tailor())}
-        />
-      )}
-      {askVersion && options && <VersionChoice versions={options.existingVersions} onReplace={() => tailor(options.existingVersions[0].jobId)} onNew={() => tailor()} onCancel={() => setAskVersion(false)} />}
-
-      {step === "tailoring" && <TailorProgress step={progress} />}
-
-      {step === "input" && <SavedJobs jobs={jobs} />}
+        {step === "input" && <SavedJobs jobs={jobs} />}
+      </div>
     </div>
   );
 }
 
 function HonestNote() {
   return (
-    <p className="mt-4 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900 dark:border-indigo-900 dark:bg-indigo-950/40 dark:text-indigo-200" data-testid="honest-note">
+    <Alert tone="info" data-testid="honest-note">
       {HONEST_NOTE}
-    </p>
+    </Alert>
   );
 }
 
 function AiOffNote() {
   return (
-    <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200" data-testid="ai-off-note">
+    <Alert tone="warning" role="status" data-testid="ai-off-note">
       {AI_OFF_NOTE}
-    </p>
+    </Alert>
   );
 }
 
+// Where the user is: done steps are ticked, the current one is in the accent
 function Steps({ current }) {
   const labels = ["Job and resume", "Check the analysis", "Match report"];
   return (
-    <ol className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-sm" aria-label="Steps">
+    <ol className="flex flex-wrap gap-x-6 gap-y-2" aria-label="Steps">
       {labels.map((label, index) => (
-        <li key={label} className={`flex items-center gap-2 ${index === current ? "font-semibold text-slate-900 dark:text-white" : "text-slate-500 dark:text-slate-400"}`} aria-current={index === current ? "step" : undefined}>
+        <li key={label} className={`flex items-center gap-2 type-small ${index === current ? "font-medium text-fg" : "text-fg-muted"}`} aria-current={index === current ? "step" : undefined}>
           <span
-            className={`grid size-6 place-items-center rounded-full text-xs ${
-              index < current ? "bg-emerald-500 text-white" : index === current ? "bg-indigo-600 text-white" : "bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-            }`}
+            className={`grid size-6 place-items-center rounded-full text-xs font-medium ${index < current ? "bg-success-soft text-success" : index === current ? "bg-accent text-on-accent" : "bg-surface-2 text-fg-muted"}`}
+            aria-hidden="true"
           >
-            {index < current ? <Check className="size-3.5" aria-hidden="true" /> : index + 1}
+            {index < current ? <Check className="size-3.5" /> : index + 1}
           </span>
           {label}
+          {index < current && <span className="sr-only"> (done)</span>}
         </li>
       ))}
     </ol>
@@ -296,213 +290,179 @@ function AnalysisCheck({ analysis, onChange, aiEnabled, resume, options, choices
   const nothingLeft = !analysis.mustHave.length && !analysis.niceToHave.length;
 
   return (
-    <section className="card mt-6 space-y-6 p-5 sm:p-6" aria-labelledby="step-check">
-      <div>
-        <h2 id="step-check" className="font-semibold text-slate-900 dark:text-white">
-          2. Check what we found
-        </h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Move a skill if we put it in the wrong list, or remove one the job doesn't really need.</p>
-      </div>
+    <Card as="section" aria-labelledby="step-check">
+      <CardHeader title={<span id="step-check">2. Check what we found</span>} description="Click a skill to move it to the other list, or to remove one the job doesn't really need." />
 
-      <dl className="grid gap-4 sm:grid-cols-3">
-        {[
-          ["Job title", analysis.title],
-          ["Company", analysis.company],
-          ["Seniority", analysis.seniority && analysis.seniority[0].toUpperCase() + analysis.seniority.slice(1)],
-        ].map(([label, value]) => (
-          <div key={label}>
-            <dt className="text-xs font-medium text-slate-500 uppercase dark:text-slate-400">{label}</dt>
-            <dd className="mt-1 font-medium text-slate-900 dark:text-white">{value || <span className="text-slate-400">Not stated</span>}</dd>
+      <div className="space-y-6">
+        <dl className="grid gap-4 sm:grid-cols-3">
+          {[
+            ["Job title", analysis.title],
+            ["Company", analysis.company],
+            ["Seniority", analysis.seniority && analysis.seniority[0].toUpperCase() + analysis.seniority.slice(1)],
+          ].map(([label, value]) => (
+            <div key={label}>
+              <dt className="type-eyebrow text-fg-muted">{label}</dt>
+              <dd className="mt-1 type-label text-fg">{value || <span className="font-normal text-fg-subtle">Not stated</span>}</dd>
+            </div>
+          ))}
+        </dl>
+
+        <SkillGroup title="Must-have skills" testId="must-have" skills={analysis.mustHave} tone="accent" moveLabel="Move to nice-to-have" onMove={(skill) => move(skill, "mustHave", "niceToHave")} onRemove={(skill) => remove(skill, "mustHave")} />
+        <SkillGroup title="Nice-to-have skills" testId="nice-to-have" skills={analysis.niceToHave} tone="neutral" moveLabel="Move to must-have" onMove={(skill) => move(skill, "niceToHave", "mustHave")} onRemove={(skill) => remove(skill, "niceToHave")} />
+
+        {analysis.responsibilities.length > 0 && (
+          <div>
+            <h3 className="type-label text-fg">Key responsibilities</h3>
+            <ul className="mt-2 list-disc space-y-1 pl-5 type-small text-fg-muted">
+              {analysis.responsibilities.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
           </div>
-        ))}
-      </dl>
+        )}
 
-      <SkillGroup
-        title="Must-have skills"
-        testId="must-have"
-        skills={analysis.mustHave}
-        moveLabel="Move to nice-to-have"
-        onMove={(skill) => move(skill, "mustHave", "niceToHave")}
-        onRemove={(skill) => remove(skill, "mustHave")}
-        tone="must"
-      />
-      <SkillGroup
-        title="Nice-to-have skills"
-        testId="nice-to-have"
-        skills={analysis.niceToHave}
-        moveLabel="Move to must-have"
-        onMove={(skill) => move(skill, "niceToHave", "mustHave")}
-        onRemove={(skill) => remove(skill, "niceToHave")}
-        tone="nice"
-      />
+        {aiEnabled === false && <AiOffNote />}
+        {resume && (
+          <p className="type-small text-fg-muted">
+            Tailoring <span className="font-medium text-fg">{resume.title}</span>
+          </p>
+        )}
+        {options?.tailoredFrom && <TailoredCopyWarning base={options.tailoredFrom} onUse={onUseResume} />}
+        {options && choices ? <TailorOptions options={options} choices={choices} onChange={onChoices} aiEnabled={aiEnabled !== false} /> : <p className="type-small text-fg-muted">Loading the options...</p>}
 
-      {analysis.responsibilities.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Key responsibilities</h3>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700 dark:text-slate-300">
-            {analysis.responsibilities.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+          <Button icon={ArrowLeft} onClick={onBack}>
+            Back
+          </Button>
+          <Button variant="primary" onClick={onTailor} disabled={nothingLeft || !choices}>
+            Tailor my resume
+            <ArrowRight className="size-4" aria-hidden="true" />
+          </Button>
         </div>
-      )}
-
-      {aiEnabled === false && <AiOffNote />}
-      {resume && (
-        <p className="text-sm text-slate-600 dark:text-slate-300">
-          Tailoring <span className="font-medium text-slate-900 dark:text-white">{resume.title}</span>
-        </p>
-      )}
-      {options?.tailoredFrom && <TailoredCopyWarning base={options.tailoredFrom} onUse={onUseResume} />}
-      {options && choices ? <TailorOptions options={options} choices={choices} onChange={onChoices} aiEnabled={aiEnabled !== false} /> : <p className="text-sm text-slate-500 dark:text-slate-400">Loading the options...</p>}
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <button type="button" onClick={onBack} className="btn-secondary">
-          <ArrowLeft className="size-4" aria-hidden="true" />
-          Back
-        </button>
-        <button type="button" onClick={onTailor} disabled={nothingLeft || !choices} className="btn-primary">
-          Tailor my resume
-          <ArrowRight className="size-4" aria-hidden="true" />
-        </button>
       </div>
-    </section>
+    </Card>
   );
 }
 
 // The chosen resume is itself a tailored copy: suggest its base resume instead
 function TailoredCopyWarning({ base, onUse }) {
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200" role="alert" data-testid="tailored-copy-warning">
-      <p>
-        This resume is already a tailored copy{base.title ? ` of "${base.title}"` : ""}. Tailoring it again carries over its changes (and any mistakes in them), so it's best to start from
-        your base resume.
-      </p>
-      {base.resumeId ? (
-        <button type="button" onClick={() => onUse(base.resumeId)} className="btn-secondary mt-2 px-3 py-1.5">
-          Use "{base.title}" instead
-        </button>
-      ) : (
-        <p className="mt-1">Its base resume was deleted.</p>
-      )}
-    </div>
+    <Alert
+      tone="warning"
+      data-testid="tailored-copy-warning"
+      action={
+        base.resumeId && (
+          <Button size="sm" onClick={() => onUse(base.resumeId)}>
+            Use "{base.title}" instead
+          </Button>
+        )
+      }
+    >
+      This resume is already a tailored copy{base.title ? ` of "${base.title}"` : ""}. Tailoring it again carries over its changes (and any mistakes in them), so it's best to start from your base
+      resume.{!base.resumeId && " Its base resume was deleted."}
+    </Alert>
   );
 }
 
 // The same resume was tailored for this job before: replace that version or add a new one
 function VersionChoice({ versions, onReplace, onNew, onCancel }) {
   const latest = versions[0];
+  const option = "w-full rounded-lg border p-3 text-left transition-colors focus-visible:outline-2 focus-visible:outline-accent";
   return (
-    <Modal onClose={onCancel} labelledBy="version-choice-title" className="max-w-md p-6">
-      <h2 id="version-choice-title" className="text-lg font-semibold text-slate-900 dark:text-white">
-        You've tailored this resume for this job before
-      </h2>
-      <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-        "{latest.title}", {timeAgo(latest.createdAt)}
-        {versions.length > 1 ? ` (and ${versions.length - 1} older ${versions.length === 2 ? "version" : "versions"})` : ""}.
-      </p>
-      <div className="mt-5 space-y-3">
-        <button type="button" onClick={onReplace} className="w-full rounded-xl border border-indigo-200 bg-indigo-50 p-3 text-left hover:bg-indigo-100 dark:border-indigo-900 dark:bg-indigo-950/40 dark:hover:bg-indigo-950/70">
-          <span className="block font-medium text-indigo-800 dark:text-indigo-200">Replace the existing version</span>
-          <span className="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">Same application: its cover letter and the skills you confirmed are kept.</span>
+    <Dialog
+      size="sm"
+      titleId="version-choice-title"
+      title="You've tailored this resume for this job before"
+      description={`"${latest.title}", ${timeAgo(latest.createdAt)}${versions.length > 1 ? ` (and ${versions.length - 1} older ${versions.length === 2 ? "version" : "versions"})` : ""}.`}
+      onClose={onCancel}
+      footer={<Button onClick={onCancel}>Cancel</Button>}
+    >
+      <div className="space-y-2">
+        <button type="button" onClick={onReplace} className={`${option} border-accent bg-accent-soft hover:border-accent-strong`} data-autofocus>
+          <span className="block type-label text-fg">Replace the existing version</span>
+          <span className="mt-0.5 block type-small text-fg-muted">Same application: its cover letter and the skills you confirmed are kept.</span>
         </button>
-        <button type="button" onClick={onNew} className="w-full rounded-xl border border-slate-200 p-3 text-left hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
-          <span className="block font-medium text-slate-900 dark:text-white">Create a new version</span>
-          <span className="mt-0.5 block text-sm text-slate-500 dark:text-slate-400">Keep both, as separate applications.</span>
-        </button>
-      </div>
-      <div className="mt-5 flex justify-end">
-        <button type="button" onClick={onCancel} className="btn-secondary">
-          Cancel
+        <button type="button" onClick={onNew} className={`${option} border-line hover:bg-surface-2`}>
+          <span className="block type-label text-fg">Create a new version</span>
+          <span className="mt-0.5 block type-small text-fg-muted">Keep both, as separate applications.</span>
         </button>
       </div>
-    </Modal>
+    </Dialog>
   );
 }
 
-const TAG_TONES = {
-  must: "bg-indigo-50 text-indigo-800 ring-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-200 dark:ring-indigo-900",
-  nice: "bg-slate-100 text-slate-700 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700",
+// Chip colours: must-haves in the accent, nice-to-haves neutral
+const CHIP_TONES = {
+  accent: "border-accent/30 bg-accent-soft text-accent hover:border-accent",
+  neutral: "border-line bg-surface-2 text-fg hover:border-line-strong",
 };
 
-function SkillGroup({ title, testId, skills, moveLabel, onMove, onRemove, tone }) {
+// One list of the job's skills. Each skill is a chip; clicking it opens a small menu to move it
+// to the other list or remove it (one interaction, instead of icons on every chip).
+function SkillGroup({ title, testId, skills, tone, moveLabel, onMove, onRemove }) {
   return (
     <div>
-      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
-        {title} <span className="font-normal text-slate-400">({skills.length})</span>
+      <h3 className="type-label text-fg">
+        {title} <span className="font-normal text-fg-muted tabular-nums">({skills.length})</span>
       </h3>
       {skills.length ? (
         <ul className="mt-2 flex flex-wrap gap-2" data-testid={testId}>
           {skills.map((skill) => (
-            <li key={skill} className={`flex items-center gap-1 rounded-full py-1 pr-1 pl-3 text-sm font-medium ring-1 ${TAG_TONES[tone]}`}>
-              {skill}
-              <button type="button" onClick={() => onMove(skill)} className="grid size-6 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/10" aria-label={`${moveLabel}: ${skill}`} title={moveLabel}>
-                {tone === "must" ? <Minus className="size-3.5" aria-hidden="true" /> : <Plus className="size-3.5" aria-hidden="true" />}
-              </button>
-              <button type="button" onClick={() => onRemove(skill)} className="grid size-6 place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/10" aria-label={`Remove ${skill}`} title="Remove">
-                <X className="size-3.5" aria-hidden="true" />
-              </button>
+            <li key={skill}>
+              <Menu
+                align="start"
+                label={`Change ${skill}`}
+                trigger={
+                  <>
+                    {skill}
+                    <ChevronDown className="size-3.5 opacity-60" aria-hidden="true" />
+                  </>
+                }
+                triggerClassName={`inline-flex h-7 items-center gap-1 rounded-full border pr-2 pl-3 type-small font-medium transition-colors focus-visible:outline-2 focus-visible:outline-accent ${CHIP_TONES[tone]}`}
+                items={[
+                  { label: moveLabel, icon: tone === "accent" ? ArrowRight : ArrowLeft, onClick: () => onMove(skill) },
+                  { label: "Remove", icon: Trash2, tone: "danger", onClick: () => onRemove(skill) },
+                ]}
+              />
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-sm text-slate-400">None</p>
+        <p className="mt-2 type-small text-fg-subtle">None</p>
       )}
     </div>
-  );
-}
-
-function TailorProgress({ step }) {
-  return (
-    <section className="card mx-auto mt-6 max-w-lg p-8" role="status" aria-live="polite">
-      <h2 className="text-center text-lg font-semibold text-slate-900 dark:text-white">Tailoring your resume</h2>
-      <ol className="mt-6 space-y-4">
-        {TAILOR_STEPS.map((label, index) => (
-          <li key={label} className="flex items-center gap-3 text-sm">
-            <span
-              className={`grid size-6 shrink-0 place-items-center rounded-full ${
-                index < step ? "bg-emerald-500 text-white" : index === step ? "border-2 border-indigo-600 border-t-transparent motion-safe:animate-spin" : "border-2 border-slate-200 dark:border-slate-700"
-              }`}
-            >
-              {index < step && <Check className="size-3.5" aria-hidden="true" />}
-            </span>
-            <span className={index <= step ? "text-slate-900 dark:text-white" : "text-slate-400"}>{label}</span>
-          </li>
-        ))}
-      </ol>
-    </section>
   );
 }
 
 function SavedJobs({ jobs }) {
   if (!jobs.length) return null;
   return (
-    <section className="mt-10" aria-labelledby="saved-jobs">
-      <h2 id="saved-jobs" className="text-lg font-semibold text-slate-900 dark:text-white">
+    <section aria-labelledby="saved-jobs" className="pt-4">
+      <h2 id="saved-jobs" className="type-h2 text-fg">
         Saved jobs
       </h2>
-      <ul className="mt-3 divide-y divide-slate-200 overflow-hidden rounded-xl border border-slate-200 bg-white dark:divide-slate-800 dark:border-slate-800 dark:bg-slate-900" data-testid="saved-jobs">
-        {jobs.map((job) => (
-          <li key={job._id} className="flex items-center hover:bg-slate-50 dark:hover:bg-slate-800/60">
-            <Link to={`/tailor/jobs/${job._id}`} className="flex min-w-0 flex-1 items-center justify-between gap-4 px-4 py-3">
-              <span className="min-w-0">
-                <span className="block truncate font-medium text-slate-900 dark:text-white">{job.title || "Untitled job"}</span>
-                <span className="block truncate text-sm text-slate-500 dark:text-slate-400">
-                  {job.company || "Company not stated"} · {timeAgo(job.createdAt)}
+      <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface shadow-soft" data-testid="saved-jobs">
+        {jobs.map((job) => {
+          const fit = fitTone(job.score);
+          return (
+            <li key={job._id} className="flex items-center gap-2 pr-4 transition-colors hover:bg-surface-2">
+              <Link to={`/tailor/jobs/${job._id}`} className="flex min-w-0 flex-1 items-center justify-between gap-4 px-4 py-3 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent">
+                <span className="min-w-0">
+                  <span className="block truncate type-label text-fg">{job.title || "Untitled job"}</span>
+                  <span className="block truncate type-small text-fg-muted">
+                    {job.company || "Company not stated"} · {timeAgo(job.createdAt)}
+                  </span>
                 </span>
-              </span>
-              <span className={`shrink-0 rounded-full px-2.5 py-1 text-sm font-semibold tabular-nums ${fitTone(job.score).badge}`}>
-                {job.score}% · {fitTone(job.score).label}
-              </span>
-            </Link>
-            <Link
-              to={job.coverLetterId ? `/cover-letters/${job.coverLetterId}` : `/cover-letters/new?job=${job._id}`}
-              className="mr-4 shrink-0 text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400"
-            >
-              {job.coverLetterId ? "Cover letter" : "Write cover letter"}
-            </Link>
-          </li>
-        ))}
+                <Badge tone={fit.tone}>
+                  {job.score}% · {fit.label}
+                </Badge>
+              </Link>
+              <Button as={Link} variant="link" className="type-small max-sm:hidden" to={job.coverLetterId ? `/cover-letters/${job.coverLetterId}` : `/cover-letters/new?job=${job._id}`}>
+                {job.coverLetterId ? "Cover letter" : "Write cover letter"}
+              </Button>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -545,10 +505,10 @@ function JobReport({ jobId }) {
   if (failed) {
     return (
       <div className={pageClass("narrow", "text-center")}>
-        <p className="font-medium text-slate-900 dark:text-white">We couldn't open this job.</p>
-        <Link to="/tailor" className="btn-primary mt-6">
+        <h1 className="type-h2 text-fg">We couldn't open this job</h1>
+        <Button as={Link} to="/tailor" variant="primary" className="mt-6">
           Tailor to a job
-        </Link>
+        </Button>
       </div>
     );
   }
@@ -556,59 +516,62 @@ function JobReport({ jobId }) {
 
   const report = job.matchReport;
   const setReport = (matchReport, changes = {}) => setJob((previous) => ({ ...previous, matchReport, ...changes }));
+  const fit = fitTone(report.score);
 
   return (
     <div className={pageClass()}>
-      <Link to="/tailor" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
-        <ArrowLeft className="size-4" aria-hidden="true" />
-        Tailor to a job
-      </Link>
-      <div className="mt-3 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{jobTitleOf(job.analysis)}</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Tailored copy: {job.tailoredResume?.title ?? "deleted"} · {timeAgo(job.createdAt)}
-          </p>
-        </div>
-        {job.tailoredResume && (
-          <div className="flex flex-wrap gap-2">
-            <Link to={job.coverLetterId ? `/cover-letters/${job.coverLetterId}` : `/cover-letters/new?job=${job._id}`} className="btn-secondary">
-              {job.coverLetterId ? "Open cover letter" : "Write cover letter"}
-            </Link>
-            <Link to={`/ats/review/${job.tailoredResumeId}`} className="btn-secondary">
-              Review changes
-            </Link>
-            <Link to={`/editor/${job.tailoredResumeId}`} className="btn-primary">
-              Open in editor
-            </Link>
-            <button type="button" onClick={() => setDeleteOpen(true)} className="btn-secondary text-red-600 hover:border-red-200 hover:bg-red-50 dark:text-red-400 dark:hover:border-red-900 dark:hover:bg-red-950/50">
-              Delete
-            </button>
+      <PageHeader
+        back={
+          <div className="mb-3">
+            <BackLink to="/tailor">Tailor to a job</BackLink>
           </div>
-        )}
+        }
+        title={jobTitleOf(job.analysis)}
+        description={`Tailored copy: ${job.tailoredResume?.title ?? "deleted"} · ${timeAgo(job.createdAt)}`}
+        actions={
+          job.tailoredResume && (
+            <>
+              <Button as={Link} to={job.coverLetterId ? `/cover-letters/${job.coverLetterId}` : `/cover-letters/new?job=${job._id}`}>
+                {job.coverLetterId ? "Open cover letter" : "Write cover letter"}
+              </Button>
+              <Button as={Link} to={`/ats/review/${job.tailoredResumeId}`}>
+                Review changes
+              </Button>
+              <Button as={Link} to={`/editor/${job.tailoredResumeId}`} variant="primary">
+                Open in editor
+              </Button>
+              <Button variant="ghostDanger" iconOnly icon={Trash2} onClick={() => setDeleteOpen(true)} aria-label="Delete" title="Delete" />
+            </>
+          )
+        }
+      />
+      <div className="mt-6 space-y-4">
+        <HonestNote />
+        <TailoringNote tailoring={job.tailoring} aiEnabled={job.aiEnabled} />
+        {job.tailoring?.differences && <Differences differences={job.tailoring.differences} />}
       </div>
-      <HonestNote />
-      <TailoringNote tailoring={job.tailoring} aiEnabled={job.aiEnabled} />
-      {job.tailoring?.differences && <Differences differences={job.tailoring.differences} />}
       <DeleteApplicationModal open={deleteOpen} name={job.tailoredResume?.title ?? jobTitleOf(job.analysis)} onChoose={remove} onCancel={() => setDeleteOpen(false)} loading={deleting} />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)]">
-        <section className="card p-6" aria-label="Match">
-          <div data-testid="match-score" data-score={report.score}>
-            <ScoreRing key={report.score} score={report.score} grade={fitTone(report.score).label} label="Match" unit="% match" toneFor={fitTone} />
+      <div className="mt-6 grid gap-6 lg:grid-cols-3">
+        <Card as="section" aria-label="Match">
+          <div className="flex justify-center" data-testid="match-score" data-score={report.score}>
+            <ScoreRing key={report.score} value={report.score} label={fit.label} name="Match" caption="% match" tone={fit.tone} size="lg" animate />
           </div>
           <Breakdown report={report} />
-        </section>
+        </Card>
 
-        <div className="space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           <MatchedSkills matched={report.matched} />
           <MissingSkills job={job} onReport={setReport} />
         </div>
       </div>
 
-      <details id="job-description" className="card mt-6 p-5" open={window.location.hash === "#job-description"}>
-        <summary className="cursor-pointer font-semibold text-slate-900 dark:text-white">Job description</summary>
-        <p className="mt-3 text-sm whitespace-pre-line text-slate-700 dark:text-slate-300">{job.description}</p>
+      <details id="job-description" className="group mt-6 rounded-xl border border-line bg-surface shadow-soft" open={window.location.hash === "#job-description"}>
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 type-label text-fg">
+          Job description
+          <ChevronDown className="size-4 text-fg-muted transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <p className="border-t border-line px-5 py-4 type-small whitespace-pre-line text-fg-muted">{job.description}</p>
       </details>
     </div>
   );
@@ -617,12 +580,12 @@ function JobReport({ jobId }) {
 // How this copy was tailored: AI or rules only, the strength, and the generated lines the
 // safety check dropped (with why). Jobs tailored before this was saved have no tailoring.
 function TailoringNote({ tailoring, aiEnabled }) {
-  if (!tailoring) return aiEnabled === false ? <div className="mt-4"><AiOffNote /></div> : null;
-  if (tailoring.tailoredWith !== "rules+ai") return <div className="mt-4"><AiOffNote /></div>;
+  if (!tailoring) return aiEnabled === false ? <AiOffNote /> : null;
+  if (tailoring.tailoredWith !== "rules+ai") return <AiOffNote />;
   const dropped = tailoring.rejectedRewrites ?? [];
   const strength = STRENGTHS.find((option) => option.value === tailoring.strength)?.label ?? "Balanced";
   return (
-    <div className="mt-4 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300" data-testid="tailoring-note">
+    <Card padding="sm" tone="quiet" className="type-small text-fg" data-testid="tailoring-note">
       <p>
         Tailored with AI · {strength} ·{" "}
         <span data-testid="rewrites-dropped" data-count={dropped.length}>
@@ -631,17 +594,17 @@ function TailoringNote({ tailoring, aiEnabled }) {
       </p>
       {dropped.length > 0 && (
         <details className="mt-2">
-          <summary className="cursor-pointer text-slate-500 dark:text-slate-400">Why they were dropped</summary>
-          <ul className="mt-2 list-disc space-y-1 pl-5">
+          <summary className="cursor-pointer text-fg-muted">Why they were dropped</summary>
+          <ul className="mt-2 list-disc space-y-1 pl-5 text-fg-muted">
             {dropped.map((item, index) => (
               <li key={index}>
-                <span className="font-medium capitalize">{item.section}</span>: {item.problem}
+                <span className="font-medium text-fg capitalize">{item.section}</span>: {item.problem}
               </li>
             ))}
           </ul>
         </details>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -650,34 +613,35 @@ function TailoringNote({ tailoring, aiEnabled }) {
 function Differences({ differences }) {
   const percent = Math.round(differences.changedShare * 100);
   return (
-    <section className="card mt-4 p-5" aria-labelledby="differences" data-testid="differences">
-      <h2 id="differences" className="font-semibold text-slate-900 dark:text-white">
+    <Card as="section" aria-labelledby="differences" data-testid="differences">
+      <h2 id="differences" className="type-h3 text-fg">
         How this version differs
       </h2>
       {differences.nearlyIdentical && (
-        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200" role="alert" data-testid="nearly-identical">
-          <p className="font-medium">This version is nearly identical to your base resume ({percent}% of its words changed).</p>
-          <ul className="mt-1 list-disc pl-5">
-            {differences.reasons.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
+        <div className="mt-3" data-testid="nearly-identical">
+          <Alert tone="warning" title={`This version is nearly identical to your base resume (${percent}% of its words changed).`}>
+            <ul className="list-disc pl-5">
+              {differences.reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+          </Alert>
         </div>
       )}
       {differences.byType.length ? (
-        <ul className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+        <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {differences.byType.map((entry) => (
-            <li key={entry.type} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
-              <span className="text-slate-700 dark:text-slate-300">{entry.label}</span>
-              <span className="font-semibold tabular-nums text-slate-900 dark:text-white">{entry.count}</span>
+            <li key={entry.type} className="flex items-center justify-between gap-3 rounded-lg bg-surface-2 px-3 py-2 type-small">
+              <span className="text-fg-muted">{entry.label}</span>
+              <span className="font-medium text-fg tabular-nums">{entry.count}</span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">No changes were made.</p>
+        <p className="mt-2 type-small text-fg-muted">No changes were made.</p>
       )}
-      {!differences.nearlyIdentical && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{percent}% of the words differ from your base resume (reordering not counted).</p>}
-    </section>
+      {!differences.nearlyIdentical && <p className="mt-2 type-small text-fg-muted">{percent}% of the words differ from your base resume (reordering not counted).</p>}
+    </Card>
   );
 }
 
@@ -688,25 +652,25 @@ function Breakdown({ report }) {
     return { matched, total: matched + missing };
   };
   const rows = [
-    ["Must-haves", count(true), "bg-indigo-600"],
-    ["Nice-to-haves", count(false), "bg-slate-400"],
+    ["Must-haves", count(true), "bg-accent"],
+    ["Nice-to-haves", count(false), "bg-fg-subtle"],
   ];
   return (
     <dl className="mt-6 space-y-3" data-testid="breakdown">
       {rows.map(([label, { matched, total }, color]) => (
         <div key={label}>
-          <div className="flex justify-between text-sm">
-            <dt className="text-slate-600 dark:text-slate-300">{label}</dt>
-            <dd className="font-semibold tabular-nums text-slate-900 dark:text-white">
+          <div className="flex justify-between type-small">
+            <dt className="text-fg-muted">{label}</dt>
+            <dd className="font-medium text-fg tabular-nums">
               {matched} of {total}
             </dd>
           </div>
-          <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800" aria-hidden="true">
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-2" aria-hidden="true">
             <div className={`h-full rounded-full ${color}`} style={{ width: total ? `${(matched / total) * 100}%` : 0 }} />
           </div>
         </div>
       ))}
-      <p className="pt-1 text-xs text-slate-500 dark:text-slate-400">Must-haves count three times as much as nice-to-haves.</p>
+      <p className="pt-1 type-small text-fg-muted">Must-haves count three times as much as nice-to-haves.</p>
     </dl>
   );
 }
@@ -714,18 +678,15 @@ function Breakdown({ report }) {
 // Matched skills; the evidence quote shows on hover and keyboard focus
 function MatchedSkills({ matched }) {
   return (
-    <section className="card p-5" aria-labelledby="matched-skills">
-      <h2 id="matched-skills" className="font-semibold text-slate-900 dark:text-white">
-        Skills your resume shows ({matched.length})
-      </h2>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Hover or focus a skill to see where.</p>
+    <Card as="section" aria-labelledby="matched-skills">
+      <CardHeader title={<span id="matched-skills">Skills your resume shows ({matched.length})</span>} description="Hover or focus a skill to see where." />
       {matched.length ? (
-        <ul className="mt-3 flex flex-wrap gap-2" data-testid="matched-skills">
+        <ul className="flex flex-wrap gap-2" data-testid="matched-skills">
           {matched.map((item) => (
             <li key={item.skill} className="group relative">
               <span
                 tabIndex={0}
-                className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-800 ring-1 ring-emerald-200 outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 dark:bg-emerald-950/60 dark:text-emerald-200 dark:ring-emerald-900"
+                className="inline-flex h-7 items-center gap-1 rounded-full border border-success/30 bg-success-soft px-3 type-small font-medium text-success outline-none focus-visible:ring-2 focus-visible:ring-success"
                 title={`${item.evidence.section}: "${item.evidence.text}"`}
                 aria-describedby={`evidence-${item.skill}`}
                 data-skill={item.skill}
@@ -737,18 +698,18 @@ function MatchedSkills({ matched }) {
               <span
                 id={`evidence-${item.skill}`}
                 role="tooltip"
-                className="pointer-events-none absolute bottom-full left-0 z-10 mb-2 hidden w-72 rounded-lg bg-slate-900 px-3 py-2 text-xs text-white shadow-lg group-focus-within:block group-hover:block dark:bg-slate-700"
+                className="pointer-events-none absolute bottom-full left-0 z-20 mb-2 hidden w-72 rounded-md bg-fg px-3 py-2 text-xs leading-snug text-canvas shadow-raised group-focus-within:block group-hover:block"
               >
-                <span className="block font-semibold">{item.evidence.section[0].toUpperCase() + item.evidence.section.slice(1)}</span>
+                <span className="block font-medium">{item.evidence.section[0].toUpperCase() + item.evidence.section.slice(1)}</span>
                 <span className="mt-0.5 block">"{item.evidence.text}"</span>
               </span>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">None of the job's skills appear in your resume yet.</p>
+        <p className="type-small text-fg-muted">None of the job's skills appear in your resume yet.</p>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -767,36 +728,32 @@ function MissingSkills({ job, onReport }) {
   };
 
   return (
-    <section className="card p-5" aria-labelledby="missing-skills">
-      <h2 id="missing-skills" className="font-semibold text-slate-900 dark:text-white">
-        Skills the job asks for that your resume doesn't show ({missing.length})
-      </h2>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        Nothing is added unless you say you have it. If you don't, it's a good list of what to learn next.
-      </p>
+    <Card as="section" aria-labelledby="missing-skills">
+      <CardHeader
+        title={<span id="missing-skills">Skills the job asks for that your resume doesn't show ({missing.length})</span>}
+        description="Nothing is added unless you say you have it. If you don't, it's a good list of what to learn next."
+      />
       {missing.length ? (
-        <ul className="mt-4 divide-y divide-slate-200 dark:divide-slate-800" data-testid="missing-skills">
+        <ul className="divide-y divide-line" data-testid="missing-skills">
           {missing.map(({ skill, required }) => {
             const declined = job.declinedSkills.includes(skill);
             return (
-              <li key={skill} className="py-3" data-skill={skill}>
+              <li key={skill} className="py-3 first:pt-0 last:pb-0" data-skill={skill}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-slate-900 dark:text-white">{skill}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${required ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}>
-                      {required ? "Must-have" : "Nice-to-have"}
-                    </span>
-                    {declined && <span className="text-xs text-slate-500 dark:text-slate-400">You don't have this yet</span>}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="type-label text-fg">{skill}</span>
+                    <Badge tone={required ? "accent" : "neutral"}>{required ? "Must-have" : "Nice-to-have"}</Badge>
+                    {declined && <span className="type-small text-fg-muted">You don't have this yet</span>}
                   </div>
                   {open !== skill && (
                     <div className="flex gap-2">
-                      <button type="button" onClick={() => setOpen(skill)} className="btn-secondary px-3 py-1.5">
+                      <Button size="sm" onClick={() => setOpen(skill)}>
                         I have this skill
-                      </button>
+                      </Button>
                       {!declined && (
-                        <button type="button" onClick={() => decline(skill)} className="btn-secondary px-3 py-1.5">
+                        <Button size="sm" variant="ghost" onClick={() => decline(skill)}>
                           I don't have this
-                        </button>
+                        </Button>
                       )}
                     </div>
                   )}
@@ -817,9 +774,9 @@ function MissingSkills({ job, onReport }) {
           })}
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Your resume shows every skill this job lists.</p>
+        <p className="type-small text-fg-muted">Your resume shows every skill this job lists.</p>
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -858,89 +815,78 @@ function ConfirmSkillForm({ job, skill, onCancel, onConfirmed }) {
   };
 
   return (
-    <form onSubmit={submit} className="mt-3 space-y-4 rounded-xl bg-slate-50 p-4 dark:bg-slate-800/50" aria-label={`Confirm ${skill}`}>
-      <div>
-        <label htmlFor={`where-${id}`} className="label">
-          Where did you use {skill}?
-        </label>
-        <select id={`where-${id}`} className="input" value={where} onChange={(event) => setWhere(event.target.value)} required>
-          <option value="" disabled>
-            Choose a job or project
-          </option>
-          {job.places.jobs.length > 0 && (
-            <optgroup label="Jobs">
-              {job.places.jobs.map((place) => (
-                <option key={place.id} value={`job:${place.id}`}>
-                  {place.label}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          {job.places.projects.length > 0 && (
-            <optgroup label="Projects">
-              {job.places.projects.map((place) => (
-                <option key={place.id} value={`project:${place.id}`}>
-                  {place.label}
-                </option>
-              ))}
-            </optgroup>
-          )}
-          <option value="other">Other (a course, side work...)</option>
-        </select>
-      </div>
-      <div>
-        <label htmlFor={`note-${id}`} className="label">
-          A short note on how you used it
-        </label>
-        <textarea id={`note-${id}`} rows={2} className="input" maxLength={300} value={note} onChange={(event) => setNote(event.target.value)} placeholder={`e.g. Ran our services on ${skill} in production`} required />
-      </div>
+    <form onSubmit={submit} className="mt-3 space-y-4 rounded-lg border border-line bg-surface-2 p-4" aria-label={`Confirm ${skill}`}>
+      <Field id={`where-${id}`} label={`Where did you use ${skill}?`}>
+        {(props) => (
+          <Select {...props} value={where} onChange={(event) => setWhere(event.target.value)} required>
+            <option value="" disabled>
+              Choose a job or project
+            </option>
+            {job.places.jobs.length > 0 && (
+              <optgroup label="Jobs">
+                {job.places.jobs.map((place) => (
+                  <option key={place.id} value={`job:${place.id}`}>
+                    {place.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {job.places.projects.length > 0 && (
+              <optgroup label="Projects">
+                {job.places.projects.map((place) => (
+                  <option key={place.id} value={`project:${place.id}`}>
+                    {place.label}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            <option value="other">Other (a course, side work...)</option>
+          </Select>
+        )}
+      </Field>
+      <Field id={`note-${id}`} label="A short note on how you used it">
+        {(props) => <Textarea {...props} rows={2} maxLength={300} value={note} onChange={(event) => setNote(event.target.value)} placeholder={`e.g. Ran our services on ${skill} in production`} required />}
+      </Field>
 
       <fieldset>
-        <legend className="label">What should we add?</legend>
-        <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
-          <label className="flex items-center gap-2">
-            <input type="radio" name={`placement-${id}`} value="skills" checked={!canBullet || placement === "skills"} onChange={() => setPlacement("skills")} />
-            Add to Skills only
-          </label>
-          <label className={`flex items-center gap-2 ${canBullet ? "" : "opacity-60"}`}>
-            <input type="radio" name={`placement-${id}`} value="bullet" checked={canBullet && placement === "bullet"} disabled={!canBullet} onChange={() => setPlacement("bullet")} />
-            Also add a bullet{!canBullet && where === "other" ? " (choose a job or project for it)" : ""}
-          </label>
+        <legend className="mb-2 type-label text-fg">What should we add?</legend>
+        <div className="space-y-2">
+          <Radio name={`placement-${id}`} value="skills" label="Add to Skills only" checked={!canBullet || placement === "skills"} onChange={() => setPlacement("skills")} />
+          <Radio
+            name={`placement-${id}`}
+            value="bullet"
+            label="Also add a bullet"
+            description={!canBullet && where === "other" ? "Choose a job or project for it" : undefined}
+            checked={canBullet && placement === "bullet"}
+            disabled={!canBullet}
+            onChange={() => setPlacement("bullet")}
+          />
         </div>
       </fieldset>
 
       {canBullet && placement === "bullet" && (
-        <div>
-          <label htmlFor={`bullet-${id}`} className="label">
-            The bullet (edit it to read well)
-          </label>
-          <textarea
-            id={`bullet-${id}`}
-            rows={2}
-            className="input"
-            maxLength={300}
-            value={bulletText}
-            onChange={(event) => {
-              setBulletEdited(true);
-              setBullet(event.target.value);
-            }}
-          />
-          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">Keep to what's true: numbers and tools must come from your note or resume.</p>
-        </div>
+        <Field id={`bullet-${id}`} label="The bullet (edit it to read well)" help="Keep to what's true: numbers and tools must come from your note or resume.">
+          {(props) => (
+            <Textarea
+              {...props}
+              rows={2}
+              maxLength={300}
+              value={bulletText}
+              onChange={(event) => {
+                setBulletEdited(true);
+                setBullet(event.target.value);
+              }}
+            />
+          )}
+        </Field>
       )}
 
-      {error && (
-        <p className="field-error" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <Alert tone="danger">{error}</Alert>}
       <div className="flex justify-end gap-2">
-        <button type="button" onClick={onCancel} className="btn-secondary">
-          Cancel
-        </button>
-        <button type="submit" disabled={saving || !where || !note.trim()} className="btn-primary">
+        <Button onClick={onCancel}>Cancel</Button>
+        <Button type="submit" variant="primary" disabled={!where || !note.trim()} loading={saving}>
           {saving ? "Adding..." : "Add it"}
-        </button>
+        </Button>
       </div>
     </form>
   );

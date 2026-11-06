@@ -31,12 +31,12 @@ export default function DevTemplates() {
     <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Template gallery</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <h1 className="type-h1 text-fg">Template gallery</h1>
+          <p className="type-small text-fg-muted">
             Development only. {TEMPLATES.length} templates, first page of each.
           </p>
         </div>
-        <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+        <label className="flex items-center gap-2 type-small text-fg">
           <input type="checkbox" checked={withPhoto} onChange={(event) => setSearchParams(event.target.checked ? {} : { photo: "0" })} />
           Show photo
         </label>
@@ -44,12 +44,12 @@ export default function DevTemplates() {
 
       {groups.map((tier) => (
         <section key={tier.id} className="mt-10">
-          <h2 className="border-b border-slate-200 pb-2 text-xl font-semibold text-slate-900 dark:border-slate-800 dark:text-white">
+          <h2 className="border-b border-line pb-2 type-h2 text-fg">
             {tier.name}
           </h2>
           {tier.layouts.map((templates) => (
             <div key={templates[0].layout} className="mt-6">
-              <h3 className="text-sm font-semibold text-slate-600 dark:text-slate-300">{templates[0].layout}</h3>
+              <h3 className="type-label text-fg-muted">{templates[0].layout}</h3>
               <div className="mt-3 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
                 {templates.map((template) => (
                   <GalleryCard key={template.id} template={template} withPhoto={withPhoto} />
@@ -93,7 +93,7 @@ function GalleryCard({ template, withPhoto }) {
 
   return (
     <div>
-      <div ref={boxRef} className="relative aspect-[210/297] overflow-hidden rounded-md bg-white shadow-md ring-1 ring-slate-200">
+      <div ref={boxRef} className="relative aspect-page overflow-hidden rounded-md border border-line bg-white shadow-soft">
         {isVisible && scale > 0 ? (
           <div style={{ width: A4_WIDTH_PX, transform: `scale(${scale})`, transformOrigin: "top left" }}>
             <ResumeSheet>
@@ -101,13 +101,13 @@ function GalleryCard({ template, withPhoto }) {
             </ResumeSheet>
           </div>
         ) : (
-          <div className="absolute inset-0 animate-pulse bg-slate-100 dark:bg-slate-800" />
+          <div className="absolute inset-0 animate-pulse bg-surface-2" />
         )}
       </div>
       <div className="mt-2 flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{template.name}</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
+          <p className="truncate type-label text-fg">{template.name}</p>
+          <p className="type-small text-fg-muted">
             {template.id} · {template.atsFriendly ? "ATS-friendly" : "not ATS-friendly"}
           </p>
         </div>

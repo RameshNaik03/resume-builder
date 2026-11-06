@@ -4,11 +4,12 @@ import toast from "../utils/toast";
 import api from "../api/axios";
 import getErrorMessage from "../utils/getErrorMessage";
 import { TEMPLATES } from "../templates/registry";
-import { ACCEPT_ATTRIBUTE, MAX_SIZE_MB, toUploadFile, validateFile } from "../utils/resumeFile";
-import { Loader2, Upload } from "lucide-react";
+import { toUploadFile, validateFile } from "../utils/resumeFile";
+import { Loader2 } from "lucide-react";
 import Dialog from "./ui/Dialog";
 import Button from "./ui/Button";
 import { Alert } from "./ui/Display";
+import FileDropzone from "./ui/FileDropzone";
 import TemplatePicker from "./editor/TemplatePicker";
 
 // Used when the user closes the "choose a template" step without picking one
@@ -19,7 +20,6 @@ const FALLBACK_TEMPLATE = TEMPLATES.find((template) => template.tier === "basic"
 //   initialFile        - optional file to import straight away (e.g. one checked on the ATS page)
 export default function ImportResumeModal({ onClose, onStartFromScratch, initialFile = null }) {
   const navigate = useNavigate();
-  const inputRef = useRef(null);
   const startedInitialUpload = useRef(false); // StrictMode runs effects twice in development
 
   const [status, setStatus] = useState("idle"); // "idle" | "uploading" | "reading" | "failed" | "choose"
@@ -30,7 +30,6 @@ export default function ImportResumeModal({ onClose, onStartFromScratch, initial
   const [fileName, setFileName] = useState("");
   const [fileError, setFileError] = useState(""); // Problem found before uploading
   const [serverError, setServerError] = useState(""); // Problem reported by the server
-  const [isDragging, setIsDragging] = useState(false);
 
   const isBusy = status === "uploading" || status === "reading";
 
@@ -119,12 +118,6 @@ export default function ImportResumeModal({ onClose, onStartFromScratch, initial
     if (files[0]) uploadFile(files[0]);
   };
 
-  const handleDrop = (event) => {
-    event.preventDefault();
-    setIsDragging(false);
-    if (!isBusy) handleFiles(event.dataTransfer.files);
-  };
-
   const tryAgain = () => {
     setStatus("idle");
     setServerError("");
@@ -193,36 +186,7 @@ export default function ImportResumeModal({ onClose, onStartFromScratch, initial
       {/* ---------- Choose / drop a file ---------- */}
       {status === "idle" && (
         <>
-          <div
-            onDragOver={(event) => {
-              event.preventDefault();
-              setIsDragging(true);
-            }}
-            onDragLeave={() => setIsDragging(false)}
-            onDrop={handleDrop}
-            className={`rounded-xl border border-dashed px-6 py-10 text-center transition-colors ${isDragging ? "border-accent bg-accent-soft" : "border-line-strong bg-surface-2"}`}
-          >
-            <span className="mx-auto grid size-11 place-items-center rounded-full bg-surface text-fg-muted shadow-soft">
-              <Upload className="size-5" aria-hidden="true" />
-            </span>
-            <p className="mt-4 type-label text-fg">{isDragging ? "Drop your file here" : "Drag and drop your resume here"}</p>
-            <p className="mt-1 type-small text-fg-muted">or</p>
-            <Button variant="primary" className="mt-3" onClick={() => inputRef.current.click()} data-autofocus>
-              Choose file
-            </Button>
-            <p className="mt-4 type-small text-fg-subtle">PDF or DOCX, up to {MAX_SIZE_MB} MB</p>
-
-            <input
-              ref={inputRef}
-              type="file"
-              accept={ACCEPT_ATTRIBUTE}
-              className="hidden"
-              onChange={(event) => {
-                handleFiles(event.target.files);
-                event.target.value = ""; // Allow choosing the same file again
-              }}
-            />
-          </div>
+          <FileDropzone onFiles={handleFiles} disabled={isBusy} primary chooseProps={{ "data-autofocus": true }} />
 
           {fileError && (
             <div className="mt-3">

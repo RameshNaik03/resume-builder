@@ -71,7 +71,7 @@ test("ATS checker page and editor banners", async (t) => {
   await check("results: call to action below 70", body.includes("Generate an ATS-friendly version"));
   await check("results: disclaimer", body.includes("don't come from any specific ATS"));
   await check("results: skills found (no job description)", body.includes("Paste a job description to see which"));
-  await check("score ring orange/red", await page.$eval("svg circle:nth-child(2)", (circle) => /stroke-(orange|rose)-500/.test(circle.getAttribute("class"))));
+  await check("score ring warning/danger", await page.$eval("svg circle:nth-child(2)", (circle) => /stroke-(warning|danger)\b/.test(circle.getAttribute("class"))));
   await shot("3-results");
 
   await clickText("button[aria-expanded]", "Content quality");
@@ -178,7 +178,7 @@ test("ATS checker page and editor banners", async (t) => {
   await sleep(1400);
   body = await text();
   await check("clean: Excellent, no call to action", body.includes("Excellent") && !body.includes("Generate an ATS-friendly version"));
-  await check("score ring green", await page.$eval("svg circle:nth-child(2)", (circle) => circle.getAttribute("class").includes("emerald")));
+  await check("score ring green", await page.$eval("svg circle:nth-child(2)", (circle) => circle.getAttribute("class").includes("stroke-success")));
 
   await clickText("button", "Check another resume");
   await check("file kept after 'Check another resume'", (await text()).includes("clean.pdf"));

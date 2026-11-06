@@ -49,7 +49,7 @@ export default function ResumeSnapshot({ resume, highlights = [], tone = "new" }
   }, [resume, highlightKey, className]);
 
   return (
-    <div ref={boxRef} className="relative overflow-hidden rounded-lg shadow-md ring-1 ring-slate-200 dark:ring-slate-700" style={{ height: height * scale }}>
+    <div ref={boxRef} className="relative overflow-hidden rounded-lg border border-line shadow-soft" style={{ height: height * scale }}>
       <div style={{ width: widthPx, transform: `scale(${scale})`, transformOrigin: "top left" }}>
         <ResumeSheet ref={sheetRef} pageSize={pageSize}>
           <TemplateRenderer resume={resume} design={resume.design} withLinks={false} highlightPlaceholders />

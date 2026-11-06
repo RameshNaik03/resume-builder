@@ -115,7 +115,8 @@ export function PageHeader({ back, eyebrow, title, description, actions }) {
         <h1 className="type-h1 text-fg">{title}</h1>
         {description && <p className="mt-2 max-w-2xl type-body text-fg-muted">{description}</p>}
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      {/* The actions keep their width (the title wraps instead); on phones they wrap under it */}
+      {actions && <div className="flex flex-wrap gap-2 sm:shrink-0">{actions}</div>}
     </header>
   );
 }

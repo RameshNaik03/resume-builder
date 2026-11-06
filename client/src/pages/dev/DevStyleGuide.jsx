@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import toast from "../../utils/toast";
-import { ArrowLeft, Download, FileText, Moon, Plus, Search, Sun, Target, Trash2, Upload } from "lucide-react";
+import { Download, FileText, Moon, Plus, Search, Sun, Target, Trash2, Upload } from "lucide-react";
 import { getTheme, setTheme, subscribe } from "../../utils/theme";
 import { SAMPLE_RESUME } from "../../templates/sampleResume";
 import Button from "../../components/ui/Button";
+import BackLink from "../../components/ui/BackLink";
 import { Checkbox, Field, Input, Radio, Select, Textarea, Toggle } from "../../components/ui/Form";
 import Tabs from "../../components/ui/Tabs";
 import { Alert, Badge, Card, CardHeader, EmptyState, PageHeader, StatCard, Tooltip } from "../../components/ui/Display";
@@ -360,9 +361,9 @@ export default function DevStyleGuide() {
             <Card>
               <PageHeader
                 back={
-                  <Button variant="link" icon={ArrowLeft} className="mb-3 type-small no-underline">
-                    Dashboard
-                  </Button>
+                  <div className="mb-3">
+                    <BackLink onClick={() => {}}>Dashboard</BackLink>
+                  </div>
                 }
                 eyebrow="Step 2 of 3"
                 title="Tailor to a job"

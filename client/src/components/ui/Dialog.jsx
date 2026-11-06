@@ -61,8 +61,10 @@ export function DialogShell({ onClose, labelledBy, size = "sm", className = "", 
 }
 
 // headerAction - replaces the close button (e.g. a "Skip for now" button)
-export default function Dialog({ title, description, onClose, footer, size = "sm", headerAction, children }) {
-  const titleId = useId();
+// titleId: a fixed id for the title (for links and tests), instead of a generated one
+export default function Dialog({ title, titleId: fixedTitleId, description, onClose, footer, size = "sm", headerAction, children }) {
+  const generatedId = useId();
+  const titleId = fixedTitleId ?? generatedId;
   return (
     <DialogShell onClose={onClose} labelledBy={titleId} size={size}>
       <DialogPanel titleId={titleId} title={title} description={description} onClose={onClose} footer={footer} headerAction={headerAction} scroll={size === "lg" || size === "full"}>

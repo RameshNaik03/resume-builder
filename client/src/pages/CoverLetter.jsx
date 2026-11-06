@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
-import { AlertTriangle, ArrowLeft, CheckCircle2, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, Download, FileText, XCircle } from "lucide-react";
 import toast from "../utils/toast";
 import api from "../api/axios";
 import usePageTitle from "../hooks/usePageTitle";
@@ -17,6 +17,11 @@ import ConfirmModal from "../components/ConfirmModal";
 import ResumePreview from "../components/ResumePreview";
 import RichTextEditor from "../components/editor/RichTextEditor";
 import { pageClass } from "../components/ui/pageLayout";
+import { Alert, Card, CardHeader, PageHeader } from "../components/ui/Display";
+import { Field, Input, Select, Textarea } from "../components/ui/Form";
+import Button from "../components/ui/Button";
+import BackLink from "../components/ui/BackLink";
+import SegmentedControl from "../components/ui/SegmentedControl";
 
 // Cover letters (/cover-letters/new?job=<jobId> and /cover-letters/:id), via /api/cover-letters:
 //   new    - generate a letter for a tailored job: tone, length, language, the recipient (name and
@@ -68,49 +73,38 @@ export default function CoverLetter() {
 
 // ---------- Shared form pieces ----------
 
+// One choice from a few options (tone, length, language): a label and the shared segmented control
 function Choice({ legend, name, options, value, onChange }) {
+  const id = `choice-${name}`;
   return (
-    <fieldset>
-      <legend className="label">{legend}</legend>
-      <div className="flex flex-wrap gap-2">
-        {options.map(([optionValue, label, detail]) => (
-          <label
-            key={optionValue}
-            className={`cursor-pointer rounded-lg px-3 py-2 text-sm ring-1 transition has-focus-visible:ring-2 has-focus-visible:ring-indigo-500 ${
-              value === optionValue ? "bg-indigo-50 font-medium text-indigo-800 ring-indigo-500 dark:bg-indigo-950/60 dark:text-indigo-200" : "text-slate-700 ring-slate-200 hover:ring-indigo-300 dark:text-slate-300 dark:ring-slate-700"
-            }`}
-          >
-            <input type="radio" name={name} value={optionValue} checked={value === optionValue} onChange={() => onChange(optionValue)} className="sr-only" />
-            {label}
-            {detail && <span className="ml-1 text-xs text-slate-500 dark:text-slate-400">{detail}</span>}
-          </label>
-        ))}
-      </div>
-    </fieldset>
+    <div data-choice={name}>
+      <p id={id} className="mb-1.5 type-label text-fg">
+        {legend}
+      </p>
+      <SegmentedControl labelledBy={id} options={options.map(([optionValue, label, hint]) => ({ value: optionValue, label, hint }))} value={value} onChange={onChange} />
+    </div>
   );
 }
 
 function RecipientFields({ name, salutation, onName, onSalutation, idPrefix }) {
   return (
-    <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_12rem]">
-      <div>
-        <label htmlFor={`${idPrefix}-recipient`} className="label">
-          Recipient's name <span className="font-normal text-slate-400">(if you know it)</span>
-        </label>
-        <input id={`${idPrefix}-recipient`} className="input" maxLength={120} value={name} onChange={(event) => onName(event.target.value)} placeholder="e.g. Anna Schmidt" />
+    <div className="grid gap-4 sm:grid-cols-3">
+      <div className="sm:col-span-2">
+        <Field id={`${idPrefix}-recipient`} label="Recipient's name" help="If you know it.">
+          {(props) => <Input {...props} maxLength={120} value={name} onChange={(event) => onName(event.target.value)} placeholder="e.g. Anna Schmidt" />}
+        </Field>
       </div>
-      <div>
-        <label htmlFor={`${idPrefix}-salutation`} className="label">
-          Salutation
-        </label>
-        <select id={`${idPrefix}-salutation`} className="input" value={salutation} onChange={(event) => onSalutation(event.target.value)} disabled={!name.trim()}>
-          {SALUTATIONS.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
+      <Field id={`${idPrefix}-salutation`} label="Salutation">
+        {(props) => (
+          <Select {...props} value={salutation} onChange={(event) => onSalutation(event.target.value)} disabled={!name.trim()}>
+            {SALUTATIONS.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        )}
+      </Field>
     </div>
   );
 }
@@ -118,44 +112,36 @@ function RecipientFields({ name, salutation, onName, onSalutation, idPrefix }) {
 // The guided answers: short, optional, in the user's own words. Only these (and the resume) go
 // into the letter; empty ones become marked spots, never invented text.
 function GuidedAnswers({ values, language, onChange, idPrefix }) {
-  const field = (name) => ({ id: `${idPrefix}-${name}`, className: "input", value: values[name], onChange: (event) => onChange(name, event.target.value) });
-  const optional = <span className="font-normal text-slate-400">(optional)</span>;
+  const bind = (name) => ({ value: values[name], onChange: (event) => onChange(name, event.target.value) });
   return (
     <fieldset className="space-y-4">
-      <legend className="label">In your own words</legend>
-      <p className="-mt-1 text-sm text-slate-500 dark:text-slate-400">All optional, but they make the letter yours. Anything you leave empty is marked for you to fill in, never made up.</p>
-      <div>
-        <label htmlFor={`${idPrefix}-achievement`} className="label">
-          Your strongest achievement for this job {optional}
-        </label>
-        <textarea {...field("achievement")} rows={3} maxLength={600} placeholder="A short story: the situation, what you did, the result. E.g. “Our nightly billing job kept timing out, so I rewrote it as a stream; it now finishes in 4 minutes.”" />
-      </div>
-      <div>
-        <label htmlFor={`${idPrefix}-why`} className="label">
-          Why this company? {optional}
-        </label>
-        <textarea {...field("whyCompany")} id={`${idPrefix}-why`} rows={2} maxLength={600} placeholder="One or two sentences in your own words." />
-      </div>
-      <div>
-        <label htmlFor={`${idPrefix}-interest`} className="label">
-          Anything specific about the company that interests you? {optional}
-        </label>
-        <input {...field("companyInterest")} id={`${idPrefix}-interest`} maxLength={400} placeholder="A product, a project, a value. E.g. “your open-source ledger library”" />
-      </div>
+      <legend className="type-label text-fg">In your own words</legend>
+      <p className="-mt-2 type-small text-fg-muted">All optional, but they make the letter yours. Anything you leave empty is marked for you to fill in, never made up.</p>
+      <Field id={`${idPrefix}-achievement`} label="Your strongest achievement for this job" optional>
+        {(props) => (
+          <Textarea
+            {...props}
+            {...bind("achievement")}
+            rows={3}
+            maxLength={600}
+            placeholder="A short story: the situation, what you did, the result. E.g. “Our nightly billing job kept timing out, so I rewrote it as a stream; it now finishes in 4 minutes.”"
+          />
+        )}
+      </Field>
+      <Field id={`${idPrefix}-why`} label="Why this company?" optional>
+        {(props) => <Textarea {...props} {...bind("whyCompany")} rows={2} maxLength={600} placeholder="One or two sentences in your own words." />}
+      </Field>
+      <Field id={`${idPrefix}-interest`} label="Anything specific about the company that interests you?" optional>
+        {(props) => <Input {...props} {...bind("companyInterest")} maxLength={400} placeholder="A product, a project, a value. E.g. “your open-source ledger library”" />}
+      </Field>
       <div className={`grid gap-4 ${language === "de" ? "sm:grid-cols-2" : ""}`}>
-        <div>
-          <label htmlFor={`${idPrefix}-availability`} className="label">
-            Earliest start date {optional}
-          </label>
-          <input {...field("availability")} maxLength={120} placeholder={language === "de" ? "z. B. 1. April 2027 / sofort" : "e.g. 1 March 2027 / immediately"} />
-        </div>
+        <Field id={`${idPrefix}-availability`} label="Earliest start date" optional>
+          {(props) => <Input {...props} {...bind("availability")} maxLength={120} placeholder={language === "de" ? "z. B. 1. April 2027 / sofort" : "e.g. 1 March 2027 / immediately"} />}
+        </Field>
         {language === "de" && (
-          <div>
-            <label htmlFor={`${idPrefix}-salary`} className="label">
-              Gehaltsvorstellung {optional}
-            </label>
-            <input {...field("salary")} maxLength={80} placeholder="z. B. 75.000 € brutto im Jahr" />
-          </div>
+          <Field id={`${idPrefix}-salary`} label="Gehaltsvorstellung" optional>
+            {(props) => <Input {...props} {...bind("salary")} maxLength={80} placeholder="z. B. 75.000 € brutto im Jahr" />}
+          </Field>
         )}
       </div>
     </fieldset>
@@ -163,39 +149,39 @@ function GuidedAnswers({ values, language, onChange, idPrefix }) {
 }
 
 // The letter strength check from the server (opening, evidence, motivation, clichés, length,
-// placeholders): pass, warning (amber) or fail, with a tip for each one that isn't a pass.
+// placeholders): pass, warning or fail, with a tip for each one that isn't a pass.
 //   evidenceWords - set when the requested length couldn't be reached because the resume has no
 //                   more matching evidence (the letter is never padded): a note under the length
 const STATUS_ICONS = {
-  pass: [CheckCircle2, "text-emerald-600 dark:text-emerald-400", "Passed"],
-  warn: [AlertTriangle, "text-amber-500 dark:text-amber-400", "Warning"],
-  fail: [XCircle, "text-rose-600 dark:text-rose-400", "Needs work"],
+  pass: [CheckCircle2, "text-success", "Passed"],
+  warn: [AlertTriangle, "text-warning", "Warning"],
+  fail: [XCircle, "text-danger", "Needs work"],
 };
 function StrengthCheck({ strength, evidenceWords }) {
   if (!strength) return null;
   return (
-    <section className="card p-5" aria-labelledby="letter-strength" data-testid="letter-strength">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 id="letter-strength" className="font-semibold text-slate-900 dark:text-white">
+    <Card as="section" aria-labelledby="letter-strength" data-testid="letter-strength">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h2 id="letter-strength" className="type-h3 text-fg">
           Letter strength
         </h2>
-        <span className="text-sm font-medium text-slate-600 tabular-nums dark:text-slate-300">
+        <span className="type-small text-fg-muted tabular-nums">
           {strength.passed} of {strength.total} checks passed
           {strength.warnings > 0 && ` · ${strength.warnings} ${strength.warnings === 1 ? "warning" : "warnings"}`}
         </span>
       </div>
-      <ul className="mt-3 space-y-2.5">
+      <ul className="mt-4 space-y-3">
         {strength.checks.map((check) => {
           const status = check.status ?? (check.passed ? "pass" : "fail");
           const [Icon, color, label] = STATUS_ICONS[status];
           return (
-            <li key={check.id} className="flex gap-2.5 text-sm" data-check={check.id} data-passed={check.passed} data-status={status}>
+            <li key={check.id} className="flex gap-2.5" data-check={check.id} data-passed={check.passed} data-status={status}>
               <Icon className={`mt-0.5 size-4 shrink-0 ${color}`} aria-label={label} />
-              <div>
-                <p className="font-medium text-slate-800 dark:text-slate-200">{check.label}</p>
-                {check.tip && <p className="mt-0.5 text-slate-500 dark:text-slate-400">{check.tip}</p>}
+              <div className="min-w-0">
+                <p className="type-label text-fg">{check.label}</p>
+                {check.tip && <p className="mt-0.5 type-small text-fg-muted">{check.tip}</p>}
                 {check.id === "length" && status !== "pass" && evidenceWords > 0 && (
-                  <p className="mt-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200" data-testid="length-note">
+                  <p className="mt-1.5 rounded-md bg-warning-soft px-2.5 py-1.5 type-small text-fg" data-testid="length-note">
                     Your resume has evidence for about {evidenceWords} words. Add an achievement story or a company detail to make it longer.
                   </p>
                 )}
@@ -204,7 +190,7 @@ function StrengthCheck({ strength, evidenceWords }) {
           );
         })}
       </ul>
-    </section>
+    </Card>
   );
 }
 
@@ -214,15 +200,11 @@ function OpeningPicker({ options, current, busy, onChoose }) {
   if (!options?.length) return null;
   const selected = options.findIndex((option) => normalize(option) === current);
   return (
-    <section className="card space-y-3 p-5" aria-labelledby="letter-openings">
-      <div>
-        <h2 id="letter-openings" className="font-semibold text-slate-900 dark:text-white">
-          Opening
-        </h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          {selected === -1 ? "You've written your own opening. Choosing one of these replaces it." : "Three ways to open, from your real experience. Pick the one that sounds most like you."}
-        </p>
-      </div>
+    <Card as="section" aria-labelledby="letter-openings">
+      <CardHeader
+        title={<span id="letter-openings">Opening</span>}
+        description={selected === -1 ? "You've written your own opening. Choosing one of these replaces it." : "Three ways to open, from your real experience. Pick the one that sounds most like you."}
+      />
       <div role="radiogroup" aria-labelledby="letter-openings" className="space-y-2">
         {options.map((option, index) => (
           <button
@@ -233,15 +215,15 @@ function OpeningPicker({ options, current, busy, onChoose }) {
             disabled={busy}
             onClick={() => index !== selected && onChoose(index)}
             data-testid="opening-option"
-            className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm ring-1 transition focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:outline-none disabled:opacity-60 ${
-              index === selected ? "bg-indigo-50 text-indigo-900 ring-indigo-500 dark:bg-indigo-950/60 dark:text-indigo-100" : "text-slate-700 ring-slate-200 hover:ring-indigo-300 dark:text-slate-300 dark:ring-slate-700"
+            className={`block w-full rounded-lg border px-3 py-2.5 text-left type-small transition-colors focus-visible:outline-2 focus-visible:outline-accent disabled:opacity-60 ${
+              index === selected ? "border-accent bg-accent-soft text-fg" : "border-line text-fg-muted hover:border-line-strong hover:text-fg"
             }`}
           >
             {option}
           </button>
         ))}
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -290,10 +272,11 @@ function NewLetter() {
   if (failed) {
     return (
       <div className={pageClass("narrow", "text-center")}>
-        <p className="font-medium text-slate-900 dark:text-white">Choose a job first: cover letters are written for a tailored resume and its job.</p>
-        <Link to="/tailor" className="btn-primary mt-6">
+        <h1 className="type-h2 text-fg">Choose a job first</h1>
+        <p className="mt-2 type-body text-fg-muted">Cover letters are written for a tailored resume and its job.</p>
+        <Button as={Link} to="/tailor" variant="primary" className="mt-6">
           Tailor to a job
-        </Link>
+        </Button>
       </div>
     );
   }
@@ -302,27 +285,30 @@ function NewLetter() {
 
   return (
     <div className={pageClass()}>
-      <Link to={`/tailor/jobs/${jobId}`} className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
-        <ArrowLeft className="size-4" aria-hidden="true" />
-        Back to the match report
-      </Link>
-      <h1 className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">Write a cover letter</h1>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-        For {role}, from your tailored resume{job.tailoredResume ? ` "${job.tailoredResume.title}"` : ""} and the skills you confirmed. Nothing is made up: anything we don't know is marked for you to fill in.
-      </p>
+      <PageHeader
+        back={
+          <div className="mb-3">
+            <BackLink to={`/tailor/jobs/${jobId}`}>Back to the match report</BackLink>
+          </div>
+        }
+        title="Write a cover letter"
+        description={`For ${role}, from your tailored resume${job.tailoredResume ? ` "${job.tailoredResume.title}"` : ""} and the skills you confirmed. Nothing is made up: anything we don't know is marked for you to fill in.`}
+      />
 
-      <form onSubmit={generate} className="card mt-6 space-y-6 p-5 sm:p-6">
-        <Choice legend="Tone" name="tone" options={TONES} value={options.tone} onChange={set("tone")} />
-        <Choice legend="Length" name="length" options={LENGTHS} value={options.length} onChange={set("length")} />
-        <Choice legend="Language" name="language" options={LANGUAGES} value={options.language} onChange={set("language")} />
+      <Card as="form" onSubmit={generate} className="mt-6 space-y-6">
+        <div className="flex flex-wrap gap-x-8 gap-y-5">
+          <Choice legend="Tone" name="tone" options={TONES} value={options.tone} onChange={set("tone")} />
+          <Choice legend="Length" name="length" options={LENGTHS} value={options.length} onChange={set("length")} />
+          <Choice legend="Language" name="language" options={LANGUAGES} value={options.language} onChange={set("language")} />
+        </div>
         <RecipientFields idPrefix="new" name={options.recipientName} salutation={options.recipientSalutation} onName={set("recipientName")} onSalutation={set("recipientSalutation")} />
         <GuidedAnswers idPrefix="new" values={options} language={options.language} onChange={(name, value) => set(name)(value)} />
-        <div className="flex justify-end">
-          <button type="submit" disabled={busy} className="btn-primary">
+        <div className="flex justify-end border-t border-line pt-5">
+          <Button type="submit" variant="primary" loading={busy}>
             {busy ? "Writing..." : "Write cover letter"}
-          </button>
+          </Button>
         </div>
-      </form>
+      </Card>
     </div>
   );
 }
@@ -464,10 +450,10 @@ function LetterEditor({ id }) {
   if (failed) {
     return (
       <div className={pageClass("narrow", "text-center")}>
-        <p className="font-medium text-slate-900 dark:text-white">We couldn't open this cover letter.</p>
-        <Link to="/dashboard" className="btn-primary mt-6">
+        <h1 className="type-h2 text-fg">We couldn't open this cover letter</h1>
+        <Button as={Link} to="/dashboard" variant="primary" className="mt-6">
           Back to dashboard
-        </Link>
+        </Button>
       </div>
     );
   }
@@ -475,22 +461,26 @@ function LetterEditor({ id }) {
 
   return (
     <div>
-      {/* Top bar */}
-      <div className="sticky top-16 z-5 border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
-          <Link to={letter.jobId ? `/tailor/jobs/${letter.jobId}` : "/dashboard"} className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800" aria-label="Back">
-            <ArrowLeft className="size-5" aria-hidden="true" />
-          </Link>
-          <input value={letter.title} onChange={(event) => update({ title: event.target.value })} aria-label="Cover letter title" className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 text-lg font-semibold text-slate-900 outline-none hover:bg-slate-100 focus:ring-2 focus:ring-indigo-500/30 dark:text-white dark:hover:bg-slate-800" />
-          <span className="hidden text-sm text-slate-500 sm:inline dark:text-slate-400" aria-live="polite" data-testid="letter-save-status">
-            {STATUS_TEXT[status]}
+      {/* Top bar: the same as the resume editor's (sits just below the AppShell's bar) */}
+      <div className="sticky top-16 z-10 border-b border-line bg-surface">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-6">
+          <Button as={Link} to={letter.jobId ? `/tailor/jobs/${letter.jobId}` : "/dashboard"} variant="ghost" iconOnly icon={ArrowLeft} aria-label="Back" title="Back" />
+          <input
+            value={letter.title}
+            onChange={(event) => update({ title: event.target.value })}
+            aria-label="Cover letter title"
+            className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 type-h3 text-ellipsis text-fg outline-none hover:bg-surface-2 focus:bg-surface-2 focus:ring-3 focus:ring-accent/15"
+          />
+          <span className="flex items-center gap-1.5 type-small text-fg-muted max-sm:sr-only" aria-live="polite">
+            <span className={`size-2 rounded-full ${status === "error" ? "bg-danger" : status === "saved" ? "bg-success" : "bg-warning"}`} aria-hidden="true" />
+            <span data-testid="letter-save-status">{STATUS_TEXT[status]}</span>
           </span>
-          <Link to={`/editor/${resume._id}`} className="btn-secondary hidden shrink-0 md:inline-flex">
-            Resume
-          </Link>
-          <button type="button" onClick={download} className="btn-primary shrink-0">
-            Download PDF
-          </button>
+          <Button as={Link} to={`/editor/${resume._id}`} icon={FileText} aria-label="Resume" className="max-md:w-9 max-md:px-0">
+            <span className="hidden md:inline">Resume</span>
+          </Button>
+          <Button variant="primary" icon={Download} onClick={download} aria-label="Download PDF" className="max-sm:w-9 max-sm:px-0">
+            <span className="hidden sm:inline">Download PDF</span>
+          </Button>
         </div>
       </div>
 
@@ -498,26 +488,25 @@ function LetterEditor({ id }) {
         {/* Left: the letter (min-w-0: grid columns may shrink below the A4 preview's width) */}
         <div className="min-w-0 space-y-4">
           {placeholders.length > 0 && (
-            <section className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200" data-testid="letter-placeholders">
-              <p className="font-semibold">
-                Fill {placeholders.length === 1 ? "this" : `these ${placeholders.length}`} before sending
-              </p>
-              <ul className="mt-2 flex flex-wrap gap-2">
-                {placeholders.map((placeholder) => (
-                  <li key={placeholder}>
-                    <mark className="ats-placeholder">{placeholder}</mark>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-2 text-xs">They're highlighted in yellow in the preview. Replace each one with your own words, or delete it.</p>
-            </section>
+            <div data-testid="letter-placeholders">
+              <Alert tone="warning" role="status" title={`Fill ${placeholders.length === 1 ? "this" : `these ${placeholders.length}`} before sending`}>
+                <ul className="mt-1 flex flex-wrap gap-2">
+                  {placeholders.map((placeholder) => (
+                    <li key={placeholder}>
+                      <mark className="ats-placeholder text-fg">{placeholder}</mark>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 type-small">They're highlighted in yellow in the preview. Replace each one with your own words, or delete it.</p>
+              </Alert>
+            </div>
           )}
 
           <StrengthCheck strength={letter.strength} evidenceWords={letter.evidenceWords} />
           <OpeningPicker options={letter.openingOptions} current={currentOpening} busy={busy} onChoose={pickOpening} />
 
-          <section className="card space-y-4 p-5" aria-labelledby="letter-recipient">
-            <h2 id="letter-recipient" className="font-semibold text-slate-900 dark:text-white">
+          <Card as="section" aria-labelledby="letter-recipient" className="space-y-4">
+            <h2 id="letter-recipient" className="type-h3 text-fg">
               Recipient
             </h2>
             <RecipientFields
@@ -527,72 +516,69 @@ function LetterEditor({ id }) {
               onName={(recipientName) => update({ recipientName, ...(recipientName.trim() ? {} : { recipientSalutation: "" }) })}
               onSalutation={(recipientSalutation) => update({ recipientSalutation })}
             />
-            <div>
-              <label htmlFor="edit-company" className="label">
-                Company
-              </label>
-              <input id="edit-company" className="input" maxLength={120} value={letter.companyName} onChange={(event) => update({ companyName: event.target.value })} />
-            </div>
-          </section>
+            <Field id="edit-company" label="Company">
+              {(props) => <Input {...props} maxLength={120} value={letter.companyName} onChange={(event) => update({ companyName: event.target.value })} />}
+            </Field>
+          </Card>
 
-          <section className="card space-y-4 p-5" aria-labelledby="letter-text">
-            <h2 id="letter-text" className="font-semibold text-slate-900 dark:text-white">
+          <Card as="section" aria-labelledby="letter-text" className="space-y-4">
+            <h2 id="letter-text" className="type-h3 text-fg">
               Letter
             </h2>
-            <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_11rem]">
-              <div>
-                <label htmlFor="edit-subject" className="label">
-                  Subject line
-                </label>
-                <input id="edit-subject" className="input" maxLength={200} value={letter.subject} onChange={(event) => update({ subject: event.target.value })} />
+            <div className="grid gap-4 sm:grid-cols-3">
+              <div className="sm:col-span-2">
+                <Field id="edit-subject" label="Subject line">
+                  {(props) => <Input {...props} maxLength={200} value={letter.subject} onChange={(event) => update({ subject: event.target.value })} />}
+                </Field>
               </div>
-              <div>
-                <label htmlFor="edit-date" className="label">
-                  Date
-                </label>
-                <input id="edit-date" type="date" className="input" value={toDateInput(letter.date)} onChange={(event) => event.target.value && update({ date: new Date(`${event.target.value}T12:00:00`).toISOString() })} />
-              </div>
+              <Field id="edit-date" label="Date">
+                {(props) => <Input {...props} type="date" value={toDateInput(letter.date)} onChange={(event) => event.target.value && update({ date: new Date(`${event.target.value}T12:00:00`).toISOString() })} />}
+              </Field>
             </div>
             <div>
               <div className="mb-1.5 flex items-baseline justify-between">
-                <span className="label mb-0" id="letter-body-label">
+                <span className="type-label text-fg" id="letter-body-label">
                   Text
                 </span>
-                <span className="text-xs text-slate-500 tabular-nums dark:text-slate-400" data-testid="word-count">
+                <span className="type-small text-fg-muted tabular-nums" data-testid="word-count">
                   {wordCount(letter.body)} words
                 </span>
               </div>
               <RichTextEditor value={letter.body} onChange={(body) => update({ body })} ariaLabel="Cover letter text" minHeight="16rem" />
             </div>
-          </section>
+          </Card>
 
-          <section className="card space-y-4 p-5" aria-labelledby="letter-regenerate">
+          <Card as="section" aria-labelledby="letter-regenerate" className="space-y-5">
             <div>
-              <h2 id="letter-regenerate" className="font-semibold text-slate-900 dark:text-white">
+              <h2 id="letter-regenerate" className="type-h3 text-fg">
                 Regenerate
               </h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Rewrite the text from your tailored resume with other options. It replaces the text above.</p>
+              <p className="mt-0.5 type-small text-fg-muted">Rewrite the text from your tailored resume with other options. It replaces the text above.</p>
             </div>
-            <Choice legend="Tone" name="regen-tone" options={TONES} value={regen.tone} onChange={(tone) => setRegen((r) => ({ ...r, tone }))} />
-            <Choice legend="Length" name="regen-length" options={LENGTHS} value={regen.length} onChange={(length) => setRegen((r) => ({ ...r, length }))} />
-            <Choice legend="Language" name="regen-language" options={LANGUAGES} value={regen.language} onChange={(language) => setRegen((r) => ({ ...r, language }))} />
+            <div className="flex flex-wrap gap-x-8 gap-y-5">
+              <Choice legend="Tone" name="regen-tone" options={TONES} value={regen.tone} onChange={(tone) => setRegen((r) => ({ ...r, tone }))} />
+              <Choice legend="Length" name="regen-length" options={LENGTHS} value={regen.length} onChange={(length) => setRegen((r) => ({ ...r, length }))} />
+              <Choice legend="Language" name="regen-language" options={LANGUAGES} value={regen.language} onChange={(language) => setRegen((r) => ({ ...r, language }))} />
+            </div>
             <GuidedAnswers idPrefix="regen" values={regen} language={regen.language} onChange={(name, value) => setRegen((r) => ({ ...r, [name]: value }))} />
-            <div className="flex justify-end">
-              <button type="button" onClick={() => (letter.bodyEdited || pending.current.body !== undefined ? setConfirm("regenerate") : regenerate())} disabled={busy || !letter.jobId} className="btn-secondary">
+            <div className="flex justify-end border-t border-line pt-5">
+              <Button onClick={() => (letter.bodyEdited || pending.current.body !== undefined ? setConfirm("regenerate") : regenerate())} disabled={!letter.jobId} loading={busy}>
                 {busy ? "Rewriting..." : "Regenerate"}
-              </button>
+              </Button>
             </div>
-          </section>
+          </Card>
         </div>
 
         {/* Right: live preview (scaled to the column's width) */}
         <div className="min-w-0">
-          <div className="lg:sticky lg:top-36 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:p-1">
-            <p className="mb-3 hidden text-xs font-medium tracking-wider text-slate-400 uppercase lg:block dark:text-slate-500">Live preview · {getTemplate(resume.template).name}</p>
+          <div className="lg:sticky lg:top-36 lg:max-h-workspace lg:overflow-y-auto lg:p-1">
+            <p className="mb-3 hidden type-eyebrow text-fg-muted lg:block">Live preview · {getTemplate(resume.template).name}</p>
             {fit?.fitStatus && !fit.fitStatus.pending && !fit.fitStatus.fits && (
-              <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-950/50 dark:text-amber-200" role="status">
-                This letter is longer than one page. Shorten it, or choose a shorter length.
-              </p>
+              <div className="mb-3">
+                <Alert tone="warning" role="status">
+                  This letter is longer than one page. Shorten it, or choose a shorter length.
+                </Alert>
+              </div>
             )}
             <ResumePreview resume={previewResume} letter={previewLetter} printRef={printRef} highlightPlaceholders onStatus={setFit} />
           </div>

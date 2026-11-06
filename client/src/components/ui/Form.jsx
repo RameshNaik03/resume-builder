@@ -1,5 +1,6 @@
 import { useId, useState } from "react";
 import { ChevronDown, Eye, EyeOff } from "lucide-react";
+import Switch from "../Switch";
 
 // "Quiet professional" form controls.
 // Field wraps any control with its label, help text and error, and links them for screen
@@ -11,8 +12,10 @@ const CONTROL =
 // label, help, error, optional ("(optional)" after the label), aside (e.g. a "Forgot password?"
 // link at the end of the label row); children({ id, aria-describedby, aria-invalid }) renders
 // the control, e.g. {(props) => <Input {...props} {...register("email")} />}
-export function Field({ label, help, error, optional = false, aside, children }) {
-  const id = useId();
+// id: a fixed id for the control (for links to it), instead of a generated one
+export function Field({ id: fixedId, label, help, error, optional = false, aside, children }) {
+  const generatedId = useId();
+  const id = fixedId ?? generatedId;
   const helpId = help ? `${id}-help` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   return (
@@ -99,21 +102,13 @@ function Choice({ type, label, description, className, ...props }) {
   );
 }
 
-// An on/off switch with its visible label (the label is also its accessible name)
-export function Toggle({ checked, onChange, label, disabled = false }) {
+// An on/off switch with its visible label (the label is also its accessible name).
+// between: the label first and the switch at the far end (a settings row)
+export function Toggle({ checked, onChange, label, disabled = false, between = false }) {
   return (
-    <label className={`inline-flex items-center gap-3 ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        disabled={disabled}
-        onClick={() => onChange(!checked)}
-        className={`relative h-5 w-9 shrink-0 rounded-full transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${checked ? "bg-accent" : "bg-line-strong"}`}
-      >
-        <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-surface shadow-soft transition-transform ${checked ? "translate-x-4" : ""}`} />
-      </button>
-      <span className="type-label text-fg">{label}</span>
+    <label className={`${between ? "flex flex-row-reverse justify-between" : "inline-flex"} items-center gap-3 ${disabled ? "cursor-not-allowed" : "cursor-pointer"}`}>
+      <Switch checked={checked} onChange={onChange} label={label} disabled={disabled} />
+      <span className={`type-label text-fg ${disabled ? "opacity-50" : ""}`}>{label}</span>
     </label>
   );
 }

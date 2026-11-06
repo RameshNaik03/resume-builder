@@ -56,7 +56,7 @@ test("Cover letters", async (t) => {
     await page.goto(`${APP}/tailor/jobs/${jobId}`, { waitUntil: "networkidle0" });
     await clickText("a", "Write cover letter");
     await page.waitForSelector("#new-recipient");
-    await page.click('input[name="language"][value="de"]');
+    await clickText('[data-choice="language"] [role="radio"]', "Deutsch");
     await page.type("#new-recipient", "Anna Schmidt");
     await page.select("#new-salutation", "Frau");
     await page.type("#new-achievement", "Ich habe unsere Abrechnung auf Kafka umgestellt");
@@ -94,7 +94,7 @@ test("Cover letters", async (t) => {
     assert.deepEqual(checks.map(([id]) => id), ["opening", "evidence", "motivation", "cliches", "length", "placeholders"]);
     assert.ok(checks.find(([id]) => id === "opening")[1] === "true", "the generated opening is specific");
     assert.ok(checks.find(([id]) => id === "motivation")[1] === "false" && /Why this company/.test(panel), "no reason given yet: fails with a tip");
-    // The resume's evidence is all used and the letter is short of "standard": a warning (amber) or
+    // The resume's evidence is all used and the letter is short of "standard": a warning or
     // fail, and a note saying how far the evidence goes (the letter isn't padded)
     const saved = (await api("GET", `/cover-letters/${letterId}`, token)).body;
     const lengthStatus = await page.$eval('[data-testid="letter-strength"] [data-check="length"]', (li) => li.dataset.status);
@@ -133,7 +133,7 @@ test("Cover letters", async (t) => {
   });
 
   await t.test("Regenerate in English warns before replacing the edits", async () => {
-    await page.click('input[name="regen-language"][value="en"]');
+    await clickText('[data-choice="regen-language"] [role="radio"]', "English");
     await clickText("button", "Regenerate");
     await page.waitForFunction(() => document.body.innerText.includes("Replace your edits?"));
     await clickText("button", "Cancel");
@@ -198,7 +198,7 @@ test("Cover letters", async (t) => {
   // React's dev mode loads a page twice; both loads fail here, and the message must show once
   await t.test("a letter that doesn't exist: one toast, not two", async () => {
     await page.goto(`${APP}/cover-letters/0123456789abcdef01234567`, { waitUntil: "networkidle0" });
-    await page.waitForFunction(() => document.body.innerText.includes("We couldn't open this cover letter."), { timeout: 10000 });
+    await page.waitForFunction(() => document.body.innerText.includes("We couldn't open this cover letter"), { timeout: 10000 });
     await sleep(500);
     const shown = await page.evaluate(() => document.body.innerText.split("Cover letter not found").length - 1);
     assert.equal(shown, 1, `"Cover letter not found" shown ${shown} times`);
