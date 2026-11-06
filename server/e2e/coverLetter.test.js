@@ -195,6 +195,16 @@ test("Cover letters", async (t) => {
     await page.waitForFunction(() => document.querySelector("#job-description")?.open && document.querySelector("#job-description").innerText.includes("Familiarity with GraphQL"), { timeout: 10000 });
   });
 
+  // The regenerate panel's Length choice: each segment's visible text, and the visible caption
+  const lengthChoice = () =>
+    page.$eval('[data-choice="regen-length"]', (el) => {
+      const caption = el.querySelector('[data-testid="choice-caption"]');
+      return {
+        segments: [...el.querySelectorAll('[role="radio"]')].map((button) => button.innerText.replace(/\s+/g, " ").trim()),
+        caption: caption?.offsetParent ? caption.innerText.trim() : undefined,
+      };
+    });
+
   await t.test("on a phone: Edit / Preview, like the resume editor", async () => {
     await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
     try {
@@ -203,6 +213,14 @@ test("Cover letters", async (t) => {
       const shown = (selector) => page.$eval(selector, (el) => el.offsetParent !== null);
       assert.ok(await shown('[aria-label="Cover letter text"]'), "the letter's form shows first");
       assert.ok(!(await shown("[data-page]")), "the preview is hidden while editing");
+
+      // Length: just the names in the segments, the selected one's word count under them
+      const phoneLength = await lengthChoice();
+      assert.deepEqual(phoneLength.segments, ["Short", "Standard", "Detailed"], "no word counts in the segments on a phone");
+      assert.match(phoneLength.caption ?? "", /^~\d+ words$/, `the selected length's word count is the caption: ${phoneLength.caption}`);
+      // (its text content still includes the hidden word count, so match the start)
+      await page.$$eval('[data-choice="regen-length"] [role="radio"]', (buttons) => buttons.find((button) => button.textContent.startsWith("Short")).click());
+      assert.equal((await lengthChoice()).caption, "~150 words", "the caption follows the choice");
 
       await clickText('[role="tab"]', "Preview");
       await page.waitForFunction(() => document.querySelector("[data-page]")?.offsetParent !== null, { timeout: 10000 });
@@ -214,6 +232,12 @@ test("Cover letters", async (t) => {
     } finally {
       await page.setViewport({ width: 1400, height: 1000 });
     }
+    // Wider screens: the word counts are back in the segments, and there's no caption
+    // (leaving mobile emulation reloads the page)
+    await page.waitForSelector('[data-choice="regen-length"]', { timeout: 15000 });
+    const desktopLength = await lengthChoice();
+    assert.deepEqual(desktopLength.segments, ["Short~150 words", "Standard~250 words", "Detailed~350 words"]);
+    assert.equal(desktopLength.caption, undefined, "no caption on wider screens");
   });
 
   // React's dev mode loads a page twice; both loads fail here, and the message must show once

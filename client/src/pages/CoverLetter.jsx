@@ -74,15 +74,23 @@ export default function CoverLetter() {
 
 // ---------- Shared form pieces ----------
 
-// One choice from a few options (tone, length, language): a label and the shared segmented control
+// One choice from a few options (tone, length, language): a label and the shared segmented control.
+// Hints (a length's word count) sit inside the segments on wider screens; on phones the segments
+// show just the labels, and the selected option's hint is a caption under them.
 function Choice({ legend, name, options, value, onChange }) {
   const id = `choice-${name}`;
+  const selectedHint = options.find(([optionValue]) => optionValue === value)?.[2];
   return (
     <div data-choice={name}>
       <p id={id} className="mb-1.5 type-label text-fg">
         {legend}
       </p>
-      <SegmentedControl labelledBy={id} options={options.map(([optionValue, label, hint]) => ({ value: optionValue, label, hint }))} value={value} onChange={onChange} />
+      <SegmentedControl labelledBy={id} options={options.map(([optionValue, label, hint]) => ({ value: optionValue, label, hint }))} value={value} onChange={onChange} hintClassName="max-sm:hidden" />
+      {selectedHint && (
+        <p className="mt-1.5 type-small text-fg-muted sm:hidden" data-testid="choice-caption">
+          {selectedHint}
+        </p>
+      )}
     </div>
   );
 }

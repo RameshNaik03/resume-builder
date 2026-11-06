@@ -7,7 +7,9 @@ import { useRef } from "react";
 //             "210 × 297 mm"; ariaLabel: the name when the label is a symbol, e.g. "•" -> "Disc")
 //   value / onChange(value); label - the group's accessible name (or labelledBy: an element id)
 //   size    - "sm" (dense panels) or "md"; fullWidth - the segments share the row equally
-export default function SegmentedControl({ options, value, onChange, label, labelledBy, size = "md", fullWidth = false }) {
+//   hintClassName - extra classes for the hints (e.g. "max-sm:hidden": the caller shows the
+//             selected option's hint elsewhere on phones)
+export default function SegmentedControl({ options, value, onChange, label, labelledBy, size = "md", fullWidth = false, hintClassName = "" }) {
   const refs = useRef([]);
   const index = Math.max(0, options.findIndex((option) => option.value === value));
   const move = (event, from) => {
@@ -41,7 +43,7 @@ export default function SegmentedControl({ options, value, onChange, label, labe
             }`}
           >
             {option.label}
-            {option.hint && <span className="ml-1.5 font-normal text-fg-subtle">{option.hint}</span>}
+            {option.hint && <span className={`ml-1.5 font-normal text-fg-subtle ${hintClassName}`}>{option.hint}</span>}
           </button>
         );
       })}
