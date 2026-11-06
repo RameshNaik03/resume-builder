@@ -41,8 +41,8 @@ function ToolbarButton({ label, shortcut, active, icon: Icon, onClick }) {
       title={shortcut ? `${label} (${shortcut})` : label}
       className={`grid size-7 place-items-center rounded-md transition ${
         active
-          ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
-          : "text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+          ? "bg-accent-soft text-accent"
+          : "text-fg-muted hover:bg-surface-2 hover:text-fg"
       }`}
     >
       <Icon className="size-4" aria-hidden="true" />
@@ -152,7 +152,7 @@ export default function RichTextEditor({ value, onChange, inline = false, placeh
   return (
     <div className="rich-editor group">
       <div
-        className={`items-center gap-0.5 border-b border-slate-200 px-1.5 py-1 dark:border-slate-800 ${
+        className={`items-center gap-0.5 border-b border-line px-1.5 py-1 ${
           toolbar === "focus" && !linkOpen ? "hidden group-focus-within:flex" : "flex"
         }`}
         role="toolbar"
@@ -179,7 +179,7 @@ export default function RichTextEditor({ value, onChange, inline = false, placeh
       </div>
 
       {linkOpen && (
-        <div className="flex items-center gap-2 border-b border-slate-200 px-2 py-1.5 dark:border-slate-800">
+        <div className="flex items-center gap-2 border-b border-line px-2 py-1.5">
           <input
             ref={linkInputRef}
             type="text"
@@ -197,9 +197,9 @@ export default function RichTextEditor({ value, onChange, inline = false, placeh
             }}
             placeholder="https://example.com or name@mail.com"
             aria-label="Link address"
-            className="min-w-0 flex-1 rounded-md border border-slate-300 bg-transparent px-2 py-1 text-sm outline-none focus:border-indigo-500 dark:border-slate-700"
+            className="min-w-0 flex-1 rounded-md border border-line-strong bg-transparent px-2 py-1 text-sm outline-none focus:border-accent"
           />
-          <button type="button" onClick={applyLink} className="rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-700">
+          <button type="button" onClick={applyLink} className="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-on-accent hover:bg-accent-strong">
             {linkUrl.trim() ? "Apply" : "Remove"}
           </button>
           <button
@@ -208,7 +208,7 @@ export default function RichTextEditor({ value, onChange, inline = false, placeh
               setLinkOpen(false);
               editor.commands.focus();
             }}
-            className="rounded-md px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="rounded-md px-2 py-1 text-xs font-medium text-fg-muted hover:bg-surface-2"
           >
             Cancel
           </button>

@@ -90,12 +90,12 @@ export default function PhotoUpload({ resumeId, photoUrl, onPhotoChange }) {
   return (
     <div>
       <p className="label">
-        Photo <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
+        Photo <span className="font-normal text-fg-subtle">(optional)</span>
       </p>
 
       {photoUrl ? (
         <div className="flex items-center gap-4">
-          <img src={photoUrl} alt="Your resume photo" className="size-20 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700" />
+          <img src={photoUrl} alt="Your resume photo" className="size-20 rounded-full object-cover ring-1 ring-line" />
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => inputRef.current.click()} className="btn-secondary">
               <Upload className="size-4" aria-hidden="true" />
@@ -104,7 +104,7 @@ export default function PhotoUpload({ resumeId, photoUrl, onPhotoChange }) {
             <button
               type="button"
               onClick={() => setConfirmRemove(true)}
-              className="btn-secondary text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/50"
+              className="btn-secondary text-danger hover:bg-danger-soft"
             >
               <Trash2 className="size-4" aria-hidden="true" />
               Remove
@@ -127,16 +127,16 @@ export default function PhotoUpload({ resumeId, photoUrl, onPhotoChange }) {
           }}
           className={`flex w-full items-center gap-4 rounded-xl border-2 border-dashed px-4 py-4 text-left transition ${
             isDragging
-              ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40"
-              : "border-slate-300 hover:border-indigo-300 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50"
+              ? "border-accent bg-accent-soft"
+              : "border-line-strong hover:border-accent/30 hover:bg-surface-2"
           }`}
         >
-          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-950 dark:text-indigo-400">
+          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-accent-soft text-accent">
             <ImagePlus className="size-6" aria-hidden="true" />
           </span>
           <span>
-            <span className="block text-sm font-medium text-slate-900 dark:text-white">Add a photo</span>
-            <span className="block text-xs text-slate-500 dark:text-slate-400">
+            <span className="block text-sm font-medium text-fg">Add a photo</span>
+            <span className="block text-xs text-fg-muted">
               Click or drop an image here · JPG, PNG or WebP · you can crop it next
             </span>
           </span>
@@ -145,12 +145,12 @@ export default function PhotoUpload({ resumeId, photoUrl, onPhotoChange }) {
       {fileInput}
 
       {error && (
-        <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/50 dark:text-red-300" role="alert">
+        <p className="mt-2 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger" role="alert">
           {error}
         </p>
       )}
 
-      <p className="mt-3 flex gap-2 text-xs text-slate-500 dark:text-slate-400">
+      <p className="mt-3 flex gap-2 text-xs text-fg-muted">
         <Info className="mt-px size-3.5 shrink-0" aria-hidden="true" />
         Photos are common in Germany and Europe, but often left out in the US and UK to help with ATS and fair hiring.
       </p>

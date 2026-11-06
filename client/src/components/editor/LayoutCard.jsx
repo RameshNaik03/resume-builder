@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { Check, Loader2 } from "lucide-react";
 import TemplateRenderer from "../../templates/TemplateRenderer";
-import ResumeSheet from "../ResumeSheet";
+import ResumeSheet from "../../templates/ResumeSheet";
+import { Badge } from "../ui/Display";
 
 const A4_WIDTH_PX = 794; // 210mm at 96 DPI
-
-const TIER_BADGE_STYLES = {
-  basic: "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300",
-  advanced: "bg-sky-50 text-sky-700",
-  premium: "bg-linear-to-r from-amber-100 to-yellow-50 text-amber-800 ring-1 ring-amber-200",
-};
 
 // One card in the template picker per layout: a small live preview using the user's own
 // data, and a swatch for each of the layout's palettes. A swatch previews that palette on
@@ -25,9 +21,7 @@ export default function LayoutCard({ layout, resume, selectedId, paletteId, onSe
   const [scale, setScale] = useState(0);
 
   const selected = layout.templates.find((template) => template.id === selectedId);
-  const [shownId, setShownId] = useState(
-    () => (selected ?? layout.templates.find((template) => template.theme.id === paletteId) ?? layout.templates[0]).id
-  );
+  const [shownId, setShownId] = useState(() => (selected ?? layout.templates.find((template) => template.theme.id === paletteId) ?? layout.templates[0]).id);
   const shown = layout.templates.find((template) => template.id === shownId);
   const saving = layout.templates.some((template) => template.id === savingId);
 
@@ -55,44 +49,34 @@ export default function LayoutCard({ layout, resume, selectedId, paletteId, onSe
   }, []);
 
   return (
-    <div
-      className={`rounded-xl p-2 transition ${
-        selected ? "bg-indigo-50 ring-2 ring-indigo-600 dark:bg-indigo-950/60" : "ring-1 ring-slate-200 hover:ring-indigo-300 dark:ring-slate-700"
-      }`}
-    >
+    <div className={`rounded-xl bg-surface p-2 transition-shadow ${selected ? "ring-2 ring-accent" : "ring-1 ring-line hover:ring-line-strong"}`}>
       <button
         type="button"
         onClick={() => onSelect(shown)}
         disabled={disabled}
         aria-label={`Use ${layout.name} in ${shown.theme.name}${selected?.id === shown.id ? " (selected)" : ""}`}
-        className="group block w-full text-left disabled:cursor-wait"
+        className="group block w-full rounded-md text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-wait"
       >
-        <div ref={boxRef} className="relative aspect-[210/297] overflow-hidden rounded-md bg-white shadow-sm ring-1 ring-slate-200">
+        <div ref={boxRef} className="relative aspect-page overflow-hidden rounded-md bg-surface shadow-soft ring-1 ring-line">
           {isVisible && scale > 0 ? (
-            <div
-              aria-hidden="true"
-              className="pointer-events-none"
-              style={{ width: A4_WIDTH_PX, transform: `scale(${scale})`, transformOrigin: "top left" }}
-            >
+            <div aria-hidden="true" className="pointer-events-none" style={{ width: A4_WIDTH_PX, transform: `scale(${scale})`, transformOrigin: "top left" }}>
               <ResumeSheet>
                 <TemplateRenderer resume={resume} templateId={shown.id} withLinks={false} />
               </ResumeSheet>
             </div>
           ) : (
-            <div className="absolute inset-0 animate-pulse bg-slate-100 dark:bg-slate-800" />
+            <div className="absolute inset-0 bg-surface-2 motion-safe:animate-pulse" />
           )}
 
           {saving && (
-            <div className="absolute inset-0 grid place-items-center bg-white/70">
-              <div className="size-8 animate-spin rounded-full border-4 border-indigo-200 border-t-indigo-600 dark:border-indigo-900" />
+            <div className="absolute inset-0 grid place-items-center bg-surface/70">
+              <Loader2 className="size-6 animate-spin text-accent" aria-hidden="true" />
             </div>
           )}
 
           {selected && (
-            <span className="absolute top-2 right-2 grid size-6 place-items-center rounded-full bg-indigo-600 text-white shadow">
-              <svg className="size-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
+            <span className="absolute top-2 right-2 grid size-6 place-items-center rounded-full bg-accent text-on-accent shadow-soft">
+              <Check className="size-3.5" strokeWidth={3} aria-hidden="true" />
             </span>
           )}
         </div>
@@ -100,8 +84,8 @@ export default function LayoutCard({ layout, resume, selectedId, paletteId, onSe
 
       <div className="mt-2 px-1">
         <div className="flex items-baseline justify-between gap-2">
-          <p className="truncate text-sm font-medium text-slate-900 dark:text-white">{layout.name}</p>
-          <p className="shrink-0 text-xs text-slate-500 dark:text-slate-400">{shown.theme.name}</p>
+          <p className="truncate type-label text-fg">{layout.name}</p>
+          <p className="shrink-0 type-small text-fg-muted">{shown.theme.name}</p>
         </div>
 
         {/* Palettes */}
@@ -116,8 +100,8 @@ export default function LayoutCard({ layout, resume, selectedId, paletteId, onSe
                 aria-label={`Preview ${template.theme.name}`}
                 aria-pressed={template.id === shownId}
                 title={template.theme.name}
-                className={`size-5 rounded-full ring-offset-2 ring-offset-white transition dark:ring-offset-slate-900 ${
-                  template.id === shownId ? "ring-2 ring-slate-900 dark:ring-white" : "ring-1 ring-black/10 hover:scale-110"
+                className={`size-5 rounded-full ring-offset-2 ring-offset-surface transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+                  template.id === shownId ? "ring-2 ring-fg" : "ring-1 ring-fg/10 motion-safe:hover:scale-110"
                 }`}
                 style={{ backgroundColor: template.theme.accent }}
               />
@@ -125,23 +109,12 @@ export default function LayoutCard({ layout, resume, selectedId, paletteId, onSe
           </div>
         )}
 
+        {/* Tier (every template is free; this only shows the tier) and ATS-friendliness */}
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {/* Tier badge (all templates are free; the badge only shows the tier) */}
-          <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium capitalize ${TIER_BADGE_STYLES[layout.tier]}`}
-          >
-            {layout.tier === "premium" && (
-              <svg className="size-3" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z" />
-              </svg>
-            )}
-            {layout.tier}
-          </span>
-          {layout.atsFriendly && (
-            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
-              ATS-friendly
-            </span>
-          )}
+          <Badge>
+            <span className="capitalize">{layout.tier}</span>
+          </Badge>
+          {layout.atsFriendly && <Badge tone="success">ATS-friendly</Badge>}
         </div>
       </div>
     </div>

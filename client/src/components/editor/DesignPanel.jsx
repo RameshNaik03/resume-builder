@@ -26,6 +26,10 @@ import { loadAllFonts } from "../../templates/fonts";
 import { BODY_FONTS, SERIF_HEADING_FONTS } from "../../templates/foundation/tokens";
 import SectionOrderList from "./SectionOrderList";
 import Switch from "../Switch";
+import Button from "../ui/Button";
+import { Card } from "../ui/Display";
+import { Input } from "../ui/Form";
+import SegmentedControl from "../ui/SegmentedControl";
 
 // Segmented-control id for "no override" (null can't be an option id)
 const DEFAULT = "default";
@@ -74,22 +78,19 @@ export default function DesignPanel({ resume, onChange }) {
 
   return (
     <div className="space-y-4">
-      <div className="card flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+      <Card padding="sm" className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-semibold text-slate-900 dark:text-white">Design</h2>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-            Customise {template.name}. Changes apply to this resume only.
-          </p>
+          <h2 className="type-h3 text-fg">Design</h2>
+          <p className="mt-0.5 type-small text-fg-muted">Customise {template.name}. Changes apply to this resume only.</p>
         </div>
-        <button type="button" onClick={() => onChange({})} disabled={Object.keys(overrides).length === 0} className="btn-secondary">
-          <RotateCcw className="size-4" aria-hidden="true" />
+        <Button size="sm" icon={RotateCcw} onClick={() => onChange({})} disabled={Object.keys(overrides).length === 0}>
           Reset everything
-        </button>
-      </div>
+        </Button>
+      </Card>
 
       {/* ---------- Sections ---------- */}
       <Group title="Sections" {...groupProps("sections")}>
-        <p className="-mt-2 text-sm text-slate-500 dark:text-slate-400">
+        <p className="-mt-2 type-small text-fg-muted">
           Drag to reorder, rename headings, or hide a section. Empty sections never show.
         </p>
         <SectionOrderList
@@ -118,7 +119,7 @@ export default function DesignPanel({ resume, onChange }) {
           <>
             <fieldset>
               <legend className="label">Side column</legend>
-              <p className="-mt-1 mb-2 text-xs text-slate-500 dark:text-slate-400">
+              <p className="-mt-1 mb-2 type-small text-fg-muted">
                 {template.layout === "sidebar"
                   ? "These sections go in the coloured sidebar."
                   : "These sections go in the narrow column; the rest stay in the main one."}
@@ -132,10 +133,8 @@ export default function DesignPanel({ resume, onChange }) {
                       type="button"
                       onClick={() => toggleSide(section.id)}
                       aria-pressed={inSide}
-                      className={`rounded-full px-3 py-1 text-sm font-medium transition ${
-                        inSide
-                          ? "bg-indigo-600 text-white"
-                          : "text-slate-700 ring-1 ring-slate-200 hover:ring-indigo-300 dark:text-slate-300 dark:ring-slate-700"
+                      className={`rounded-full px-3 py-1 type-small font-medium ring-1 transition-colors focus-visible:outline-2 focus-visible:outline-accent ${
+                        inSide ? "bg-accent-soft text-accent ring-accent/40" : "text-fg-muted ring-line hover:text-fg hover:ring-line-strong"
                       }`}
                     >
                       {section.label}
@@ -187,7 +186,7 @@ export default function DesignPanel({ resume, onChange }) {
         {resume.personalInfo?.photoUrl ? (
           <PhotoControls template={template} resolved={resolved} defaults={defaults} set={set} />
         ) : (
-          <p className="-mt-2 text-sm text-slate-500 dark:text-slate-400">
+          <p className="-mt-2 type-small text-fg-muted">
             Add a photo under Personal info (Content tab) to use these settings.
           </p>
         )}
@@ -272,7 +271,7 @@ export default function DesignPanel({ resume, onChange }) {
         />
         <div>
           <Toggle label="Fit to one page" checked={resolved.fitOnePage} onChange={(fitOnePage) => update({ fitOnePage: fitOnePage || null })} />
-          <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1.5 type-small text-fg-muted">
             Shrinks spacing, then margins, then line height, then text size, only as far as needed and never below readable
             limits. Your own settings come back when you turn it off.
           </p>
@@ -297,13 +296,11 @@ export default function DesignPanel({ resume, onChange }) {
                     update({ accentColor, textColor, headingColor, backgroundColor, dividerColor });
                   }}
                   aria-pressed={active}
-                  className={`rounded-lg p-2 text-left text-xs font-medium transition ${
-                    active
-                      ? "bg-indigo-50 text-indigo-700 ring-2 ring-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-300"
-                      : "text-slate-700 ring-1 ring-slate-200 hover:ring-indigo-300 dark:text-slate-300 dark:ring-slate-700"
+                  className={`rounded-lg p-2 text-left type-small font-medium transition-shadow focus-visible:outline-2 focus-visible:outline-accent ${
+                    active ? "text-fg ring-2 ring-accent" : "text-fg-muted ring-1 ring-line hover:ring-line-strong"
                   }`}
                 >
-                  <span className="flex overflow-hidden rounded ring-1 ring-black/10" aria-hidden="true">
+                  <span className="flex overflow-hidden rounded ring-1 ring-fg/10" aria-hidden="true">
                     {[palette.accentColor, palette.headingColor, palette.textColor, palette.dividerColor, palette.backgroundColor].map(
                       (hex, i) => (
                         <span key={i} className="h-5 flex-1" style={{ backgroundColor: hex }} />
@@ -371,7 +368,7 @@ function PhotoControls({ template, resolved, defaults, set }) {
               onChange={(photoPosition) => set("photoPosition", photoPosition)}
             />
             {resolved.headerAlign === "center" && position !== "sidebar" && (
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              <p className="mt-2 type-small text-fg-muted">
                 With a centred header, the photo sits above your name. Change the header alignment under Layout to put it
                 beside your name.
               </p>
@@ -396,7 +393,7 @@ function PhotoControls({ template, resolved, defaults, set }) {
 function Toggle({ label, checked, onChange }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
+      <span className="type-label text-fg">{label}</span>
       <Switch checked={checked} onChange={onChange} label={label} />
     </div>
   );
@@ -405,22 +402,15 @@ function Toggle({ label, checked, onChange }) {
 // A card for one group of controls, with its own "Reset" button
 function Group({ title, changed, onReset, children }) {
   return (
-    <section className="card p-5">
+    <Card as="section" padding="sm">
       <div className="flex items-center justify-between gap-3">
-        <h3 className="font-semibold text-slate-900 dark:text-white">{title}</h3>
-        <button
-          type="button"
-          onClick={onReset}
-          disabled={!changed}
-          className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-indigo-600 hover:bg-indigo-50 disabled:cursor-default disabled:text-slate-400 disabled:hover:bg-transparent dark:text-indigo-400 dark:hover:bg-indigo-950/60 dark:disabled:text-slate-600"
-          title={`Reset ${title.toLowerCase()} to the template defaults`}
-        >
-          <RotateCcw className="size-3.5" aria-hidden="true" />
+        <h3 className="type-h3 text-fg">{title}</h3>
+        <Button variant="ghost" size="sm" icon={RotateCcw} onClick={onReset} disabled={!changed} title={`Reset ${title.toLowerCase()} to the template defaults`}>
           Reset
-        </button>
+        </Button>
       </div>
       <div className="mt-4 space-y-5">{children}</div>
-    </section>
+    </Card>
   );
 }
 
@@ -444,7 +434,7 @@ function FontPicker({ label, value, defaultLabel, defaultStack, recommended, onC
       <legend className="label">{label}</legend>
       {groups.map((group) => (
         <div key={group.title} className="mt-2 first-of-type:mt-0">
-          <p className="mb-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">{group.title}</p>
+          <p className="mb-1.5 type-small text-fg-muted">{group.title}</p>
           <FontGrid fonts={group.fonts} value={value} onChange={onChange} />
         </div>
       ))}
@@ -463,16 +453,14 @@ function FontGrid({ fonts, value, onChange }) {
             type="button"
             onClick={() => onChange(font.id)}
             aria-pressed={selected}
-            className={`rounded-lg px-3 py-2 text-left transition ${
-              selected
-                ? "bg-indigo-50 ring-2 ring-indigo-600 dark:bg-indigo-950/60"
-                : "ring-1 ring-slate-200 hover:ring-indigo-300 dark:ring-slate-700"
+            className={`rounded-lg px-3 py-2 text-left transition-shadow focus-visible:outline-2 focus-visible:outline-accent ${
+              selected ? "ring-2 ring-accent" : "ring-1 ring-line hover:ring-line-strong"
             }`}
           >
-            <span className="block truncate text-base text-slate-900 dark:text-white" style={{ fontFamily: font.stack }}>
+            <span className="block truncate text-base text-fg" style={{ fontFamily: font.stack }}>
               {font.name}
             </span>
-            <span className="block text-[11px] text-slate-500 dark:text-slate-400">{font.category}</span>
+            <span className="block text-xs text-fg-muted">{font.category}</span>
           </button>
         );
       })}
@@ -487,11 +475,11 @@ function Slider({ label, hint, value, limits, format, isDefault, onChange }) {
       <div className="flex items-baseline justify-between gap-3">
         <label htmlFor={id} className="label mb-0">
           {label}
-          {hint && <span className="ml-1.5 font-normal text-slate-400 dark:text-slate-500">{hint}</span>}
+          {hint && <span className="ml-1.5 font-normal text-fg-subtle">{hint}</span>}
         </label>
-        <span className="text-sm text-slate-600 tabular-nums dark:text-slate-300">
+        <span className="type-small text-fg-muted tabular-nums">
           {format(value)}
-          {isDefault && <span className="ml-1 text-xs text-slate-400 dark:text-slate-500">(default)</span>}
+          {isDefault && <span className="ml-1 text-fg-subtle">(default)</span>}
         </span>
       </div>
       <input
@@ -502,39 +490,41 @@ function Slider({ label, hint, value, limits, format, isDefault, onChange }) {
         step={limits.step}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="mt-2 w-full accent-indigo-600"
+        className="mt-2 w-full accent-accent"
       />
     </div>
   );
 }
 
-// Row of toggle buttons (one choice)
+// One choice from a few options: the shared segmented control, with its label above
+//   options - [{ id, label, icon?, detail?, title? }] (title: the name when the label is a symbol)
 function Segmented({ label, value, options, onChange }) {
+  const labelId = useId();
   return (
-    <fieldset>
-      <legend className="label">{label}</legend>
-      <div className="flex flex-wrap gap-2">
-        {options.map((option) => (
-          <button
-            key={option.id}
-            type="button"
-            onClick={() => onChange(option.id)}
-            aria-pressed={value === option.id}
-            aria-label={option.title}
-            title={option.title}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-              value === option.id
-                ? "bg-indigo-600 text-white"
-                : "text-slate-700 ring-1 ring-slate-200 hover:ring-indigo-300 dark:text-slate-300 dark:ring-slate-700"
-            }`}
-          >
-            {option.icon && <option.icon className="size-4" aria-hidden="true" />}
-            {option.label}
-            {option.detail && <span className="ml-1.5 text-xs opacity-75">{option.detail}</span>}
-          </button>
-        ))}
-      </div>
-    </fieldset>
+    <div>
+      <p id={labelId} className="label">
+        {label}
+      </p>
+      <SegmentedControl
+        labelledBy={labelId}
+        size="sm"
+        value={value}
+        onChange={onChange}
+        options={options.map((option) => ({
+          value: option.id,
+          label: option.icon ? (
+            <span className="inline-flex items-center gap-1.5">
+              <option.icon className="size-3.5" aria-hidden="true" />
+              {option.label}
+            </span>
+          ) : (
+            option.label
+          ),
+          hint: option.detail,
+          ariaLabel: option.title,
+        }))}
+      />
+    </div>
   );
 }
 
@@ -591,10 +581,10 @@ function MarginInput({ label, value, onChange }) {
 
   return (
     <div>
-      <label htmlFor={id} className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">
+      <label htmlFor={id} className="mb-1 block type-small text-fg-muted">
         {label} (mm)
       </label>
-      <input
+      <Input
         id={id}
         type="number"
         inputMode="decimal"
@@ -612,7 +602,6 @@ function MarginInput({ label, value, onChange }) {
           if (event.target.value !== "" && number >= min && number <= max) onChange(number);
         }}
         onBlur={() => setFocused(false)} // An invalid entry snaps back to the saved value
-        className="input"
       />
     </div>
   );
@@ -627,11 +616,11 @@ function ColorField({ label, value, onChange }) {
         type="color"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="h-9 w-12 shrink-0 cursor-pointer rounded-md border border-slate-300 bg-white p-0.5 dark:border-slate-700 dark:bg-slate-950"
+        className="h-9 w-12 shrink-0 cursor-pointer rounded-md border border-line-strong bg-surface p-0.5"
       />
       <label htmlFor={id} className="min-w-0">
-        <span className="block text-sm font-medium text-slate-700 dark:text-slate-300">{label}</span>
-        <span className="block font-mono text-xs text-slate-500 uppercase dark:text-slate-400">{value}</span>
+        <span className="block type-label text-fg">{label}</span>
+        <span className="block font-mono type-small text-fg-muted uppercase">{value}</span>
       </label>
     </div>
   );

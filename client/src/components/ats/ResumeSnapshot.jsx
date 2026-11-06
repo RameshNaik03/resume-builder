@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import TemplateRenderer from "../../templates/TemplateRenderer";
 import { getTemplate } from "../../templates/registry";
 import { MM_TO_PX, PAGE_SIZES, resolveDesign } from "../../templates/design";
-import ResumeSheet from "../ResumeSheet";
+import ResumeSheet from "../../templates/ResumeSheet";
 
 const normalize = (text) => text.replace(/\s+/g, " ").trim();
 

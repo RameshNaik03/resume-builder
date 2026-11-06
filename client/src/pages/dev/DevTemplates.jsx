@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import TemplateRenderer from "../../templates/TemplateRenderer";
 import { TEMPLATES, TIERS } from "../../templates/registry";
-import ResumeSheet from "../../components/ResumeSheet";
+import ResumeSheet from "../../templates/ResumeSheet";
 import usePageTitle from "../../hooks/usePageTitle";
 import galleryResume from "../../templates/galleryResume";
 

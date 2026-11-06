@@ -166,7 +166,8 @@ test("ATS review screen", async (t) => {
   await page.goto(`${APP}/dashboard`, { waitUntil: "networkidle0" });
   const badges = await page.$$eval("[data-testid=ats-badge]", (items) => items.map((item) => item.textContent));
   await check("dashboard shows ATS badges", badges.length >= 1 && badges.every((badge) => /^ATS \d+$/.test(badge)), badges.join(", "));
-  await clickText("button", "Re-check");
+  await page.click('[data-testid="resume-card"] button[aria-label^="Actions for"]'); // A card's actions are in its menu
+  await clickText('[role="menuitem"]', "Re-check");
   await waitForText("ATS score:");
   await check("Re-check updates the score", true);
   await page.screenshot({ path: path.join(SHOTS, "3-dashboard.png"), fullPage: false });

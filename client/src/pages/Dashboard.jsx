@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { FileText, Plus, Target, Trash2, Upload, X } from "lucide-react";
 import toast from "../utils/toast";
 import api from "../api/axios";
 import { useAuth } from "../context/AuthContext";
@@ -9,10 +10,15 @@ import ResumeCard, { ResumeCardSkeleton } from "../components/ResumeCard";
 import ApplicationCard from "../components/ApplicationCard";
 import ConfirmModal from "../components/ConfirmModal";
 import DeleteApplicationModal from "../components/DeleteApplicationModal";
-import EmptyState from "../components/EmptyState";
 import ImportResumeModal from "../components/ImportResumeModal";
+import Button from "../components/ui/Button";
+import { Alert, EmptyState, PageHeader } from "../components/ui/Display";
 import { clearPendingImport, getPendingImport } from "../utils/resumeFile";
 import { pageClass } from "../components/ui/pageLayout";
+
+// The dashboard: the user's applications (a tailored resume with its job and cover letter) and
+// resumes, as cards that lead with each resume's real first page. Each card's actions are in its
+// menu; ticking cards shows a bar to delete several at once.
 
 // "Good morning" / "Good afternoon" / "Good evening" based on the current hour
 const getGreeting = () => {
@@ -21,6 +27,8 @@ const getGreeting = () => {
   if (hour < 18) return "Good afternoon";
   return "Good evening";
 };
+const plural = (count, word) => `${count} ${count === 1 ? word : `${word}s`}`;
+const GRID = "grid gap-6 sm:grid-cols-2 lg:grid-cols-3";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -30,8 +38,7 @@ export default function Dashboard() {
   const [jobs, setJobs] = useState([]); // Tailored jobs: shown as applications (resume + job + cover letter)
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [duplicatingId, setDuplicatingId] = useState(null);
-  const [recheckingId, setRecheckingId] = useState(null);
+  const [busy, setBusy] = useState({}); // { [resumeId]: "Duplicating…" | "Checking…" }
   const [resumeToDelete, setResumeToDelete] = useState(null); // The resume shown in the modal
   const [applicationToDelete, setApplicationToDelete] = useState(null); // The job shown in "Delete this application?"
   const [selected, setSelected] = useState({ resumes: [], jobs: [] }); // Bulk delete: resume ids, job ids
@@ -54,7 +61,7 @@ export default function Dashboard() {
     setPendingFile(null);
   };
 
-  // Load the user's resumes when the page opens (and again on "Try again")
+  // Load the user's resumes and applications when the page opens (and again on "Try again")
   useEffect(() => {
     const fetchResumes = async () => {
       setLoading(true);
@@ -77,6 +84,15 @@ export default function Dashboard() {
   const applications = jobs.filter((job) => resumes.some((resume) => resume._id === job.tailoredResumeId));
   const tailoredIds = new Set(applications.map((job) => job.tailoredResumeId));
   const otherResumes = resumes.filter((resume) => !tailoredIds.has(resume._id));
+  const resumeById = (id) => resumes.find((resume) => resume._id === id);
+
+  const setBusyFor = (id, label) => setBusy((current) => ({ ...current, [id]: label }));
+  const clearBusy = (id) =>
+    setBusy((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
 
   const handleCreate = async () => {
     setCreating(true);
@@ -91,22 +107,21 @@ export default function Dashboard() {
   };
 
   const handleDuplicate = async (resume) => {
-    setDuplicatingId(resume._id);
+    setBusyFor(resume._id, "Duplicating…");
     try {
       const { data } = await api.post(`/resumes/${resume._id}/duplicate`);
-      // Newest first, so the copy goes at the top of the list
-      setResumes((current) => [{ _id: data._id, title: data.title, updatedAt: data.updatedAt }, ...current]);
+      setResumes((current) => [data, ...current]); // Newest first, so the copy goes at the top
       toast.success(`Created "${data.title}"`);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
-      setDuplicatingId(null);
+      clearBusy(resume._id);
     }
   };
 
   // Scores the resume again (against the job it was last checked for) and updates its badge
   const handleRecheck = async (resume) => {
-    setRecheckingId(resume._id);
+    setBusyFor(resume._id, "Checking…");
     try {
       const { data } = await api.post(`/ats/rescore/${resume._id}`);
       setResumes((current) => current.map((r) => (r._id === resume._id ? { ...r, atsScore: { score: data.score, grade: data.grade, checkedAt: data.checkedAt } } : r)));
@@ -114,7 +129,7 @@ export default function Dashboard() {
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
-      setRecheckingId(null);
+      clearBusy(resume._id);
     }
   };
 
@@ -153,14 +168,14 @@ export default function Dashboard() {
   const toggle = (kind, id, on) => setSelected((current) => ({ ...current, [kind]: on ? [...current[kind], id] : current[kind].filter((other) => other !== id) }));
   const selectedCount = selected.resumes.length + selected.jobs.length;
   const handleBulkDelete = async (scope = "resume") => {
-    const tailoredIds = applications.filter((job) => selected.jobs.includes(job._id)).map((job) => job.tailoredResumeId);
+    const tailoredSelected = applications.filter((job) => selected.jobs.includes(job._id)).map((job) => job.tailoredResumeId);
     setDeleting(true);
     try {
       const { data } = await api.post("/resumes/delete-many", {
-        resumeIds: [...selected.resumes, ...(scope === "resume" ? tailoredIds : [])],
+        resumeIds: [...selected.resumes, ...(scope === "resume" ? tailoredSelected : [])],
         jobIds: scope === "application" ? selected.jobs : [],
       });
-      toast.success(`Deleted ${data.resumes} ${data.resumes === 1 ? "resume" : "resumes"}${data.applications ? ` and ${data.applications} ${data.applications === 1 ? "application" : "applications"}` : ""}`);
+      toast.success(`Deleted ${plural(data.resumes, "resume")}${data.applications ? ` and ${plural(data.applications, "application")}` : ""}`);
       setSelected({ resumes: [], jobs: [] });
       setBulkOpen(false);
       setReloadKey((key) => key + 1);
@@ -171,91 +186,94 @@ export default function Dashboard() {
     }
   };
 
+  const summary = loading
+    ? "Loading your resumes…"
+    : loadError
+      ? "Your resumes couldn't be loaded."
+      : [plural(otherResumes.length, "resume"), applications.length > 0 && plural(applications.length, "application")].filter(Boolean).join(" · ");
+
   return (
     <div className={pageClass()}>
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl dark:text-white">
-            {getGreeting()}, {user.name.split(" ")[0]} 👋
-          </h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {loading
-              ? "Loading your resumes..."
-              : loadError
-                ? "Your resumes couldn't be loaded."
-                : `You have ${resumes.length} ${resumes.length === 1 ? "resume" : "resumes"}.`}
-          </p>
-        </div>
+      <PageHeader
+        title={`${getGreeting()}, ${user.name.split(" ")[0]}`}
+        description={summary}
+        actions={
+          <>
+            <Button icon={Target} onClick={() => navigate("/tailor")}>
+              Tailor to a job
+            </Button>
+            <Button icon={Upload} onClick={() => setIsImportOpen(true)}>
+              Upload
+            </Button>
+            <Button variant="primary" icon={Plus} onClick={handleCreate} loading={creating}>
+              {creating ? "Creating…" : "Create resume"}
+            </Button>
+          </>
+        }
+      />
 
-        <div className="flex flex-wrap gap-2">
-          <Link to="/tailor" className="btn-secondary">
-            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <circle cx="12" cy="12" r="9" />
-              <circle cx="12" cy="12" r="5" />
-              <circle cx="12" cy="12" r="1" />
-            </svg>
-            Tailor to a job
-          </Link>
-          <button type="button" onClick={() => setIsImportOpen(true)} className="btn-secondary">
-            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-            </svg>
-            Upload existing resume
-          </button>
-          <button type="button" onClick={handleCreate} disabled={creating} className="btn-primary">
-            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            {creating ? "Creating..." : "Create new resume"}
-          </button>
-        </div>
-      </div>
-
-      {/* Content */}
       <div className="mt-8">
         {loading ? (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className={GRID} aria-hidden="true">
             {[1, 2, 3].map((n) => (
               <ResumeCardSkeleton key={n} />
             ))}
           </div>
         ) : loadError ? (
-          <div className="card flex flex-col items-center px-6 py-16 text-center" role="alert">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Couldn't load your resumes</h2>
-            <p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">{loadError}</p>
-            <button type="button" onClick={() => setReloadKey((key) => key + 1)} className="btn-primary mt-6">
-              Try again
-            </button>
-          </div>
+          <Alert
+            tone="danger"
+            title="Couldn't load your resumes"
+            action={
+              <Button size="sm" onClick={() => setReloadKey((key) => key + 1)}>
+                Try again
+              </Button>
+            }
+          >
+            {loadError}
+          </Alert>
         ) : resumes.length === 0 ? (
-          <EmptyState onCreate={handleCreate} onUpload={() => setIsImportOpen(true)} creating={creating} />
+          <EmptyState
+            icon={FileText}
+            title="No resumes yet"
+            description="Start from a blank page, or upload the resume you already have and we'll fill in the editor for you."
+            action={
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button icon={Upload} onClick={() => setIsImportOpen(true)}>
+                  Upload a resume
+                </Button>
+                <Button variant="primary" icon={Plus} onClick={handleCreate} loading={creating}>
+                  Create resume
+                </Button>
+              </div>
+            }
+          />
         ) : (
-          <>
+          <div className="space-y-12">
             {selectedCount > 0 && (
-              <div className="sticky top-2 z-20 mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm dark:border-indigo-900 dark:bg-indigo-950/70" data-testid="bulk-bar">
-                <span className="font-medium text-indigo-900 dark:text-indigo-100">{selectedCount} selected</span>
+              <div className="sticky top-20 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-surface px-4 py-3 shadow-raised" data-testid="bulk-bar" role="region" aria-label="Selected items">
+                <p className="type-label text-fg" aria-live="polite">
+                  {selectedCount} selected
+                </p>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setSelected({ resumes: [], jobs: [] })} className="btn-secondary px-3 py-1.5">
+                  <Button variant="ghost" size="sm" icon={X} onClick={() => setSelected({ resumes: [], jobs: [] })}>
                     Clear
-                  </button>
-                  <button type="button" onClick={() => setBulkOpen(true)} className="btn-primary bg-red-600 px-3 py-1.5 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-500">
+                  </Button>
+                  <Button variant="danger" size="sm" icon={Trash2} onClick={() => setBulkOpen(true)}>
                     Delete selected
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
+
             {applications.length > 0 && (
-              <section className="mb-10" aria-labelledby="applications">
-                <h2 id="applications" className="text-lg font-semibold text-slate-900 dark:text-white">
-                  Applications
-                </h2>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Each tailored resume with its job and cover letter.</p>
-                <div className="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              <section aria-labelledby="applications">
+                <SectionHeading id="applications" title="Applications" description="Each tailored resume with its job and cover letter." />
+                <div className={GRID}>
                   {applications.map((job) => (
                     <ApplicationCard
                       key={job._id}
                       job={job}
+                      resume={resumeById(job.tailoredResumeId)}
                       selected={selected.jobs.includes(job._id)}
                       onSelect={(on) => toggle("jobs", job._id, on)}
                       onDelete={() => setApplicationToDelete(job)}
@@ -264,33 +282,35 @@ export default function Dashboard() {
                 </div>
               </section>
             )}
-            {applications.length > 0 && otherResumes.length > 0 && (
-              <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">Resumes</h2>
+
+            {otherResumes.length > 0 && (
+              <section aria-labelledby="resumes">
+                <SectionHeading id="resumes" title="Resumes" description={applications.length > 0 ? "Your base resumes. Tailor one to a job to start an application." : null} />
+                <div className={GRID}>
+                  {otherResumes.map((resume) => (
+                    <ResumeCard
+                      key={resume._id}
+                      resume={resume}
+                      busyLabel={busy[resume._id]}
+                      onDuplicate={handleDuplicate}
+                      onDelete={setResumeToDelete}
+                      onRecheck={handleRecheck}
+                      selected={selected.resumes.includes(resume._id)}
+                      onSelect={(on) => toggle("resumes", resume._id, on)}
+                    />
+                  ))}
+                </div>
+              </section>
             )}
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {otherResumes.map((resume) => (
-              <ResumeCard
-                key={resume._id}
-                resume={resume}
-                onDuplicate={handleDuplicate}
-                onDelete={setResumeToDelete}
-                onRecheck={handleRecheck}
-                isDuplicating={duplicatingId === resume._id}
-                isRechecking={recheckingId === resume._id}
-                selected={selected.resumes.includes(resume._id)}
-                onSelect={(on) => toggle("resumes", resume._id, on)}
-              />
-            ))}
           </div>
-          </>
         )}
       </div>
 
       <ConfirmModal
         open={resumeToDelete !== null}
-        title="Delete resume?"
+        title="Delete this resume?"
         message={`"${resumeToDelete?.title}" will be permanently deleted. This can't be undone.`}
-        confirmText="Delete"
+        confirmText="Delete resume"
         onConfirm={handleConfirmDelete}
         onCancel={() => setResumeToDelete(null)}
         loading={deleting}
@@ -313,7 +333,7 @@ export default function Dashboard() {
       />
       <ConfirmModal
         open={bulkOpen && selected.jobs.length === 0}
-        title={`Delete ${selected.resumes.length} ${selected.resumes.length === 1 ? "resume" : "resumes"}?`}
+        title={`Delete ${plural(selected.resumes.length, "resume")}?`}
         message="The selected resumes will be permanently deleted. This can't be undone."
         confirmText="Delete"
         onConfirm={() => handleBulkDelete("resume")}
@@ -331,6 +351,17 @@ export default function Dashboard() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function SectionHeading({ id, title, description }) {
+  return (
+    <div className="mb-5">
+      <h2 id={id} className="type-h2 text-fg">
+        {title}
+      </h2>
+      {description && <p className="mt-1 type-body text-fg-muted">{description}</p>}
     </div>
   );
 }

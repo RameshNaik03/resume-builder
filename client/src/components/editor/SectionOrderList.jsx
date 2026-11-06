@@ -68,8 +68,8 @@ function SectionRow({ id, isHidden, heading, defaultTitle, onToggle, onRename })
     <li
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-center gap-2 rounded-lg bg-white p-2 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-700 ${
-        isDragging ? "relative z-10 shadow-lg ring-2 ring-indigo-500" : ""
+      className={`flex items-center gap-2 rounded-lg bg-surface p-2 ring-1 ring-line ${
+        isDragging ? "relative z-10 shadow-lg ring-2 ring-accent" : ""
       }`}
     >
       <button
@@ -78,15 +78,15 @@ function SectionRow({ id, isHidden, heading, defaultTitle, onToggle, onRename })
         {...attributes}
         {...listeners}
         aria-label={`Move ${label}`}
-        className="grid size-8 shrink-0 cursor-grab touch-none place-items-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 active:cursor-grabbing dark:hover:bg-slate-800 dark:hover:text-slate-200"
+        className="grid size-8 shrink-0 cursor-grab touch-none place-items-center rounded-md text-fg-subtle hover:bg-surface-2 hover:text-fg-muted active:cursor-grabbing"
       >
         <GripVertical className="size-4" aria-hidden="true" />
       </button>
 
       <div className={`min-w-0 flex-1 ${isHidden ? "opacity-50" : ""}`}>
-        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{label}</p>
+        <p className="text-sm font-medium text-fg">{label}</p>
         {id === "additional" ? (
-          <p className="text-xs text-slate-500 dark:text-slate-400">Each one keeps its own heading</p>
+          <p className="text-xs text-fg-muted">Each one keeps its own heading</p>
         ) : (
           <input
             type="text"
@@ -95,7 +95,7 @@ function SectionRow({ id, isHidden, heading, defaultTitle, onToggle, onRename })
             placeholder={defaultTitle}
             maxLength={MAX_HEADING_LENGTH}
             aria-label={`Heading for ${label}`}
-            className="mt-1 w-full rounded-md border border-slate-200 bg-transparent px-2 py-1 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus:outline-none dark:border-slate-700 dark:text-slate-100 dark:placeholder:text-slate-500"
+            className="mt-1 w-full rounded-md border border-line bg-transparent px-2 py-1 text-sm text-fg placeholder:text-fg-subtle focus:border-accent focus:ring-2 focus:ring-accent/20 focus:outline-none"
           />
         )}
       </div>
@@ -108,8 +108,8 @@ function SectionRow({ id, isHidden, heading, defaultTitle, onToggle, onRename })
         title={isHidden ? "Hidden. Click to show" : "Shown. Click to hide"}
         className={`grid size-8 shrink-0 place-items-center rounded-md transition ${
           isHidden
-            ? "text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-            : "text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/60"
+            ? "text-fg-subtle hover:bg-surface-2"
+            : "text-accent hover:bg-accent-soft"
         }`}
       >
         {isHidden ? <EyeOff className="size-4" aria-hidden="true" /> : <Eye className="size-4" aria-hidden="true" />}

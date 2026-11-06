@@ -5,7 +5,10 @@ import api from "../api/axios";
 import getErrorMessage from "../utils/getErrorMessage";
 import { TEMPLATES } from "../templates/registry";
 import { ACCEPT_ATTRIBUTE, MAX_SIZE_MB, toUploadFile, validateFile } from "../utils/resumeFile";
-import Modal from "./Modal";
+import { Loader2, Upload } from "lucide-react";
+import Dialog from "./ui/Dialog";
+import Button from "./ui/Button";
+import { Alert } from "./ui/Display";
 import TemplatePicker from "./editor/TemplatePicker";
 
 // Used when the user closes the "choose a template" step without picking one
@@ -144,43 +147,24 @@ export default function ImportResumeModal({ onClose, onStartFromScratch, initial
   }
 
   return (
-    // While uploading, Escape and outside clicks don't close the modal
-    <Modal onClose={() => !isBusy && onClose()} labelledBy="import-modal-title" className="max-w-lg p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 id="import-modal-title" className="text-lg font-semibold text-slate-900 dark:text-white">
-            Upload your existing resume
-          </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            We'll read your PDF or Word file and fill in the editor for you.
-          </p>
-        </div>
-        {!isBusy && (
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="grid size-8 shrink-0 place-items-center rounded-lg text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-200"
-          >
-            <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </button>
-        )}
-      </div>
-
+    // While uploading, Escape and outside clicks don't close it (and there's no close button)
+    <Dialog
+      size="md"
+      title="Upload your existing resume"
+      description="We'll read your PDF or Word file and fill in the editor for you."
+      onClose={() => !isBusy && onClose()}
+      headerAction={isBusy ? <span /> : undefined}
+    >
       {/* ---------- Uploading / reading ---------- */}
       {isBusy && (
-        <div className="mt-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 px-6 py-10 text-center" role="status" aria-live="polite">
-          <div className="mx-auto size-10 animate-spin rounded-full border-4 border-indigo-200 dark:border-indigo-900 border-t-indigo-600" />
-          <p className="mt-4 font-medium text-slate-900 dark:text-white">
-            {status === "uploading" ? `Uploading… ${progress}%` : "Reading your resume..."}
-          </p>
-          <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">{fileName}</p>
-          {status === "reading" && <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">This usually takes a few seconds.</p>}
+        <div className="rounded-xl border border-line bg-surface-2 px-6 py-10 text-center" role="status" aria-live="polite">
+          <Loader2 className="mx-auto size-8 animate-spin text-accent" aria-hidden="true" />
+          <p className="mt-4 type-label text-fg">{status === "uploading" ? `Uploading… ${progress}%` : "Reading your resume..."}</p>
+          <p className="mt-1 truncate type-small text-fg-muted">{fileName}</p>
+          {status === "reading" && <p className="mt-3 type-small text-fg-subtle">This usually takes a few seconds.</p>}
           {status === "uploading" && (
-            <div className="mx-auto mt-4 h-1.5 max-w-xs overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-              <div className="h-full rounded-full bg-indigo-600 transition-all" style={{ width: `${progress}%` }} />
+            <div className="mx-auto mt-4 h-1.5 max-w-xs overflow-hidden rounded-full bg-line">
+              <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${progress}%` }} />
             </div>
           )}
         </div>
@@ -188,18 +172,22 @@ export default function ImportResumeModal({ onClose, onStartFromScratch, initial
 
       {/* ---------- Failed ---------- */}
       {status === "failed" && (
-        <div className="mt-6 rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50 p-5" role="alert">
-          <p className="font-medium text-red-800 dark:text-red-200">We couldn't import {fileName || "this file"}</p>
-          <p className="mt-1 text-sm text-red-700 dark:text-red-300">{serverError}</p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" onClick={tryAgain} className="btn-secondary">
-              Try another file
-            </button>
-            <button type="button" onClick={onStartFromScratch} className="btn-primary">
-              Start from scratch instead
-            </button>
-          </div>
-        </div>
+        <Alert
+          tone="danger"
+          title={`We couldn't import ${fileName || "this file"}`}
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" onClick={tryAgain}>
+                Try another file
+              </Button>
+              <Button size="sm" variant="primary" onClick={onStartFromScratch}>
+                Start from scratch instead
+              </Button>
+            </div>
+          }
+        >
+          {serverError}
+        </Alert>
       )}
 
       {/* ---------- Choose / drop a file ---------- */}
@@ -212,23 +200,17 @@ export default function ImportResumeModal({ onClose, onStartFromScratch, initial
             }}
             onDragLeave={() => setIsDragging(false)}
             onDrop={handleDrop}
-            className={`mt-6 rounded-xl border-2 border-dashed px-6 py-10 text-center transition ${
-              isDragging ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-950/60" : "border-slate-300 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/30"
-            }`}
+            className={`rounded-xl border border-dashed px-6 py-10 text-center transition-colors ${isDragging ? "border-accent bg-accent-soft" : "border-line-strong bg-surface-2"}`}
           >
-            <div className="mx-auto grid size-12 place-items-center rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
-              <svg className="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />
-              </svg>
-            </div>
-            <p className="mt-4 font-medium text-slate-900 dark:text-white">
-              {isDragging ? "Drop your file here" : "Drag and drop your resume here"}
-            </p>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">or</p>
-            <button type="button" onClick={() => inputRef.current.click()} className="btn-primary mt-3">
+            <span className="mx-auto grid size-11 place-items-center rounded-full bg-surface text-fg-muted shadow-soft">
+              <Upload className="size-5" aria-hidden="true" />
+            </span>
+            <p className="mt-4 type-label text-fg">{isDragging ? "Drop your file here" : "Drag and drop your resume here"}</p>
+            <p className="mt-1 type-small text-fg-muted">or</p>
+            <Button variant="primary" className="mt-3" onClick={() => inputRef.current.click()} data-autofocus>
               Choose file
-            </button>
-            <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">PDF or DOCX, up to {MAX_SIZE_MB} MB</p>
+            </Button>
+            <p className="mt-4 type-small text-fg-subtle">PDF or DOCX, up to {MAX_SIZE_MB} MB</p>
 
             <input
               ref={inputRef}
@@ -243,16 +225,14 @@ export default function ImportResumeModal({ onClose, onStartFromScratch, initial
           </div>
 
           {fileError && (
-            <p className="mt-3 rounded-lg bg-red-50 dark:bg-red-950/50 px-3 py-2 text-sm text-red-700 dark:text-red-300" role="alert">
-              {fileError}
-            </p>
+            <div className="mt-3">
+              <Alert tone="danger">{fileError}</Alert>
+            </div>
           )}
 
-          <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
-            Tip: text-based PDFs (exported from Word or Google Docs) work best. Scanned images can't be read.
-          </p>
+          <p className="mt-4 type-small text-fg-muted">Tip: text-based PDFs (exported from Word or Google Docs) work best. Scanned images can't be read.</p>
         </>
       )}
-    </Modal>
+    </Dialog>
   );
 }

@@ -66,8 +66,9 @@ export const findOwnedResume = async (req, res) => {
 // GET /api/resumes
 export const getResumes = async (req, res) => {
   const resumes = await Resume.find({ userId: req.user._id })
-    // The ATS badge (without the job description), and what a tailored copy was made from
-    .select("title updatedAt atsScore.score atsScore.grade atsScore.checkedAt atsOptimization.source")
+    // The content and design (the dashboard draws each resume's first page), the ATS badge and
+    // what a tailored copy was made from; not the optimizer's review or the checked job description
+    .select("-userId -photoPublicId -atsScore.jobDescription -atsOptimization.original -atsOptimization.changes -atsOptimization.skillsToConsider -atsOptimization.selectedSkills -atsOptimization.jobDescription -atsOptimization.scores -atsOptimization.currentScore")
     .sort({ updatedAt: -1 }); // Most recently edited first
 
   res.json(resumes);

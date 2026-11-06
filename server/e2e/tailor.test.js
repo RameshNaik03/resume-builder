@@ -195,7 +195,8 @@ test("Tailor to a job", async (t) => {
     assert.ok(listed && listed[2] === fitLabel(Number(listed[1])), `the saved job shows its % and fit label: ${saved}`);
 
     await page.goto(`${APP}/dashboard`, { waitUntil: "networkidle0" });
-    await page.click(`a[aria-label="Tailor ${RESUME.title} to a job"]`);
+    await page.click(`button[aria-label="Actions for ${RESUME.title}"]`);
+    await page.evaluate(() => [...document.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent.trim() === "Tailor to a job").click());
     await page.waitForSelector("#base-resume");
     assert.equal(await page.$eval("#base-resume", (el) => el.value), original._id, "the card's resume is preselected");
   });
@@ -221,8 +222,9 @@ test("Tailor to a job", async (t) => {
 
   await t.test("delete the whole application from its dashboard card", async () => {
     await page.goto(`${APP}/dashboard`, { waitUntil: "networkidle0" });
-    await page.click('[data-testid="application-card"] button[aria-label^="Delete"]');
-    await page.waitForSelector("#delete-application-title");
+    await page.click('[data-testid="application-card"] button[aria-label^="Actions for"]');
+    await page.evaluate(() => [...document.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent.trim() === "Delete").click());
+    await page.waitForFunction(() => document.querySelector('[role="dialog"]')?.innerText.includes("Delete this application?"));
     await page.evaluate(() => [...document.querySelectorAll("button")].find((button) => button.innerText.startsWith("Delete the whole application")).click());
     await page.waitForFunction(() => !document.querySelector('[data-testid="application-card"]'), { timeout: 10000 });
     assert.equal((await api("GET", "/jobs", token)).body.length, 0, "the job is gone");

@@ -36,7 +36,13 @@ test("resume API: auth, CRUD and ownership", async (t) => {
   const second = r.body;
 
   r = await req("GET", "/resumes", { token: a.token });
-  await check("list newest first, only title+updatedAt", r.body.length === 2 && r.body[0]._id === second._id && Object.keys(r.body[0]).sort().join() === "_id,title,updatedAt", Object.keys(r.body[0]).join());
+  // The dashboard draws each resume's first page, so the list has the content and design; never
+  // the owner id or the optimizer's review
+  await check(
+    "list newest first, with the content for thumbnails (no userId or review)",
+    r.body.length === 2 && r.body[0]._id === second._id && r.body[0].experience[0].company === "Acme" && "template" in r.body[0] && !("userId" in r.body[0]) && !r.body[0].atsOptimization?.changes,
+    Object.keys(r.body[0]).join()
+  );
 
   r = await req("GET", `/resumes/${second._id}`, { token: a.token });
   await check("get own resume -> 200", r.status === 200 && r.body.experience[0].company === "Acme");

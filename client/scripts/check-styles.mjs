@@ -32,7 +32,7 @@ export const RULES = {
     [
       String.raw`(?<![\w$.])[a-z][\w-]*-\[[^\]\s"'\x60]+\]`, // w-[150px], min-[480px]:
       String.raw`(?<![\w$.])[a-z][\w-]*-\(--[\w-]+\)`, // bg-(--accent)
-      String.raw`(?<=[\s"'\x60{(])\[[^\]\s"'\x60]+\](?=:)`, // [&_svg]:size-4
+      String.raw`(?<=[\s"'\x60{(])\[[^\]\s"'\x60]*[&@][^\]\s"'\x60]*\](?=:)`, // [&_svg]:size-4 (not a computed key: { [name]: value })
       String.raw`(?<=[\s"'\x60{(])\[[a-z-]+:[^\]\s"'\x60]+\]`, // [mask-type:alpha]
     ].join("|"),
     "g"
@@ -105,4 +105,4 @@ function main({ update, init }) {
   console.log(`Style check passed. Legacy styling still to migrate: ${totals.palette} palette, ${totals.arbitrary} arbitrary, ${totals.hex} hex (${legacy} in total).`);
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) main({ update: process.argv.includes("--update"), init: process.argv.includes("--init") });
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main({ update: process.argv.includes("--update"), init: process.argv.includes("--init") });

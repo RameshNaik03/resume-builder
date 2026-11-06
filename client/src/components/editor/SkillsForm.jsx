@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X } from "lucide-react";
 
 // skills = array of strings; skillLevels = [{ name, level }] (optional 1-5 per skill)
 // onChange receives the changed fields: { skills, skillLevels }
@@ -70,24 +71,22 @@ export default function SkillsForm({ skills, skillLevels = [], onChange }) {
           {skills.map((skill) => (
             <li
               key={skill}
-              className="flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 py-1 pl-3 pr-1 text-sm font-medium text-indigo-700 dark:text-indigo-300"
+              className="flex items-center gap-1 rounded-full bg-accent-soft py-1 pl-3 pr-1 text-sm font-medium text-accent"
             >
               {skill}
               <button
                 type="button"
                 onClick={() => removeSkill(skill)}
-                className="grid size-5 place-items-center rounded-full text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900 hover:text-indigo-700 dark:hover:text-indigo-300"
+                className="grid size-5 place-items-center rounded-full text-accent hover:bg-accent-soft hover:text-accent"
                 aria-label={`Remove ${skill}`}
               >
-                <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" aria-hidden="true">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
+                <X className="size-3" strokeWidth={3} aria-hidden="true" />
               </button>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="mt-3 text-sm text-slate-400 dark:text-slate-500">No skills added yet.</p>
+        <p className="mt-3 text-sm text-fg-subtle">No skills added yet.</p>
       )}
 
       {/* Optional levels (shown as bars or dots by templates such as Infographic) */}
@@ -97,13 +96,13 @@ export default function SkillsForm({ skills, skillLevels = [], onChange }) {
             type="button"
             onClick={() => setShowLevels((shown) => !shown)}
             aria-expanded={showLevels}
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+            className="text-sm font-medium text-accent hover:text-accent"
           >
             {showLevels ? "Hide skill levels" : "Add skill levels (optional)"}
           </button>
           {showLevels && (
             <div className="mt-3">
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-fg-muted">
                 Rate only the skills you want to. Templates that show levels (like Infographic) draw them as bars or dots; skills
                 without a level appear as plain tags.
               </p>
@@ -112,7 +111,7 @@ export default function SkillsForm({ skills, skillLevels = [], onChange }) {
                   const level = levelOf(skill);
                   return (
                     <li key={skill} className="flex items-center justify-between gap-3">
-                      <span className="truncate text-sm text-slate-700 dark:text-slate-300">{skill}</span>
+                      <span className="truncate text-sm text-fg">{skill}</span>
                       <div className="flex shrink-0 items-center gap-1" role="group" aria-label={`${skill} level`}>
                         {[1, 2, 3, 4, 5].map((value) => (
                           <button
@@ -123,8 +122,8 @@ export default function SkillsForm({ skills, skillLevels = [], onChange }) {
                             aria-pressed={level !== null && value <= level}
                             className={`size-4 rounded-full ring-1 transition ${
                               level !== null && value <= level
-                                ? "bg-indigo-600 ring-indigo-600 dark:bg-indigo-400 dark:ring-indigo-400"
-                                : "bg-transparent ring-slate-300 hover:ring-indigo-400 dark:ring-slate-600"
+                                ? "bg-accent ring-accent"
+                                : "bg-transparent ring-line-strong hover:ring-accent"
                             }`}
                           />
                         ))}
@@ -132,7 +131,7 @@ export default function SkillsForm({ skills, skillLevels = [], onChange }) {
                           type="button"
                           onClick={() => setLevel(skill, null)}
                           disabled={level === null}
-                          className="ml-2 w-10 text-xs text-slate-500 hover:text-slate-800 disabled:invisible dark:text-slate-400 dark:hover:text-slate-100"
+                          className="ml-2 w-10 text-xs text-fg-muted hover:text-fg disabled:invisible"
                           aria-label={`Clear the level for ${skill}`}
                         >
                           Clear

@@ -1,4 +1,4 @@
-import { AlertTriangle, CheckCircle2, Info, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, X, XCircle } from "lucide-react";
 
 // "Quiet professional" display components:
 // Card, Badge, Alert, Tooltip, EmptyState, PageHeader and StatCard.
@@ -52,16 +52,23 @@ const ALERT_TONES = {
   warning: { box: "border-warning/25 bg-warning-soft text-fg", icon: AlertTriangle, iconColor: "text-warning" },
   danger: { box: "border-danger/25 bg-danger-soft text-fg", icon: XCircle, iconColor: "text-danger" },
 };
-export function Alert({ tone = "info", title, children, action }) {
+//   onDismiss - shows a close button; role - "alert" (danger, warning) or "status" by default
+//   (pass role="status" for a warning that's a standing reminder, not news)
+export function Alert({ tone = "info", title, children, action, onDismiss, role, ...props }) {
   const { box, icon: Icon, iconColor } = ALERT_TONES[tone];
   return (
-    <div className={`flex gap-3 rounded-lg border px-4 py-3 ${box}`} role={tone === "danger" || tone === "warning" ? "alert" : "status"}>
+    <div className={`flex gap-3 rounded-lg border px-4 py-3 ${box}`} role={role ?? (tone === "danger" || tone === "warning" ? "alert" : "status")} {...props}>
       <Icon className={`mt-0.5 size-4 shrink-0 ${iconColor}`} aria-hidden="true" />
       <div className="min-w-0 flex-1 type-body">
         {title && <p className="font-medium">{title}</p>}
         {children && <div className={title ? "mt-0.5 text-fg-muted" : ""}>{children}</div>}
         {action && <div className="mt-2">{action}</div>}
       </div>
+      {onDismiss && (
+        <button type="button" onClick={onDismiss} aria-label="Dismiss" className="-mt-1 -mr-2 grid size-8 shrink-0 place-items-center rounded-lg text-fg-muted transition-colors hover:bg-surface hover:text-fg focus-visible:outline-2 focus-visible:outline-accent">
+          <X className="size-4" aria-hidden="true" />
+        </button>
+      )}
     </div>
   );
 }

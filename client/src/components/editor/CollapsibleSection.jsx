@@ -1,4 +1,5 @@
 import { useId, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 // A card with a clickable header that shows or hides its content
 export default function CollapsibleSection({ title, description, defaultOpen = false, children }) {
@@ -6,32 +7,23 @@ export default function CollapsibleSection({ title, description, defaultOpen = f
   const contentId = useId();
 
   return (
-    <section className="card overflow-hidden">
+    <section className="rounded-xl border border-line bg-surface shadow-soft">
       <button
         type="button"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
         aria-controls={contentId}
-        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/60"
+        className={`flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent ${open ? "rounded-t-xl" : "rounded-xl"}`}
       >
-        <div>
-          <h2 className="font-semibold text-slate-900 dark:text-white">{title}</h2>
-          {description && <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">{description}</p>}
+        <div className="min-w-0">
+          <h2 className="type-h3 text-fg">{title}</h2>
+          {description && <p className="mt-0.5 type-small text-fg-muted">{description}</p>}
         </div>
-        <svg
-          className={`size-5 shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          aria-hidden="true"
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        <ChevronDown className={`size-4 shrink-0 text-fg-muted transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
       </button>
 
       {open && (
-        <div id={contentId} className="border-t border-slate-100 dark:border-slate-800 px-5 py-5">
+        <div id={contentId} className="border-t border-line px-5 py-5">
           {children}
         </div>
       )}

@@ -177,7 +177,11 @@ test("Cover letters", async (t) => {
     assert.match(card, /Senior Backend Engineer/);
     assert.match(card, /Northbeam/);
     assert.match(card, /\d+% · (Strong fit|Good fit|Stretch role)/);
-    for (const link of ["Resume", "Cover letter", "Job description"]) assert.ok(card.includes(link), `${link} link`);
+    // Its links are in the card's menu
+    const openMenu = () => page.click('[data-testid="application-card"] button[aria-label^="Actions for"]');
+    await openMenu();
+    const menu = await page.$eval('[data-testid="application-card"] [role="menu"]', (el) => el.innerText);
+    for (const link of ["Resume", "Cover letter", "Job description"]) assert.ok(menu.includes(link), `${link} link`);
     // The tailored resume isn't repeated in the resume grid; the original is
     const titles = await page.$$eval("a[title]", (links) => links.map((a) => a.title));
     assert.ok(titles.includes("Meera CV") && !titles.includes(tailored.resume.title));
@@ -186,6 +190,7 @@ test("Cover letters", async (t) => {
     await page.waitForFunction((id) => location.pathname === `/cover-letters/${id}`, {}, letterId);
 
     await page.goto(`${APP}/dashboard`, { waitUntil: "networkidle0" });
+    await openMenu();
     await clickText('[data-testid="application-card"] a', "Job description");
     await page.waitForFunction(() => document.querySelector("#job-description")?.open && document.querySelector("#job-description").innerText.includes("Familiarity with GraphQL"), { timeout: 10000 });
   });

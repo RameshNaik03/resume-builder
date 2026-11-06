@@ -22,7 +22,7 @@ export default function SummaryForm({ value, onChange }) {
         minHeight="7rem"
       />
       <p
-        className={`mt-1.5 text-right text-xs ${length > RECOMMENDED_LENGTH ? "text-amber-600 dark:text-amber-400" : "text-slate-400 dark:text-slate-500"}`}
+        className={`mt-1.5 text-right text-xs ${length > RECOMMENDED_LENGTH ? "text-warning" : "text-fg-subtle"}`}
       >
         {length} / {RECOMMENDED_LENGTH} characters recommended
       </p>

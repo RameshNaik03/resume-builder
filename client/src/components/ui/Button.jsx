@@ -1,7 +1,8 @@
 import { Loader2 } from "lucide-react";
 
 // The "quiet professional" button.
-//   variant - "primary" (one per view: the main action), "secondary", "ghost" (toolbars),
+//   variant - "primary" (one per view: the main action), "secondary", "ghost" (toolbars), "ghostDanger"
+//             (a quiet remove icon in a list row),
 //             "danger" (destructive, after a confirmation), "link" (inline text action)
 //   size    - "sm" (32px: cards, toolbars), "md" (36px: default), "lg" (44px: page actions)
 //   icon    - a lucide icon component shown before the label; iconOnly needs an aria-label
@@ -13,6 +14,7 @@ const VARIANTS = {
   primary: "rounded-lg bg-accent text-on-accent shadow-soft hover:bg-accent-strong",
   secondary: "rounded-lg border border-line-strong bg-surface text-fg hover:border-fg-subtle hover:bg-surface-2",
   ghost: "rounded-lg text-fg-muted hover:bg-surface-2 hover:text-fg",
+  ghostDanger: "rounded-lg text-fg-muted hover:bg-danger-soft hover:text-danger", // A quiet remove / delete icon in a row
   danger: "rounded-lg border border-danger/30 bg-surface text-danger hover:bg-danger-soft",
   link: "rounded-sm text-accent underline-offset-4 hover:underline",
 };

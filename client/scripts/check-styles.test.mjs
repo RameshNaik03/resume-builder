@@ -15,6 +15,7 @@ test("arbitrary Tailwind values and variants are flagged", () => {
   assert.deepEqual(rules(`className="w-[150px] text-[11px] bg-(--accent)"`), ["arbitrary:w-[150px]", "arbitrary:text-[11px]", "arbitrary:bg-(--accent)"]);
   assert.deepEqual(rules(`className="min-[480px]:inline [&_svg]:size-4 [mask-type:alpha]"`), ["arbitrary:min-[480px]", "arbitrary:[&_svg]", "arbitrary:[mask-type:alpha]"]);
   assert.deepEqual(rules(`const first = items[0]; const value = map[key];`), [], "array indexing isn't a class");
+  assert.deepEqual(rules(`setState({ ...current, [kind]: value, [event.target.name]: text })`), [], "computed object keys aren't variants");
 });
 
 test("Tailwind palette colours and the old landing tokens are flagged", () => {

@@ -1,4 +1,4 @@
-import { PAGE_SIZES } from "../templates/design";
+import { PAGE_SIZES } from "./design";
 
 // A blank page (A4 or US Letter), or several pages stacked (pages={2} -> two pages tall).
 // Used by the live preview (whose hidden full-length sheet is printed to PDF) and by

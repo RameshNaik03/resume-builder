@@ -1,5 +1,5 @@
 import TemplateRenderer from "../../templates/TemplateRenderer";
-import ResumeSheet from "../ResumeSheet";
+import ResumeSheet from "../../templates/ResumeSheet";
 
 // A real, scaled-down first page of a resume. Resume previews are the visual focus of the
 // design: cards show the actual page rather than a drawing of one.

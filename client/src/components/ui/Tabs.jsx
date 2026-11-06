@@ -4,7 +4,8 @@ import { useRef } from "react";
 //   variant "underline" - page-level views (Report / What the ATS sees)
 //   variant "segmented" - a compact switch inside a card (Content / Design, Upload / My resumes)
 // tabs: [{ id, label, count? }]; value / onChange: the selected id. Arrow keys move between tabs.
-export default function Tabs({ tabs, value, onChange, variant = "underline", label }) {
+// fullWidth (segmented): the tabs share the row equally
+export default function Tabs({ tabs, value, onChange, variant = "underline", label, fullWidth = false }) {
   const refs = useRef([]);
   const move = (event, index) => {
     const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
@@ -16,7 +17,7 @@ export default function Tabs({ tabs, value, onChange, variant = "underline", lab
   const segmented = variant === "segmented";
 
   return (
-    <div role="tablist" aria-label={label} className={segmented ? "inline-flex rounded-lg bg-surface-2 p-1" : "flex gap-6 border-b border-line"}>
+    <div role="tablist" aria-label={label} className={segmented ? `${fullWidth ? "flex" : "inline-flex"} rounded-lg bg-surface-2 p-1` : "flex gap-6 border-b border-line"}>
       {tabs.map((tab, index) => {
         const selected = tab.id === value;
         return (
@@ -31,7 +32,7 @@ export default function Tabs({ tabs, value, onChange, variant = "underline", lab
             onKeyDown={(event) => move(event, index)}
             className={
               segmented
-                ? `rounded-md px-3 py-1.5 type-label transition-colors focus-visible:outline-2 focus-visible:outline-accent ${selected ? "bg-surface text-fg shadow-soft" : "text-fg-muted hover:text-fg"}`
+                ? `${fullWidth ? "flex-1" : ""} rounded-md px-3 py-1.5 type-label transition-colors focus-visible:outline-2 focus-visible:outline-accent ${selected ? "bg-surface text-fg shadow-soft" : "text-fg-muted hover:text-fg"}`
                 : `-mb-px border-b-2 pb-2.5 type-label transition-colors focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent ${selected ? "border-fg text-fg" : "border-transparent text-fg-muted hover:text-fg"}`
             }
           >

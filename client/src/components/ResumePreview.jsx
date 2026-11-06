@@ -5,7 +5,7 @@ import { getTemplate } from "../templates/registry";
 import { pageMetrics, resolveDesign, usedFontIds } from "../templates/design";
 import { findFit } from "../templates/fit";
 import { loadFonts } from "../templates/fonts";
-import ResumeSheet from "./ResumeSheet";
+import ResumeSheet from "../templates/ResumeSheet";
 
 const PAGE_GAP_PX = 24; // Space between pages in the preview
 const FIT_DELAY_MS = 250; // "Fit to one page" waits this long after the last change before re-fitting
@@ -133,7 +133,7 @@ export default function ResumePreview({ resume, printRef, highlightPlaceholders 
               key={index}
               data-page
               aria-hidden={index > 0} // Screen readers read the whole resume from page 1's copy
-              className="relative overflow-hidden shadow-lg ring-1 ring-slate-200"
+              className="relative overflow-hidden shadow-lg ring-1 ring-line"
               style={{ height: heightPx, marginTop: index > 0 ? PAGE_GAP_PX : 0, backgroundColor: resolved.backgroundColor }}
             >
               <div style={{ transform: `translateY(${-index * heightPx}px)` }}>
@@ -142,7 +142,7 @@ export default function ResumePreview({ resume, printRef, highlightPlaceholders 
                 </ResumeSheet>
               </div>
               {pageCount > 1 && (
-                <span className="absolute right-4 bottom-3 rounded-full bg-slate-900/60 px-2.5 py-1 text-xs font-medium text-white">
+                <span className="absolute right-4 bottom-3 rounded-full bg-fg/70 px-2.5 py-1 text-xs font-medium text-canvas">
                   Page {index + 1} of {pageCount}
                 </span>
               )}

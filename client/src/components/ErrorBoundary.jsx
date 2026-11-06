@@ -21,19 +21,19 @@ export default class ErrorBoundary extends Component {
     // A failed download of a page's code ("Failed to fetch dynamically imported module", etc.)
     const isLoadError = /dynamically imported module|Importing a module script failed|error loading dynamically/i.test(this.state.error.message ?? "");
     return (
-      <div className="flex min-h-[70vh] items-center justify-center px-4 py-16" role="alert">
+      <div className="flex items-center justify-center px-4 py-24" role="alert">
         <div className="max-w-md text-center">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{isLoadError ? "This page couldn't be loaded" : "Something went wrong"}</h1>
-          <p className="mt-2 text-slate-500 dark:text-slate-400">
+          <h1 className="type-h1 text-fg">{isLoadError ? "This page couldn't be loaded" : "Something went wrong"}</h1>
+          <p className="mt-3 type-body text-fg-muted">
             {isLoadError
               ? "Check your connection and reload. If the app was just updated, reloading gets the new version."
               : "An unexpected error stopped this page. Your saved resumes are safe; reload to try again."}
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <button type="button" onClick={() => window.location.reload()} className="btn-primary px-6 py-2.5">
+            <button type="button" onClick={() => window.location.reload()} className="btn-primary">
               Reload the page
             </button>
-            <a href="/" className="btn-secondary px-6 py-2.5">
+            <a href="/" className="btn-secondary">
               Back to home
             </a>
           </div>

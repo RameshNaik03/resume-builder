@@ -16,15 +16,15 @@ export default function PhotoCropModal({ src, onCancel, onSave, saving = false }
   return (
     <Modal onClose={() => !saving && onCancel()} labelledBy="crop-photo-title" className="max-w-lg overflow-hidden">
       <div className="px-5 pt-5 pb-3">
-        <h2 id="crop-photo-title" className="text-lg font-semibold text-slate-900 dark:text-white">
+        <h2 id="crop-photo-title" className="text-lg font-semibold text-fg">
           Crop your photo
         </h2>
-        <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-0.5 text-sm text-fg-muted">
           Drag to position your face in the middle. Zoom in so it fills most of the square.
         </p>
       </div>
 
-      <div className="relative h-80 bg-slate-900">
+      <div className="relative h-80 bg-surface-2">
         <Cropper
           image={src}
           crop={crop}
@@ -49,7 +49,7 @@ export default function PhotoCropModal({ src, onCancel, onSave, saving = false }
           step={0.05}
           value={zoom}
           onChange={(event) => setZoom(Number(event.target.value))}
-          className="w-full accent-indigo-600"
+          className="w-full accent-accent"
         />
 
         <div className="mt-5 flex justify-end gap-3">

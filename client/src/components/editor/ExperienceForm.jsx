@@ -50,12 +50,12 @@ export default function ExperienceForm({ items, onChange }) {
               placeholder="e.g. Acme Pay, a payments app (React, Node.js)"
             />
 
-            <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+            <label className="flex w-fit cursor-pointer items-center gap-2 text-sm text-fg">
               <input
                 type="checkbox"
                 checked={isCurrent}
                 onChange={(event) => update({ endDate: event.target.checked ? PRESENT : "" })}
-                className="size-4 rounded border-slate-300 dark:border-slate-600 accent-indigo-600"
+                className="size-4 rounded border-line-strong accent-accent"
               />
               Currently working here
             </label>
@@ -88,14 +88,14 @@ export default function ExperienceForm({ items, onChange }) {
 function HiddenBullets({ bullets, onRestore }) {
   if (!bullets.length) return null;
   return (
-    <div className="rounded-lg border border-dashed border-slate-300 p-3 dark:border-slate-700" data-testid="hidden-bullets">
-      <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+    <div className="rounded-lg border border-dashed border-line-strong p-3" data-testid="hidden-bullets">
+      <p className="text-sm font-medium text-fg">
         Hidden for this job ({bullets.length})
       </p>
-      <p className="text-xs text-slate-500 dark:text-slate-400">Not shown on the resume. Restore one to add it back to the end of the list.</p>
+      <p className="text-xs text-fg-muted">Not shown on the resume. Restore one to add it back to the end of the list.</p>
       <ul className="mt-2 space-y-1.5">
         {bullets.map((bullet, index) => (
-          <li key={`${index}-${bullet}`} className="flex items-start justify-between gap-3 text-sm text-slate-600 dark:text-slate-400">
+          <li key={`${index}-${bullet}`} className="flex items-start justify-between gap-3 text-sm text-fg-muted">
             <span className="min-w-0">{toPlainText(bullet)}</span>
             <button type="button" onClick={() => onRestore(index)} className="btn-secondary shrink-0 px-2.5 py-1 text-xs">
               Restore

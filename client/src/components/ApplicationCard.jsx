@@ -1,64 +1,40 @@
-import { Link } from "react-router-dom";
-import { FileText, Mail, Target, Trash2 } from "lucide-react";
+import { FileText, Mail, PenLine, Target, Trash2 } from "lucide-react";
 import timeAgo from "../utils/timeAgo";
+import { Badge } from "./ui/Display";
+import DocumentCard from "./DocumentCard";
 import { fitTone } from "./ats/atsHelpers";
 
-// One application on the dashboard: a tailored resume grouped with its job and cover letter.
-//   job - a saved job from GET /api/jobs ({ title, company, score, tailoredResumeId, coverLetterId, createdAt })
-//   selected / onSelect - the bulk-delete checkbox; onDelete - opens "Delete this application?"
-export default function ApplicationCard({ job, selected = false, onSelect, onDelete }) {
-  const fit = fitTone(job.score);
+// An application on the dashboard: a tailored resume grouped with its job and cover letter, in
+// the same card as a resume. The card opens the match report; the menu has the resume, the
+// cover letter (or "Write cover letter"), the job description and Delete.
+//   job    - a saved job from GET /api/jobs ({ title, company, score, tailoredResumeId, coverLetterId, createdAt })
+//   resume - its tailored resume (for the thumbnail)
+export default function ApplicationCard({ job, resume, selected = false, onSelect, onDelete }) {
   const name = job.title || "Untitled job";
-  const links = [
-    { to: `/editor/${job.tailoredResumeId}`, label: "Resume", icon: FileText },
-    job.coverLetterId
-      ? { to: `/cover-letters/${job.coverLetterId}`, label: "Cover letter", icon: Mail }
-      : { to: `/cover-letters/new?job=${job._id}`, label: "Write cover letter", icon: Mail },
-    { to: `/tailor/jobs/${job._id}#job-description`, label: "Job description", icon: Target },
-  ];
-
   return (
-    <article className={`card flex flex-col p-4 ${selected ? "ring-2 ring-indigo-500" : ""}`} data-testid="application-card">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2">
-          {onSelect && (
-            <input type="checkbox" checked={selected} onChange={(event) => onSelect(event.target.checked)} className="mt-1 size-4 shrink-0 accent-indigo-600" aria-label={`Select ${name}`} />
-          )}
-          <div className="min-w-0">
-            <Link to={`/tailor/jobs/${job._id}`} className="block truncate font-semibold text-slate-900 hover:text-indigo-700 dark:text-white dark:hover:text-indigo-300">
-              {name}
-            </Link>
-            <p className="truncate text-sm text-slate-500 dark:text-slate-400">{job.company || "Company not stated"}</p>
-          </div>
-        </div>
-        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${fit.badge}`}>
-          {job.score}% · {fit.label}
-        </span>
-      </div>
-      <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">Tailored {timeAgo(job.createdAt)}</p>
-      <ul className="mt-4 flex flex-wrap gap-2">
-        {links.map(({ to, label, icon: Icon }) => (
-          <li key={label}>
-            <Link to={to} className="btn-secondary gap-1.5 px-2.5 py-1.5 text-sm">
-              <Icon className="size-4" aria-hidden="true" />
-              {label}
-            </Link>
-          </li>
-        ))}
-        {onDelete && (
-          <li>
-            <button
-              type="button"
-              onClick={onDelete}
-              className="btn-secondary gap-1.5 px-2.5 py-1.5 text-sm text-red-600 hover:border-red-200 hover:bg-red-50 dark:text-red-400 dark:hover:border-red-900 dark:hover:bg-red-950/50"
-              aria-label={`Delete ${name}`}
-            >
-              <Trash2 className="size-4" aria-hidden="true" />
-              Delete
-            </button>
-          </li>
-        )}
-      </ul>
-    </article>
+    <DocumentCard
+      resume={resume}
+      to={`/tailor/jobs/${job._id}`}
+      title={name}
+      meta={`${job.company || "Company not stated"} · tailored ${timeAgo(job.createdAt)}`}
+      badge={
+        <Badge tone="accent">
+          {job.score}% · {fitTone(job.score).label}
+        </Badge>
+      }
+      selected={selected}
+      onSelect={onSelect}
+      data-testid="application-card"
+      menuItems={[
+        { label: "Match report", icon: Target, to: `/tailor/jobs/${job._id}` },
+        { label: "Resume", icon: PenLine, to: `/editor/${job.tailoredResumeId}` },
+        job.coverLetterId
+          ? { label: "Cover letter", icon: Mail, to: `/cover-letters/${job.coverLetterId}` }
+          : { label: "Write cover letter", icon: Mail, to: `/cover-letters/new?job=${job._id}` },
+        { label: "Job description", icon: FileText, to: `/tailor/jobs/${job._id}#job-description` },
+        "divider",
+        { label: "Delete", icon: Trash2, tone: "danger", onClick: onDelete },
+      ]}
+    />
   );
 }

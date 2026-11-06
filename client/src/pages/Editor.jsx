@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
+import { ArrowLeft, Download, LayoutTemplate } from "lucide-react";
 import toast from "../utils/toast";
 import { getTemplate } from "../templates/registry";
 import { resolveDesign, usedFontIds } from "../templates/design";
@@ -22,16 +23,19 @@ import AdditionalForm from "../components/editor/AdditionalForm";
 import TemplatePicker from "../components/editor/TemplatePicker";
 import DesignPanel from "../components/editor/DesignPanel";
 import Switch from "../components/Switch";
+import Button from "../components/ui/Button";
+import Tabs from "../components/ui/Tabs";
+import { Alert, Badge } from "../components/ui/Display";
+import { pageClass } from "../components/ui/pageLayout";
 import { fitSuggestions } from "../templates/fit";
 
 // Text and dot colour for each save status
 const STATUS_STYLES = {
-  saved: { text: "Saved", dot: "bg-emerald-500" },
-  unsaved: { text: "Unsaved changes", dot: "bg-amber-500" },
-  saving: { text: "Saving...", dot: "bg-indigo-500 animate-pulse" },
-  error: { text: "Couldn't save", dot: "bg-red-500" },
+  saved: { text: "Saved", dot: "bg-success" },
+  unsaved: { text: "Unsaved changes", dot: "bg-warning" },
+  saving: { text: "Saving...", dot: "bg-accent motion-safe:animate-pulse" },
+  error: { text: "Couldn't save", dot: "bg-danger" },
 };
-
 
 // e.g. "Jobs and internships · 2 added"
 const withCount = (text, list) => (list.length > 0 ? `${text} · ${list.length} added` : text);
@@ -144,18 +148,14 @@ export default function Editor() {
 
   if (loadError) {
     return (
-      <div className="flex justify-center px-4 py-16">
-        <div className="card w-full max-w-md p-8 text-center">
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Couldn't open this resume</h1>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{loadError}</p>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <button type="button" onClick={() => window.location.reload()} className="btn-secondary">
-              Try again
-            </button>
-            <Link to="/dashboard" className="btn-primary">
-              Back to dashboard
-            </Link>
-          </div>
+      <div className={pageClass("narrow", "text-center")}>
+        <h1 className="type-h2 text-fg">Couldn't open this resume</h1>
+        <p className="mt-2 type-body text-fg-muted">{loadError}</p>
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          <Button onClick={() => window.location.reload()}>Try again</Button>
+          <Button as={Link} to="/dashboard" variant="primary">
+            Back to dashboard
+          </Button>
         </div>
       </div>
     );
@@ -163,39 +163,36 @@ export default function Editor() {
 
   const statusStyle = STATUS_STYLES[status];
   // Fit to one page and the page count (in the top bar, or the row below it on phones)
-  const fitControl = (testId) => (
+  const fitControl = (testId, phone = false) => (
     <>
-      <span className="hidden text-sm text-slate-600 dark:text-slate-300 xl:inline">Fit to one page</span>
+      {phone ? (
+        <span className="type-small text-fg-muted" aria-hidden="true">
+          One page
+        </span>
+      ) : (
+        <span className="hidden type-small text-fg-muted xl:inline">Fit to one page</span>
+      )}
       <Switch checked={fitOn} onChange={setFitOnePage} label="Fit to one page" />
-      <span
-        className={`rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap tabular-nums ${
-          previewStatus.pageCount > 1 ? "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-        }`}
-        aria-live="polite"
-        data-testid={testId}
-      >
-        {fitOn && fitStatus?.pending ? "Fitting…" : `${previewStatus.pageCount} ${previewStatus.pageCount === 1 ? "page" : "pages"}`}
+      <span aria-live="polite" data-testid={testId}>
+        <Badge tone={previewStatus.pageCount > 1 ? "warning" : "neutral"}>
+          {fitOn && fitStatus?.pending ? "Fitting…" : `${previewStatus.pageCount} ${previewStatus.pageCount === 1 ? "page" : "pages"}`}
+        </Badge>
       </span>
     </>
+  );
+  const saveStatus = (
+    <span className="flex items-center gap-1.5 type-small text-fg-muted" aria-live="polite" title={statusStyle.text}>
+      <span className={`size-2 rounded-full ${statusStyle.dot}`} aria-hidden="true" />
+      <span className="max-sm:sr-only">{statusStyle.text}</span>
+    </span>
   );
 
   return (
     <div>
-      {/* Top bar (sits just below the 4rem-tall Navbar) */}
-      <div className="sticky top-16 z-5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900" data-testid="editor-toolbar">
-        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-3 sm:gap-3 sm:px-6">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="grid size-9 shrink-0 place-items-center rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white"
-            aria-label="Back to dashboard"
-            title="Back to dashboard"
-          >
-            <svg className="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="m15 18-6-6 6-6" />
-            </svg>
-          </button>
-
+      {/* Top bar (sits just below the AppShell's 4rem bar) */}
+      <div className="sticky top-16 z-10 border-b border-line bg-surface" data-testid="editor-toolbar">
+        <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-6">
+          <Button variant="ghost" iconOnly icon={ArrowLeft} onClick={handleBack} aria-label="Back to dashboard" title="Back to dashboard" />
           <input
             type="text"
             value={resume.title}
@@ -203,212 +200,104 @@ export default function Editor() {
             onBlur={() => !resume.title.trim() && updateResume({ title: "Untitled Resume" })}
             maxLength={100}
             aria-label="Resume title"
-            className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 text-lg font-semibold text-ellipsis text-slate-900 dark:text-white outline-none hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/30"
+            className="min-w-0 flex-1 rounded-lg bg-transparent px-2 py-1.5 type-h3 text-ellipsis text-fg outline-none hover:bg-surface-2 focus:bg-surface-2 focus:ring-3 focus:ring-accent/15"
           />
+          <div className="hidden sm:block">{saveStatus}</div>
 
-          <span className="hidden items-center gap-2 text-sm text-slate-500 dark:text-slate-400 sm:flex" aria-live="polite">
-            <span className={`size-2 rounded-full ${statusStyle.dot}`} />
-            {statusStyle.text}
-          </span>
-
-          <button
-            type="button"
-            onClick={() => setIsPickerOpen(true)}
-            className="btn-secondary shrink-0 px-2.5 sm:px-4"
-            aria-label="Templates"
-          >
-            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <rect x="3" y="3" width="7" height="9" rx="1" />
-              <rect x="14" y="3" width="7" height="5" rx="1" />
-              <rect x="14" y="12" width="7" height="9" rx="1" />
-              <rect x="3" y="16" width="7" height="5" rx="1" />
-            </svg>
+          <Button icon={LayoutTemplate} onClick={() => setIsPickerOpen(true)} aria-label="Templates" className="max-md:w-9 max-md:px-0">
             <span className="hidden md:inline">Templates</span>
-          </button>
-
+          </Button>
           {/* Fit to one page, with the page count always shown (on phones: in the row below) */}
           <div className="hidden shrink-0 items-center gap-2 sm:flex">{fitControl("page-count")}</div>
-
-          <button
-            type="button"
-            onClick={() => handleDownloadPdf()}
-            className="btn-secondary shrink-0 px-2.5 sm:px-4"
-            aria-label="Download PDF"
-          >
-            <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-            </svg>
+          <Button icon={Download} onClick={() => handleDownloadPdf()} aria-label="Download PDF" className="max-md:w-9 max-md:px-0">
             <span className="hidden md:inline">Download PDF</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={save}
-            disabled={status === "saved" || status === "saving"}
-            className="btn-primary shrink-0"
-          >
+          </Button>
+          <Button variant="primary" onClick={save} disabled={status === "saved" || status === "saving"}>
             {status === "saving" ? "Saving..." : "Save"}
-          </button>
+          </Button>
         </div>
 
-        {/* Mobile: status + Edit/Preview tabs */}
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pb-3 lg:hidden">
-          <div className="flex rounded-lg bg-slate-100 dark:bg-slate-800 p-1" role="tablist">
-            {["edit", "preview"].map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab}
-                onClick={() => setActiveTab(tab)}
-                className={`rounded-md px-4 py-1.5 text-sm font-medium capitalize transition ${
-                  activeTab === tab ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm" : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
+        {/* Phones and tablets: Edit / Preview, and (phones) Fit to one page and the save status */}
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 pb-2.5 lg:hidden">
+          <Tabs
+            variant="segmented"
+            label="Show"
+            value={activeTab}
+            onChange={setActiveTab}
+            tabs={[
+              { id: "edit", label: "Edit" },
+              { id: "preview", label: "Preview" },
+            ]}
+          />
           <div className="flex items-center gap-3 sm:hidden">
-            <div className="flex items-center gap-2">{fitControl("page-count-phone")}</div>
-            <span className="flex items-center gap-1.5 text-sm text-slate-500 dark:text-slate-400" aria-live="polite">
-              <span className={`size-2 rounded-full ${statusStyle.dot}`} />
-              <span className="sr-only min-[360px]:not-sr-only">{statusStyle.text}</span>
-            </span>
+            <div className="flex items-center gap-2">{fitControl("page-count-phone", true)}</div>
+            {saveStatus}
           </div>
         </div>
       </div>
 
-      {/* Shown once, right after importing a file */}
-      {showImportBanner && (
-        <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
-          <div
-            className="flex flex-col gap-3 rounded-xl border border-indigo-200 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-950/60 px-4 py-3 sm:flex-row sm:items-center"
-            role="status"
-          >
-            <svg className="hidden size-5 shrink-0 text-indigo-600 dark:text-indigo-400 sm:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M20 6 9 17l-5-5" />
-            </svg>
-            <p className="flex-1 text-sm text-indigo-900 dark:text-indigo-100">
-              <span className="font-semibold">We imported your resume.</span> Please check each section, as imports
-              aren't always perfect. You can change the template anytime.
-              {bulletsUnassigned && (
-                <span className="mt-1 block font-semibold text-amber-800 dark:text-amber-300">
-                  We couldn't tell which bullets belong to which job. Please check your Experience section.
-                </span>
-              )}
-            </p>
-            <div className="flex items-center gap-2">
-              <button type="button" onClick={() => setIsPickerOpen(true)} className="btn-secondary px-3 py-1.5">
-                Change template
-              </button>
-              <button
-                type="button"
-                onClick={dismissImportBanner}
-                aria-label="Dismiss"
-                className="grid size-8 place-items-center rounded-lg text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900 hover:text-indigo-700 dark:hover:text-indigo-300"
-              >
-                <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                  <path d="M18 6 6 18M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Notices: after an import, after the ATS optimizer, and while placeholders are left */}
+      {(showImportBanner || optimized || placeholders.length > 0) && (
+        <div className="mx-auto max-w-7xl space-y-3 px-4 pt-6 sm:px-6">
+          {showImportBanner && (
+            <Alert
+              tone="info"
+              title="We imported your resume"
+              onDismiss={dismissImportBanner}
+              action={
+                <Button size="sm" icon={LayoutTemplate} onClick={() => setIsPickerOpen(true)}>
+                  Change template
+                </Button>
+              }
+            >
+              Please check each section, as imports aren't always perfect. You can change the template anytime.
+              {bulletsUnassigned && <span className="mt-1 block font-medium text-warning">We couldn't tell which bullets belong to which job. Please check your Experience section.</span>}
+            </Alert>
+          )}
 
-      {/* Shown once, right after the ATS optimizer created this resume */}
-      {optimized && (
-        <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
-          <div
-            className="flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 sm:flex-row sm:items-center dark:border-emerald-900 dark:bg-emerald-950/50"
-            role="status"
-          >
-            <span className="w-fit shrink-0 rounded-lg bg-white px-3 py-1.5 text-center font-display text-lg font-extrabold tabular-nums text-slate-900 dark:bg-slate-900 dark:text-white">
-              {optimized.before} <span aria-hidden="true">→</span>
-              <span className="sr-only">to</span> <span className="text-emerald-600 dark:text-emerald-400">{optimized.after}</span>
-            </span>
-            <p className="flex-1 text-sm text-emerald-900 dark:text-emerald-100">
-              <span className="font-semibold">
-                ATS-optimized copy created
-                {optimized.after > optimized.before && `: your score went up ${optimized.after - optimized.before} points`}.
-              </span>{" "}
-              We made {optimized.changes} change{optimized.changes === 1 ? "" : "s"}; your original resume is unchanged.
-              Please check each section before you use it.
+          {optimized && (
+            <Alert
+              tone="success"
+              title={`ATS-optimized copy created${optimized.after > optimized.before ? `: your score went up ${optimized.after - optimized.before} points (${optimized.before} → ${optimized.after})` : ""}`}
+              onDismiss={dismissOptimizedBanner}
+            >
+              We made {optimized.changes} change{optimized.changes === 1 ? "" : "s"}; your original resume is unchanged. Please check each section before you use it.
               {optimized.skillsToConsider > 0 &&
                 ` ${optimized.skillsToConsider} keyword${optimized.skillsToConsider === 1 ? " from the job wasn't" : "s from the job weren't"} added because your resume doesn't show ${optimized.skillsToConsider === 1 ? "it" : "them"} yet. Add only the ones you really have.`}
-              <span className="mt-1 block text-emerald-800/80 dark:text-emerald-200/80">
-                Fonts and layout were reset for ATS compatibility. You can still change colors in the Design tab.
-              </span>
-            </p>
-            <button
-              type="button"
-              onClick={dismissOptimizedBanner}
-              aria-label="Dismiss"
-              className="grid size-8 shrink-0 place-items-center self-end rounded-lg text-emerald-500 hover:bg-emerald-100 hover:text-emerald-800 sm:self-auto dark:hover:bg-emerald-900 dark:hover:text-emerald-200"
-            >
-              <svg className="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+              <span className="mt-1 block">Fonts and layout were reset for ATS compatibility. You can still change colors in the Design tab.</span>
+            </Alert>
+          )}
+
+          {placeholders.length > 0 && (
+            <Alert tone="warning" role="status" title={`${placeholders.length} placeholder${placeholders.length === 1 ? "" : "s"} still need${placeholders.length === 1 ? "s" : ""} real numbers`}>
+              ({[...new Set(placeholders)].slice(0, 3).join(", ")}). Replace each with your actual figure, or remove it. They're highlighted in yellow in the preview (not in the PDF).
+            </Alert>
+          )}
         </div>
       )}
 
-      {/* Shown while placeholders like "[X%]" are left (highlighted in the preview, not in the PDF) */}
-      {placeholders.length > 0 && (
-        <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6">
-          <p
-            className="rounded-xl border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-900 dark:border-yellow-800 dark:bg-yellow-950/40 dark:text-yellow-100"
-            role="status"
-          >
-            <span className="font-semibold">
-              {placeholders.length} placeholder{placeholders.length === 1 ? "" : "s"} still need{placeholders.length === 1 ? "s" : ""} real
-              numbers
-            </span>{" "}
-            ({[...new Set(placeholders)].slice(0, 3).join(", ")}). Replace each with your actual figure, or remove it. They're
-            highlighted in yellow in the preview (not in the PDF).
-          </p>
-        </div>
-      )}
-
-      {/* Two columns on large screens; tabs decide which one shows on small screens */}
+      {/* Two columns on large screens; Edit / Preview decides which one shows on smaller ones */}
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-2">
         {/* Left: content form or design settings */}
-        <div className={`space-y-4 ${activeTab === "edit" ? "block" : "hidden"} lg:block`}>
-          <div className="flex rounded-lg bg-slate-100 p-1 dark:bg-slate-800" role="tablist" aria-label="Editor panels">
-            {[
+        <div className={`min-w-0 space-y-4 ${activeTab === "edit" ? "block" : "hidden"} lg:block`}>
+          <Tabs
+            variant="segmented"
+            fullWidth
+            label="Editor panels"
+            value={formPanel}
+            onChange={setFormPanel}
+            tabs={[
               { id: "content", label: "Content" },
               { id: "design", label: "Design" },
-            ].map((panel) => (
-              <button
-                key={panel.id}
-                type="button"
-                role="tab"
-                aria-selected={formPanel === panel.id}
-                onClick={() => setFormPanel(panel.id)}
-                className={`flex-1 rounded-md px-4 py-1.5 text-sm font-medium transition ${
-                  formPanel === panel.id
-                    ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                }`}
-              >
-                {panel.label}
-              </button>
-            ))}
-          </div>
+            ]}
+          />
 
           {formPanel === "design" ? (
             <DesignPanel resume={resume} onChange={(design) => updateResume({ design })} />
           ) : (
             <>
               <CollapsibleSection title="Personal info" description="Name and contact details" defaultOpen>
-                <PersonalInfoForm
-                  data={resume.personalInfo}
-                  onChange={(personalInfo) => updateResume({ personalInfo })}
-                  resumeId={resume._id}
-                  onPhotoChange={setPhotoUrl}
-                />
+                <PersonalInfoForm data={resume.personalInfo} onChange={(personalInfo) => updateResume({ personalInfo })} resumeId={resume._id} onPhotoChange={setPhotoUrl} />
               </CollapsibleSection>
 
               <CollapsibleSection title="Summary" description="A short introduction about you">
@@ -416,11 +305,7 @@ export default function Editor() {
               </CollapsibleSection>
 
               <CollapsibleSection title="Skills" description="Tools, languages and technologies">
-                <SkillsForm
-                  skills={resume.skills}
-                  skillLevels={resume.skillLevels ?? []}
-                  onChange={(changes) => updateResume(changes)}
-                />
+                <SkillsForm skills={resume.skills} skillLevels={resume.skillLevels ?? []} onChange={(changes) => updateResume(changes)} />
               </CollapsibleSection>
 
               <CollapsibleSection title="Experience" description={withCount("Jobs and internships", resume.experience)}>
@@ -435,46 +320,43 @@ export default function Editor() {
                 <ProjectsForm items={resume.projects} onChange={(projects) => updateResume({ projects })} />
               </CollapsibleSection>
 
-              <CollapsibleSection
-                title="Additional sections"
-                description={withCount("Certifications, languages, awards…", resume.additional ?? [])}
-              >
+              <CollapsibleSection title="Additional sections" description={withCount("Certifications, languages, awards…", resume.additional ?? [])}>
                 <AdditionalForm items={resume.additional ?? []} onChange={(additional) => updateResume({ additional })} />
               </CollapsibleSection>
             </>
           )}
         </div>
 
-        {/* Right: live preview */}
-        <div className={`${activeTab === "preview" ? "block" : "hidden"} lg:block`}>
-          {/* On large screens the preview stays in view and scrolls on its own */}
-          <div className="lg:sticky lg:top-36 lg:max-h-[calc(100vh-10rem)] lg:overflow-y-auto lg:p-1">
+        {/* Right: live preview (the visual focus; on large screens it stays in view and scrolls on its own) */}
+        <div className={`min-w-0 ${activeTab === "preview" ? "block" : "hidden"} lg:block`}>
+          <div className="lg:sticky lg:top-36 lg:max-h-workspace lg:overflow-y-auto lg:p-1">
             <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="hidden text-xs font-medium tracking-wider text-slate-400 dark:text-slate-500 uppercase lg:block">Live preview</p>
-              <button
-                type="button"
-                onClick={() => setIsPickerOpen(true)}
-                className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
-              >
+              <p className="hidden type-eyebrow text-fg-muted lg:block">Live preview</p>
+              <Button variant="link" className="type-small" onClick={() => setIsPickerOpen(true)}>
                 {getTemplate(resume.template).name} · Change
-              </button>
+              </Button>
             </div>
             {tooLong && (
-              <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200" role="status" data-testid="fit-too-long">
-                <p className="font-semibold">
-                  Your resume is still {fitStatus.overflowLines} {fitStatus.overflowLines === 1 ? "line" : "lines"} too long for one page.
-                </p>
-                <p className="mt-1">Everything is already at the smallest readable size, so some content has to go. A few ideas:</p>
-                {suggestions.length > 0 && (
-                  <ul className="mt-2 list-disc space-y-1 pl-5">
-                    {suggestions.map((suggestion) => (
-                      <li key={suggestion}>{suggestion}</li>
-                    ))}
-                  </ul>
-                )}
-                <button type="button" onClick={showHideSections} className="mt-3 font-medium text-amber-900 underline underline-offset-2 dark:text-amber-100">
-                  Hide sections in the Design tab
-                </button>
+              <div className="mb-3" data-testid="fit-too-long">
+                <Alert
+                  tone="warning"
+                  role="status"
+                  title={`Your resume is still ${fitStatus.overflowLines} ${fitStatus.overflowLines === 1 ? "line" : "lines"} too long for one page.`}
+                  action={
+                    <Button size="sm" onClick={showHideSections}>
+                      Hide sections in the Design tab
+                    </Button>
+                  }
+                >
+                  Everything is already at the smallest readable size, so some content has to go. A few ideas:
+                  {suggestions.length > 0 && (
+                    <ul className="mt-2 list-disc space-y-1 pl-5">
+                      {suggestions.map((suggestion) => (
+                        <li key={suggestion}>{suggestion}</li>
+                      ))}
+                    </ul>
+                  )}
+                </Alert>
               </div>
             )}
             <ResumePreview resume={resume} printRef={printRef} highlightPlaceholders onStatus={setPreviewStatus} />
@@ -482,9 +364,7 @@ export default function Editor() {
         </div>
       </div>
 
-      {isPickerOpen && (
-        <TemplatePicker resume={resume} onSelect={handleSelectTemplate} onClose={() => setIsPickerOpen(false)} />
-      )}
+      {isPickerOpen && <TemplatePicker resume={resume} onSelect={handleSelectTemplate} onClose={() => setIsPickerOpen(false)} />}
     </div>
   );
 }
