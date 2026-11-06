@@ -121,7 +121,16 @@ test("Tailor to a job", async (t) => {
     jobUrl = page.url();
     await page.waitForSelector('[data-testid="match-score"]');
     assert.ok((await score()) > 0 && (await score()) < 100);
+    // The report's notes are one alert: the most important first, the rest behind "Show N more notes"
+    const notes = () => page.$$eval('[data-testid="report-notes"] [data-testid]', (items) => items.map((item) => item.dataset.testid).filter((id) => id !== "rewrites-dropped"));
+    assert.equal((await notes()).length, 1, `one note shows at first: ${await notes()}`);
+    assert.notEqual((await notes())[0], "honest-note", "a warning comes before the honesty note");
+    await page.evaluate(() => [...document.querySelectorAll('[data-testid="report-notes"] button')].find((button) => /^Show \d+ more notes?$/.test(button.textContent.trim())).click());
+    const all = await notes();
+    assert.ok(all.length >= 2 && all.at(-1) === "honest-note", `all notes after expanding, the honesty note last: ${all}`);
+    if (all.includes("nearly-identical")) assert.equal(all[0], "nearly-identical", "a nearly identical copy is the first note");
     assert.match(await textOf('[data-testid="ai-off-note"]'), /AI is off/, "the report says it was tailored without AI");
+    assert.match(await textOf('[data-testid="honest-note"]'), /We only use what's true in your resume/);
     const differences = await textOf('[data-testid="differences"]');
     assert.match(differences, /How this version differs/);
     assert.match(differences, /Projects left out\s*1/, `the excluded project is counted: ${differences}`);

@@ -22,6 +22,7 @@ import { Field, Input, Select, Textarea } from "../components/ui/Form";
 import Button from "../components/ui/Button";
 import BackLink from "../components/ui/BackLink";
 import SegmentedControl from "../components/ui/SegmentedControl";
+import Tabs from "../components/ui/Tabs";
 
 // Cover letters (/cover-letters/new?job=<jobId> and /cover-letters/:id), via /api/cover-letters:
 //   new    - generate a letter for a tailored job: tone, length, language, the recipient (name and
@@ -324,6 +325,7 @@ function LetterEditor({ id }) {
   const [confirm, setConfirm] = useState(null); // "regenerate" | "download" | { opening: index }
   const [busy, setBusy] = useState(false);
   const [fit, setFit] = useState(null);
+  const [view, setView] = useState("edit"); // Phones and tablets: "edit" or "preview" (as in the resume editor)
   const pending = useRef({});
   const timer = useRef(null);
   const printRef = useRef(null);
@@ -482,11 +484,25 @@ function LetterEditor({ id }) {
             <span className="hidden sm:inline">Download PDF</span>
           </Button>
         </div>
+
+        {/* Phones and tablets: Edit / Preview (side by side on large screens) */}
+        <div className="mx-auto flex max-w-7xl px-4 pb-2.5 sm:px-6 lg:hidden">
+          <Tabs
+            variant="segmented"
+            label="Show"
+            value={view}
+            onChange={setView}
+            tabs={[
+              { id: "edit", label: "Edit" },
+              { id: "preview", label: "Preview" },
+            ]}
+          />
+        </div>
       </div>
 
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-2">
         {/* Left: the letter (min-w-0: grid columns may shrink below the A4 preview's width) */}
-        <div className="min-w-0 space-y-4">
+        <div className={`min-w-0 space-y-4 ${view === "edit" ? "block" : "hidden"} lg:block`}>
           {placeholders.length > 0 && (
             <div data-testid="letter-placeholders">
               <Alert tone="warning" role="status" title={`Fill ${placeholders.length === 1 ? "this" : `these ${placeholders.length}`} before sending`}>
@@ -570,7 +586,7 @@ function LetterEditor({ id }) {
         </div>
 
         {/* Right: live preview (scaled to the column's width) */}
-        <div className="min-w-0">
+        <div className={`min-w-0 ${view === "preview" ? "block" : "hidden"} lg:block`}>
           <div className="lg:sticky lg:top-36 lg:max-h-workspace lg:overflow-y-auto lg:p-1">
             <p className="mb-3 hidden type-eyebrow text-fg-muted lg:block">Live preview · {getTemplate(resume.template).name}</p>
             {fit?.fitStatus && !fit.fitStatus.pending && !fit.fitStatus.fits && (

@@ -195,6 +195,27 @@ test("Cover letters", async (t) => {
     await page.waitForFunction(() => document.querySelector("#job-description")?.open && document.querySelector("#job-description").innerText.includes("Familiarity with GraphQL"), { timeout: 10000 });
   });
 
+  await t.test("on a phone: Edit / Preview, like the resume editor", async () => {
+    await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+    try {
+      await page.goto(`${APP}/cover-letters/${letterId}`, { waitUntil: "networkidle0" });
+      await page.waitForSelector('[aria-label="Cover letter text"]');
+      const shown = (selector) => page.$eval(selector, (el) => el.offsetParent !== null);
+      assert.ok(await shown('[aria-label="Cover letter text"]'), "the letter's form shows first");
+      assert.ok(!(await shown("[data-page]")), "the preview is hidden while editing");
+
+      await clickText('[role="tab"]', "Preview");
+      await page.waitForFunction(() => document.querySelector("[data-page]")?.offsetParent !== null, { timeout: 10000 });
+      assert.ok(!(await shown('[aria-label="Cover letter text"]')), "the form is hidden in Preview");
+      await waitForPreview("Meera Iyer");
+
+      await clickText('[role="tab"]', "Edit");
+      await page.waitForFunction(() => document.querySelector('[aria-label="Cover letter text"]')?.offsetParent !== null, { timeout: 10000 });
+    } finally {
+      await page.setViewport({ width: 1400, height: 1000 });
+    }
+  });
+
   // React's dev mode loads a page twice; both loads fail here, and the message must show once
   await t.test("a letter that doesn't exist: one toast, not two", async () => {
     await page.goto(`${APP}/cover-letters/0123456789abcdef01234567`, { waitUntil: "networkidle0" });

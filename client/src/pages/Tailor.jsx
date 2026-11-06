@@ -546,8 +546,7 @@ function JobReport({ jobId }) {
         }
       />
       <div className="mt-6 space-y-4">
-        <HonestNote />
-        <TailoringNote tailoring={job.tailoring} aiEnabled={job.aiEnabled} />
+        <ReportNotes job={job} />
         {job.tailoring?.differences && <Differences differences={job.tailoring.differences} />}
       </div>
       <DeleteApplicationModal open={deleteOpen} name={job.tailoredResume?.title ?? jobTitleOf(job.analysis)} onChoose={remove} onCancel={() => setDeleteOpen(false)} loading={deleting} />
@@ -577,39 +576,95 @@ function JobReport({ jobId }) {
   );
 }
 
-// How this copy was tailored: AI or rules only, the strength, and the generated lines the
-// safety check dropped (with why). Jobs tailored before this was saved have no tailoring.
-function TailoringNote({ tailoring, aiEnabled }) {
-  if (!tailoring) return aiEnabled === false ? <AiOffNote /> : null;
-  if (tailoring.tailoredWith !== "rules+ai") return <AiOffNote />;
-  const dropped = tailoring.rejectedRewrites ?? [];
-  const strength = STRENGTHS.find((option) => option.value === tailoring.strength)?.label ?? "Balanced";
+// The match report's notes, most important first: the copy is nearly identical to the base
+// resume, AI was off, how it was tailored (AI strength, rewrites the safety check dropped), and
+// the honesty note. Jobs tailored before the tailoring details were saved have no tailoring.
+function reportNotes(job) {
+  const { tailoring, aiEnabled } = job;
+  const notes = [];
+  const differences = tailoring?.differences;
+  if (differences?.nearlyIdentical) {
+    notes.push({
+      id: "nearly-identical",
+      tone: "warning",
+      title: `This version is nearly identical to your base resume (${Math.round(differences.changedShare * 100)}% of its words changed).`,
+      body: (
+        <ul className="list-disc pl-5">
+          {differences.reasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+      ),
+    });
+  }
+  const aiOff = tailoring ? tailoring.tailoredWith !== "rules+ai" : aiEnabled === false;
+  if (aiOff) notes.push({ id: "ai-off-note", tone: "warning", title: AI_OFF_NOTE });
+  if (tailoring && !aiOff) {
+    const dropped = tailoring.rejectedRewrites ?? [];
+    const strength = STRENGTHS.find((option) => option.value === tailoring.strength)?.label ?? "Balanced";
+    notes.push({
+      id: "tailoring-note",
+      tone: "info",
+      title: (
+        <>
+          Tailored with AI · {strength} ·{" "}
+          <span data-testid="rewrites-dropped" data-count={dropped.length}>
+            {dropped.length === 1 ? "1 rewrite" : `${dropped.length} rewrites`} dropped by the safety check
+          </span>
+        </>
+      ),
+      body: dropped.length > 0 && (
+        <ul className="list-disc space-y-1 pl-5">
+          {dropped.map((item, index) => (
+            <li key={index}>
+              <span className="font-medium text-fg capitalize">{item.section}</span>: {item.problem}
+            </li>
+          ))}
+        </ul>
+      ),
+    });
+  }
+  notes.push({ id: "honest-note", tone: "info", title: HONEST_NOTE });
+  return notes;
+}
+
+// All the notes in one alert: the most important shows, "Show N more notes" expands the rest
+function ReportNotes({ job }) {
+  const [expanded, setExpanded] = useState(false);
+  const [first, ...rest] = reportNotes(job);
+  const note = (item) => (
+    <div data-testid={item.id}>
+      <p className="font-medium text-fg">{item.title}</p>
+      {item.body && <div className="mt-1 type-small text-fg-muted">{item.body}</div>}
+    </div>
+  );
   return (
-    <Card padding="sm" tone="quiet" className="type-small text-fg" data-testid="tailoring-note">
-      <p>
-        Tailored with AI · {strength} ·{" "}
-        <span data-testid="rewrites-dropped" data-count={dropped.length}>
-          {dropped.length === 1 ? "1 rewrite" : `${dropped.length} rewrites`} dropped by the safety check
-        </span>
-      </p>
-      {dropped.length > 0 && (
-        <details className="mt-2">
-          <summary className="cursor-pointer text-fg-muted">Why they were dropped</summary>
-          <ul className="mt-2 list-disc space-y-1 pl-5 text-fg-muted">
-            {dropped.map((item, index) => (
-              <li key={index}>
-                <span className="font-medium text-fg capitalize">{item.section}</span>: {item.problem}
-              </li>
-            ))}
-          </ul>
-        </details>
+    <Alert
+      tone={first.tone}
+      role="status"
+      data-testid="report-notes"
+      action={
+        rest.length > 0 && (
+          <Button variant="link" className="type-small" onClick={() => setExpanded((value) => !value)} aria-expanded={expanded} aria-controls="report-more-notes">
+            {expanded ? "Show fewer notes" : `Show ${rest.length} more ${rest.length === 1 ? "note" : "notes"}`}
+          </Button>
+        )
+      }
+    >
+      {note(first)}
+      {expanded && (
+        <div id="report-more-notes" className="mt-3 space-y-3 border-t border-line pt-3">
+          {rest.map((item) => (
+            <div key={item.id}>{note(item)}</div>
+          ))}
+        </div>
       )}
-    </Card>
+    </Alert>
   );
 }
 
-// "How this version differs": the changes by type, and a warning (with why) when the tailored
-// copy is nearly the same as the base resume
+// "How this version differs": the changes by type and how much of the text changed (the warning
+// for a copy that's nearly the same as the base resume is in the report's notes)
 function Differences({ differences }) {
   const percent = Math.round(differences.changedShare * 100);
   return (
@@ -617,17 +672,6 @@ function Differences({ differences }) {
       <h2 id="differences" className="type-h3 text-fg">
         How this version differs
       </h2>
-      {differences.nearlyIdentical && (
-        <div className="mt-3" data-testid="nearly-identical">
-          <Alert tone="warning" title={`This version is nearly identical to your base resume (${percent}% of its words changed).`}>
-            <ul className="list-disc pl-5">
-              {differences.reasons.map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </ul>
-          </Alert>
-        </div>
-      )}
       {differences.byType.length ? (
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
           {differences.byType.map((entry) => (
@@ -640,7 +684,7 @@ function Differences({ differences }) {
       ) : (
         <p className="mt-2 type-small text-fg-muted">No changes were made.</p>
       )}
-      {!differences.nearlyIdentical && <p className="mt-2 type-small text-fg-muted">{percent}% of the words differ from your base resume (reordering not counted).</p>}
+      <p className="mt-2 type-small text-fg-muted">{percent}% of the words differ from your base resume (reordering not counted).</p>
     </Card>
   );
 }
