@@ -3,6 +3,7 @@ import Resume from "../../models/Resume.js";
 import Job from "../../models/Job.js";
 import CoverLetter from "../../models/CoverLetter.js";
 import { deletePhoto, isPhotoStorageConfigured } from "../photoStorage.js";
+import { deleteOriginals } from "../import/originalFiles.js";
 
 // Applications: a tailored resume + its job + its cover letters. Finding a tailored resume's
 // base resume and earlier versions for the same job, and deleting without leaving orphans
@@ -49,7 +50,7 @@ export function defaultTitle(analysis, source, now = new Date()) {
 
 // Deletes the user's resumes (ids that aren't theirs are ignored). Their cover letters move to
 // another resume of the same job (its tailored copy, else its base resume); a letter with no
-// resume left is deleted too. Returns { resumes, lettersMoved, lettersDeleted }.
+// resume left is deleted too, and so are their uploaded originals. Returns { resumes, lettersMoved, lettersDeleted }.
 export async function deleteResumes(userId, resumeIds) {
   const resumes = await Resume.find({ _id: { $in: validIds(resumeIds) }, userId }, { photoPublicId: 1 }).lean();
   const gone = new Set(resumes.map((resume) => String(resume._id)));
@@ -70,6 +71,7 @@ export async function deleteResumes(userId, resumeIds) {
   }
   if (orphans.length) await CoverLetter.deleteMany({ _id: { $in: orphans } });
   await Resume.deleteMany({ _id: { $in: [...gone] } });
+  await deleteOriginals(userId, [...gone]); // The files they were imported from
 
   // Their photos too (if that fails, the resumes are still deleted)
   if (isPhotoStorageConfigured()) {

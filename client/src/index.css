@@ -109,4 +109,29 @@
       @apply bg-transparent p-0;
     }
   }
+
+  /* An uploaded Word original, shown as a page of paper (white in both themes, like the resume
+     previews): plain document styles for the HTML the server converted it to */
+  .original-docx {
+    color: #1d1d1f;
+    padding: 48px 56px;
+    font: 11pt/1.45 Calibri, Carlito, Arial, sans-serif;
+    max-width: 794px;
+    margin: 0 auto;
+    overflow-wrap: anywhere;
+  }
+  .original-docx h1 { font-size: 20pt; font-weight: 700; margin: 0 0 6pt; }
+  .original-docx h2 { font-size: 14pt; font-weight: 700; margin: 14pt 0 4pt; }
+  .original-docx h3, .original-docx h4 { font-size: 12pt; font-weight: 700; margin: 10pt 0 3pt; }
+  .original-docx p { margin: 0 0 5pt; }
+  .original-docx ul, .original-docx ol { margin: 0 0 6pt; padding-left: 20pt; }
+  .original-docx ul { list-style: disc; }
+  .original-docx ol { list-style: decimal; }
+  .original-docx table { border-collapse: collapse; margin: 6pt 0; }
+  .original-docx td, .original-docx th { border: 1px solid #d0d0d0; padding: 3pt 6pt; vertical-align: top; }
+  .original-docx img { max-width: 100%; height: auto; }
+  .original-docx a { color: #1f3a5f; text-decoration: underline; }
+  @media (max-width: 640px) {
+    .original-docx { padding: 24px 20px; font-size: 10pt; }
+  }
 }

@@ -168,6 +168,7 @@ export const tailorToJob = async (req, res) => {
   const changes = result.changes.map((change) => ({ ...change, status: "pending" }));
   const content = {
     ...result.resume,
+    original: undefined, // The uploaded original stays with the imported resume
     title,
     userId: req.user._id,
     atsScore: { score: after.score, grade: after.grade, checkedAt: new Date(), jobDescription: description },

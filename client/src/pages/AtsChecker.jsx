@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowRight, FileText, X } from "lucide-react";
 import toast from "../utils/toast";
 import api from "../api/axios";
@@ -134,6 +134,10 @@ export default function AtsChecker() {
   const [savedResumes, setSavedResumes] = useState(null); // null until loaded
   const [resumeId, setResumeId] = useState(null);
   const [jobDescription, setJobDescription] = useState("");
+  // ?original=<resumeId>: check the file one of the user's resumes was imported from
+  const [searchParams, setSearchParams] = useSearchParams();
+  const originalOf = searchParams.get("original");
+  const autoStarted = useRef(false);
 
   const [step, setStep] = useState(-1); // Progress step while analyzing; -1 = not analyzing
   const stepRef = useRef(-1); // The same step, readable inside handleAnalyze while it awaits
@@ -161,14 +165,16 @@ export default function AtsChecker() {
   }, [user]);
 
   const analyzing = step >= 0;
-  const usingSaved = Boolean(user) && sourceTab === "saved";
-  const hasResume = usingSaved ? Boolean(resumeId) : Boolean(file) && !fileError;
+  const originalResume = user && originalOf ? savedResumes?.find((r) => r._id === originalOf && r.original) : null;
+  const usingOriginal = Boolean(originalResume);
+  const usingSaved = !usingOriginal && Boolean(user) && sourceTab === "saved";
+  const hasResume = usingOriginal || (usingSaved ? Boolean(resumeId) : Boolean(file) && !fileError);
   const jobWords = countWords(jobDescription);
   const jobTooShort = jobWords > 0 && jobWords < MIN_JOB_WORDS; // Empty is fine: it's optional
   const canAnalyze = hasResume && !jobTooShort && !analyzing;
 
   const handleAnalyze = async (event) => {
-    event.preventDefault();
+    event?.preventDefault();
     if (!canAnalyze) return;
 
     setError("");
@@ -180,7 +186,8 @@ export default function AtsChecker() {
     const formData = new FormData();
     if (jobWords) formData.append("jobDescription", jobDescription);
     setAnalyzedJobDescription(jobWords ? jobDescription : ""); // The optimizer uses the same one
-    if (usingSaved) formData.append("resumeId", resumeId);
+    if (usingOriginal) formData.append("originalOf", originalOf);
+    else if (usingSaved) formData.append("resumeId", resumeId);
     else formData.append("file", toUploadFile(file));
 
     try {
@@ -200,6 +207,16 @@ export default function AtsChecker() {
       setStep(-1);
     }
   };
+
+  // Opened from an original ("Check ATS score"): start the check straight away, once
+  useEffect(() => {
+    if (usingOriginal && !autoStarted.current) {
+      autoStarted.current = true;
+      handleAnalyze();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only when the original is first known
+  }, [usingOriginal]);
+  const stopUsingOriginal = () => setSearchParams({}, { replace: true });
 
   // The optimizer saves an improved copy (the original is never changed), then the review
   // screen shows each change to accept or reject
@@ -243,7 +260,7 @@ export default function AtsChecker() {
       <div className={pageClass()}>
         <AnalyzeProgress
           step={step}
-          fileName={usingSaved ? savedResumes?.find((r) => r._id === resumeId)?.title : file?.name}
+          fileName={usingOriginal ? originalResume.original.fileName : usingSaved ? savedResumes?.find((r) => r._id === resumeId)?.title : file?.name}
         />
       </div>
     );
@@ -272,7 +289,17 @@ export default function AtsChecker() {
           {/* Left: resume */}
           <Card>
             <CardHeader title="1. Your resume" />
-            {user && (
+            {usingOriginal && (
+              <div className="flex items-center gap-3 rounded-xl border border-line bg-surface-2 px-4 py-3" data-testid="ats-original-source">
+                <FileText className="size-5 shrink-0 text-fg-muted" aria-hidden="true" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate type-label text-fg">{originalResume.original.fileName}</p>
+                  <p className="type-small text-fg-muted">Your uploaded original of "{originalResume.title}"</p>
+                </div>
+                <Button variant="ghost" size="sm" iconOnly icon={X} onClick={stopUsingOriginal} aria-label="Check another resume instead" />
+              </div>
+            )}
+            {user && !usingOriginal && (
               <div className="mb-4">
                 <Tabs
                   variant="segmented"
@@ -287,7 +314,7 @@ export default function AtsChecker() {
                 />
               </div>
             )}
-            {usingSaved ? (
+            {usingOriginal ? null : usingSaved ? (
               <SavedResumePicker resumes={savedResumes ?? []} loading={savedResumes === null} selectedId={resumeId} onSelect={setResumeId} />
             ) : (
               <FileDrop

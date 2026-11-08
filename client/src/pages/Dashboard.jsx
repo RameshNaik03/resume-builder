@@ -345,6 +345,7 @@ export default function Dashboard() {
         <ImportResumeModal
           initialFile={pendingFile}
           onClose={closeImport}
+          onImported={(resume) => setResumes((current) => [resume, ...current])}
           onStartFromScratch={() => {
             closeImport();
             handleCreate();

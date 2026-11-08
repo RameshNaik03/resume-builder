@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useReactToPrint } from "react-to-print";
-import { ArrowLeft, Download, LayoutTemplate } from "lucide-react";
+import { ArrowLeft, Download, FileText, LayoutTemplate } from "lucide-react";
 import toast from "../utils/toast";
 import { getTemplate } from "../templates/registry";
 import { resolveDesign } from "../templates/design";
@@ -21,6 +21,7 @@ import ProjectsForm from "../components/editor/ProjectsForm";
 import AdditionalForm from "../components/editor/AdditionalForm";
 import TemplatePicker from "../components/editor/TemplatePicker";
 import DesignPanel from "../components/editor/DesignPanel";
+import OriginalDialog from "../components/original/OriginalDialog";
 import Switch from "../components/Switch";
 import Button from "../components/ui/Button";
 import Tabs from "../components/ui/Tabs";
@@ -46,6 +47,7 @@ export default function Editor() {
   const [activeTab, setActiveTab] = useState("edit"); // Mobile only: "edit" or "preview"
   const [formPanel, setFormPanel] = useState("content"); // Left column: "content" or "design"
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isOriginalOpen, setIsOriginalOpen] = useState(false); // "View original" (imported resumes)
 
   // After importing a file, the dashboard sends us here with { imported: true }
   const location = useLocation();
@@ -195,6 +197,11 @@ export default function Editor() {
           />
           <div className="hidden sm:block">{saveStatus}</div>
 
+          {resume.original && (
+            <Button icon={FileText} onClick={() => setIsOriginalOpen(true)} aria-label="View original" title="View original" className="max-xl:w-9 max-xl:px-0">
+              <span className="hidden xl:inline">View original</span>
+            </Button>
+          )}
           <Button icon={LayoutTemplate} onClick={() => setIsPickerOpen(true)} aria-label="Templates" className="max-md:w-9 max-md:px-0">
             <span className="hidden md:inline">Templates</span>
           </Button>
@@ -356,6 +363,7 @@ export default function Editor() {
       </div>
 
       {isPickerOpen && <TemplatePicker resume={resume} onSelect={handleSelectTemplate} onClose={() => setIsPickerOpen(false)} />}
+      {isOriginalOpen && <OriginalDialog resume={resume} onClose={() => setIsOriginalOpen(false)} />}
     </div>
   );
 }

@@ -110,6 +110,13 @@
   max-height: calc(100vh - 10rem);
 }
 
+/* A sheet of paper: a resume page or an uploaded original. White in both themes (it's what
+   prints), lifted off the page with a hairline edge */
+@utility paper {
+  background-color: #ffffff;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.05), var(--ds-elevation-raised);
+}
+
 /* The type scale: serif for page-level headings, Inter for the rest */
 @utility type-hero {
   font-family: var(--font-title);

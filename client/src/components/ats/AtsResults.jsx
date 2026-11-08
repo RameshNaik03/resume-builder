@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { CheckCircle2, Copy, Info, PenLine, Wand2 } from "lucide-react";
+import { CheckCircle2, Copy, FileText, Info, PenLine, Wand2 } from "lucide-react";
 import toast from "../../utils/toast";
 import CategoryCard from "./CategoryCard";
 import { pageClass } from "../ui/pageLayout";
@@ -278,6 +278,11 @@ export default function AtsResults({ result, onReset, onGenerate, generating }) 
             {fromSavedResume && (
               <Button as={Link} to={`/editor/${result.source.resumeId}`} icon={PenLine} className="mt-5 w-full">
                 Edit this resume
+              </Button>
+            )}
+            {result.source?.type === "original" && (
+              <Button as={Link} to={`/resumes/${result.source.resumeId}/original`} icon={FileText} className="mt-5 w-full">
+                Back to your original
               </Button>
             )}
           </Card>

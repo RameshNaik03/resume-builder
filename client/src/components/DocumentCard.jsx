@@ -9,14 +9,15 @@ import ResumeThumbnail from "./ui/ResumeThumbnail";
 //   title / meta / badge - the text under the thumbnail (badge: an element, e.g. <Badge>)
 //   menuItems - the Menu's items (see ui/Menu.jsx); selected / onSelect - the bulk checkbox
 //   linkProps - extra props for the title link (e.g. a title attribute)
-export default function DocumentCard({ resume, to, title, meta, badge, menuItems, selected = false, onSelect, linkProps = {}, ...props }) {
+//   thumbnail - something else to show in place of the resume's page (e.g. an uploaded original)
+export default function DocumentCard({ resume, to, title, meta, badge, menuItems, selected = false, onSelect, linkProps = {}, thumbnail, ...props }) {
   return (
     <article
       className={`group relative flex flex-col rounded-xl border bg-surface shadow-soft transition hover:border-line-strong hover:shadow-raised ${selected ? "border-accent" : "border-line"}`}
       {...props}
     >
       <div className="flex h-52 justify-center overflow-hidden rounded-t-xl border-b border-line bg-surface-2 px-6 pt-6">
-        {resume && <ResumeThumbnail resume={resume} templateId={resume.template} width={196} className="transition-transform duration-300 motion-safe:group-hover:-translate-y-1" />}
+        {thumbnail ?? (resume && <ResumeThumbnail resume={resume} templateId={resume.template} width={196} className="transition-transform duration-300 motion-safe:group-hover:-translate-y-1" />)}
       </div>
 
       {onSelect && (

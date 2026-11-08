@@ -3,6 +3,8 @@ import extractText from "../services/import/extractText.js";
 import parseWithAI, { isAIEnabled } from "../services/import/parseWithAI.js";
 import parseWithRules from "../services/import/parseWithRules.js";
 import sanitizeResume from "../services/import/sanitizeResume.js";
+import detectDesign from "../services/import/detectDesign.js";
+import { kindOf, saveOriginal } from "../services/import/originalFiles.js";
 
 // TEMPORARY DEBUG LOGGING (multi-page imports) - remove once imports are confirmed working.
 // Off in production, because it prints parts of the user's resume.
@@ -60,13 +62,25 @@ export const importResume = async (req, res) => {
     );
   }
 
-  // 3. Save it as a new resume for this user. No template yet: the user picks one next.
+  // 3. The file's design (fonts, colours, columns, sections...), which the client matches to a
+  //    template. null when it can't be read; the import still works.
+  const design = await detectDesign(req.file);
+
+  // 4. Save it as a new resume for this user, with the uploaded file kept unchanged. No template
+  //    yet: the user first sees their original, then keeps it or picks a (matching) template.
   const resume = await Resume.create({
     ...data,
     title: titleFromFileName(req.file.originalname),
     template: null,
     userId: req.user._id,
+    original: { fileName: req.file.originalname.slice(0, 200), kind: kindOf(req.file.mimetype), size: req.file.buffer.length, uploadedAt: new Date(), design },
   });
+  try {
+    await saveOriginal(req.user._id, resume._id, req.file);
+  } catch (error) {
+    await Resume.deleteOne({ _id: resume._id }); // No resume pointing at a file that wasn't saved
+    throw error;
+  }
 
   res.status(201).json({ resume, parsedWith, warnings });
 };

@@ -7,6 +7,8 @@ import {
   deleteResume,
   deleteManyResumes,
   duplicateResume,
+  getOriginal,
+  getOriginalPreview,
 } from "../controllers/resumeController.js";
 import { importResume } from "../controllers/importController.js";
 import { removePhoto, uploadPhoto } from "../controllers/photoController.js";
@@ -25,6 +27,8 @@ router.post("/import", importLimiter, uploadResumeFile, importResume);
 router.post("/delete-many", deleteManyResumes); // Bulk delete (dashboard): resumes and whole applications
 router.route("/:id").get(getResumeById).put(updateResume).delete(deleteResume);
 router.post("/:id/duplicate", duplicateResume);
+router.get("/:id/original", getOriginal); // The uploaded file, unchanged (owner only)
+router.get("/:id/original/preview", getOriginalPreview); // A DOCX original as HTML
 router.route("/:id/photo").post(photoLimiter, uploadPhotoFile, uploadPhoto).delete(removePhoto);
 
 export default router;

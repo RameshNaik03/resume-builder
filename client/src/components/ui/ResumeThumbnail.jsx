@@ -10,7 +10,7 @@ const A4_WIDTH_PX = 794;
 export default function ResumeThumbnail({ resume, templateId, width = 220, className = "" }) {
   const scale = width / A4_WIDTH_PX;
   return (
-    <div className={`overflow-hidden rounded-sm bg-white shadow-raised ring-1 ring-black/5 ${className}`} style={{ width, height: width * (297 / 210) }} aria-hidden="true">
+    <div className={`overflow-hidden rounded-sm paper ${className}`} style={{ width, height: width * (297 / 210) }} aria-hidden="true">
       <div className="pointer-events-none" style={{ width: A4_WIDTH_PX, transform: `scale(${scale})`, transformOrigin: "top left" }}>
         <ResumeSheet>
           <TemplateRenderer resume={resume} templateId={templateId} withLinks={false} />

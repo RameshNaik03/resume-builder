@@ -185,6 +185,24 @@ const resumeSchema = new mongoose.Schema(
     //   jobTitle, optimizedWith, lockedAt }. Set only by the ATS routes, except lockedAt: set
     //   by updateResume when the content is edited in the editor (review decisions are locked).
     atsOptimization: { type: mongoose.Schema.Types.Mixed, default: undefined },
+    // For an imported resume: the uploaded file, kept unchanged (its bytes are in OriginalFile,
+    // see models/OriginalFile.js), and the design read from it (services/import/detectDesign.js),
+    // which the client matches to a template. Set only by the import, never by an update, and
+    // not carried into copies (duplicate, tailored, ATS-optimized).
+    //   kind: "pdf" | "docx"; design: the detected design, or null when it couldn't be read
+    original: {
+      type: new mongoose.Schema(
+        {
+          fileName: String,
+          kind: { type: String, enum: ["pdf", "docx"] },
+          size: Number,
+          uploadedAt: Date,
+          design: { type: mongoose.Schema.Types.Mixed, default: null },
+        },
+        { _id: false }
+      ),
+      default: undefined,
+    },
   },
   // minimize: false keeps empty objects, so `design: {}` is stored and returned
   // (Mongoose drops empty objects by default)

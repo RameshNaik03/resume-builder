@@ -11,6 +11,7 @@ import scoreContent from "../services/ats/scoreContent.js";
 import { buildContent } from "../services/ats/optimizationOps.js";
 import parseWithRules from "../services/import/parseWithRules.js";
 import sanitizeResume from "../services/import/sanitizeResume.js";
+import { findOriginal } from "../services/import/originalFiles.js";
 
 const MIN_JOB_WORDS = 30;
 const MAX_JOB_CHARACTERS = 20000;
@@ -48,7 +49,8 @@ async function findUsersResume(req, res, resumeId) {
 }
 
 // POST /api/ats/analyze (public; multipart/form-data)
-// Fields: file (PDF/DOCX) or resumeId (logged-in users only), jobDescription (optional),
+// Fields: file (PDF/DOCX), resumeId or originalOf (logged-in users only: a saved resume, or the
+// file a resume was imported from), jobDescription (optional),
 // jobTitle (optional, overrides the title found in the job description).
 // The file is only read in memory and never saved.
 //
@@ -58,27 +60,46 @@ async function findUsersResume(req, res, resumeId) {
 // 3. If ANTHROPIC_API_KEY is set, the AI judges the content-quality checks and writes tailored
 //    fixes. If it fails, the rule-based result is returned unchanged.
 export const analyzeResume = async (req, res) => {
-  const { resumeId } = req.body ?? {};
-  if (!req.file && !resumeId) {
+  const { resumeId, originalOf } = req.body ?? {};
+  if (!req.file && !resumeId && !originalOf) {
     res.status(400);
     throw new Error("Please upload your resume as a PDF or DOCX file.");
   }
   const { jobDescription, jobTitle } = readJobFields(req, res);
+
+  // The uploaded original of one of the user's resumes is checked like a file upload
+  let file = req.file;
+  let originalResume = null;
+  if (!file && originalOf) {
+    if (!req.user) {
+      res.status(401);
+      throw new Error("Please log in to check a saved resume.");
+    }
+    originalResume = await findUsersResume(req, res, originalOf);
+    const stored = originalResume.original ? await findOriginal(req.user._id, originalResume._id) : null;
+    if (!stored) {
+      res.status(404);
+      throw new Error("This resume has no uploaded original.");
+    }
+    file = { buffer: Buffer.from(stored.data), mimetype: stored.mimetype, originalname: stored.fileName };
+  }
 
   // Step 1: parse check. extractText also rejects files that aren't really PDF/DOCX.
   // A saved resume has no file: its text is built from the data and its layout from the template.
   let atsView;
   let inspection;
   let source;
-  if (req.file) {
-    atsView = await extractText(req.file, { allowNoText: true });
+  if (file) {
+    atsView = await extractText(file, { allowNoText: true });
     try {
-      inspection = await inspectFile(req.file);
+      inspection = await inspectFile(file);
     } catch {
       res.status(422);
       throw new Error("We couldn't read this file's layout. It may be damaged. Try saving it again as a PDF or DOCX.");
     }
-    source = { type: "file", fileName: req.file.originalname };
+    source = originalResume
+      ? { type: "original", resumeId: originalResume._id, title: originalResume.title, fileName: file.originalname }
+      : { type: "file", fileName: file.originalname };
   } else {
     if (!req.user) {
       res.status(401);
@@ -91,7 +112,7 @@ export const analyzeResume = async (req, res) => {
   }
   // The ATS view keeps the PDF's own text order (what an ATS reads, scrambled or not); the
   // resume data is read in page order so the optimizer gets each title with its own bullets
-  const readingOrderText = req.file ? await extractText(req.file, { allowNoText: true, readingOrder: true }) : atsView;
+  const readingOrderText = file ? await extractText(file, { allowNoText: true, readingOrder: true }) : atsView;
   const parsedResume = sanitizeResume(parseWithRules(readingOrderText));
 
   // Step 2: rule-based score
@@ -119,8 +140,8 @@ export const analyzeResume = async (req, res) => {
     });
   }
   const { score, grade, categories } = totals(checks);
-  // A saved resume's score also becomes its ATS badge on the dashboard
-  if (source.type === "saved") await saveAtsScore(source.resumeId, { score, grade }, jobDescription);
+  // A saved resume's score (or its original's) also becomes its ATS badge on the dashboard
+  if (source.type === "saved" || source.type === "original") await saveAtsScore(source.resumeId, { score, grade }, jobDescription);
 
   res.json({
     score,
@@ -141,8 +162,8 @@ export const analyzeResume = async (req, res) => {
     headerFooterText: inspection.headerFooter.texts, // Lets the optimizer move contact details into the body
     source,
     file: {
-      name: req.file ? req.file.originalname : source.title,
-      type: req.file ? (req.file.mimetype === "application/pdf" ? "pdf" : "docx") : "saved",
+      name: file ? file.originalname : source.title,
+      type: file ? (file.mimetype === "application/pdf" ? "pdf" : "docx") : "saved",
       pages: inspection.pages,
       pagesEstimated: Boolean(inspection.pagesEstimated),
       words: atsView.split(/\s+/).filter(Boolean).length,
@@ -236,6 +257,7 @@ export const optimizeResume = async (req, res) => {
   const changes = result.changes.map((change) => ({ ...change, status: "pending" }));
   const created = await Resume.create({
     ...result.resume,
+    original: undefined, // The uploaded original stays with the imported resume
     title: `${baseTitle} (ATS-optimized)`.slice(0, 100),
     userId: req.user._id,
     atsScore: { score: after.score, grade: after.grade, checkedAt: new Date(), jobDescription },

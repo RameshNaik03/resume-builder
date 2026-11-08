@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Resume from "../models/Resume.js";
 import { copyPhoto, isPhotoStorageConfigured } from "../services/photoStorage.js";
 import { deleteApplications, deleteResumes } from "../services/jobs/applications.js";
+import { docxPreviewHtml, findOriginal } from "../services/import/originalFiles.js";
 
 const MAX_BULK_DELETE = 100;
 
@@ -155,7 +156,8 @@ export const duplicateResume = async (req, res) => {
 
   // Turn the document into a plain object and drop the fields MongoDB should regenerate
   // The copy is a new resume: no ATS score or optimizer review of its own yet
-  const { _id, createdAt, updatedAt, photoPublicId, atsScore, atsOptimization, ...data } = original.toObject();
+  // nor the uploaded original (that file belongs to the imported resume)
+  const { _id, createdAt, updatedAt, photoPublicId, atsScore, atsOptimization, original: uploaded, ...data } = original.toObject();
 
   // The copy starts without a photo; it gets its own copy of the photo below
   const copy = await Resume.create({
@@ -177,4 +179,43 @@ export const duplicateResume = async (req, res) => {
   }
 
   res.status(201).json(copy);
+};
+
+// The uploaded original of one of the user's resumes, or a 404 (also for other users' resumes)
+async function findOwnedOriginal(req, res) {
+  const resume = await findOwnedResume(req, res);
+  const file = resume.original ? await findOriginal(req.user._id, resume._id) : null;
+  if (!file) {
+    res.status(404);
+    throw new Error("This resume has no uploaded original.");
+  }
+  return file;
+}
+
+// GET /api/resumes/:id/original (?download=1 to save it instead of showing it)
+// The file exactly as it was uploaded. Never cached by shared caches: it's private.
+export const getOriginal = async (req, res) => {
+  const file = await findOwnedOriginal(req, res);
+  // filename= for old clients (ASCII only, no quotes); filename*= carries the real name
+  const asciiName = file.fileName.replace(/[^\x20-\x7e]/g, "_").replace(/["\\]/g, "");
+  res.set({
+    "Content-Type": file.mimetype,
+    "Content-Length": String(file.data.length),
+    "Content-Disposition": `${req.query.download ? "attachment" : "inline"}; filename="${asciiName}"; filename*=UTF-8''${encodeURIComponent(file.fileName)}`,
+    "Cache-Control": "private, no-store",
+    "X-Content-Type-Options": "nosniff",
+  });
+  res.send(file.data);
+};
+
+// GET /api/resumes/:id/original/preview (DOCX originals): { html } to show the file in the app
+// (a PDF is drawn by the client from the file itself)
+export const getOriginalPreview = async (req, res) => {
+  const file = await findOwnedOriginal(req, res);
+  if (file.mimetype === "application/pdf") {
+    res.status(400);
+    throw new Error("PDF originals are shown from the file itself.");
+  }
+  res.set("Cache-Control", "private, no-store");
+  res.json({ html: await docxPreviewHtml(file.data) });
 };
