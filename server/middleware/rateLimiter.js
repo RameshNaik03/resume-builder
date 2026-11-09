@@ -90,6 +90,39 @@ export const coverLetterLimiter = rateLimit({
   message: { message: "You've generated a lot of cover letters in the last hour. Please try again later." },
 });
 
+// ---------- Account settings (all must run after the protect middleware) ----------
+
+// Profile and preference changes (a profile change may upload an avatar to Cloudinary)
+export const accountLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 60,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user._id.toString(),
+  message: { message: "You've changed your settings a lot in the last few minutes. Please try again later." },
+});
+
+// Changes that need the current password (email, password, log out everywhere, deleting the
+// account). Counted per account, so a stolen token can't be used to guess the password quickly.
+export const sensitiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 10,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user._id.toString(),
+  message: { message: "Too many attempts. Please try again in 15 minutes." },
+});
+
+// Data exports (each one zips everything the user has, including their files)
+export const exportLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  limit: 5,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  keyGenerator: (req) => req.user._id.toString(),
+  message: { message: "You've reached the limit of 5 data exports per hour. Please try again later." },
+});
+
 // Limits photo uploads per logged-in user (each one is stored on Cloudinary's free tier).
 // Must run after the protect middleware, which sets req.user.
 export const photoLimiter = rateLimit({

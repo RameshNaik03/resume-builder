@@ -145,6 +145,7 @@ const resumeSchema = new mongoose.Schema(
       location: { type: String, trim: true, default: "" },
       linkedin: { type: String, trim: true, default: "" },
       github: { type: String, trim: true, default: "" },
+      website: { type: String, trim: true, default: "" },
       // Set only by the photo routes (POST/DELETE /api/resumes/:id/photo), never by a normal update
       photoUrl: { type: String, trim: true, default: "" },
     },

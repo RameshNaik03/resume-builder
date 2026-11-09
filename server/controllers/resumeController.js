@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Resume from "../models/Resume.js";
+import { CONTACT_FIELDS } from "../models/User.js";
 import { copyPhoto, isPhotoStorageConfigured } from "../services/photoStorage.js";
 import { deleteApplications, deleteResumes } from "../services/jobs/applications.js";
 import { docxPreviewHtml, findOriginal } from "../services/import/originalFiles.js";
@@ -8,7 +9,7 @@ const MAX_BULK_DELETE = 100;
 
 // Personal info fields the client may change. The photo URL isn't one of them:
 // it's only set by the photo routes (see photoController.js).
-const PERSONAL_INFO_FIELDS = ["fullName", "headline", "email", "phone", "location", "linkedin", "github"];
+const PERSONAL_INFO_FIELDS = ["fullName", "headline", "email", "phone", "location", "linkedin", "github", "website"];
 
 // Only these fields can be set from the request body.
 // userId, _id and timestamps are never taken from the client.
@@ -75,10 +76,29 @@ export const getResumes = async (req, res) => {
   res.json(resumes);
 };
 
-// POST /api/resumes
+// The account's defaults (Settings) filled into a new resume's data: contact details the body
+// left empty, the default template and the preferred date format
+export const withAccountDefaults = (data, user) => {
+  const contact = user.contactDefaults ?? {};
+  const prefs = user.preferences ?? {};
+  const personalInfo = { ...data.personalInfo };
+  for (const field of CONTACT_FIELDS) {
+    const given = personalInfo[field];
+    if ((given === undefined || given === "") && contact[field]) personalInfo[field] = contact[field];
+  }
+  const result = { ...data, personalInfo };
+  if (result.template === undefined && prefs.defaultTemplate) result.template = prefs.defaultTemplate;
+  if (prefs.dateFormat) {
+    const design = result.design && typeof result.design === "object" ? result.design : {};
+    if (design.dateFormat === undefined) result.design = { ...design, dateFormat: prefs.dateFormat };
+  }
+  return result;
+};
+
+// POST /api/resumes (pre-filled with the account's defaults, see withAccountDefaults)
 export const createResume = async (req, res) => {
   const resume = await Resume.create({
-    ...pickEditableFields(req.body),
+    ...withAccountDefaults(pickEditableFields(req.body), req.user),
     userId: req.user._id,
   });
 

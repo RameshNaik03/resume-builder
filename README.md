@@ -126,6 +126,14 @@ All routes are prefixed with `/api`. 🔒 = requires `Authorization: Bearer <tok
 | POST | `/auth/forgot-password` | Email a password reset link (same answer whether or not the email exists; rate limited) | |
 | POST | `/auth/reset-password/:token` | Set a new password with the emailed link's token (rate limited) | |
 | GET | `/auth/me` | Get the logged-in user | 🔒 |
+| PATCH | `/account/profile` | Name, contact details that pre-fill new resumes (`phone`, `location`, `linkedin`, `github`, `website`), avatar (multipart `avatar`, square, max 2 MB) or `removeAvatar` (rate limited) | 🔒 |
+| PATCH | `/account/preferences` | `theme`, `language`, `defaultTemplate`, `dateFormat`: defaults for new resumes, cover letters and tailoring (rate limited) | 🔒 |
+| POST | `/account/email` | Change email (`newEmail`, `currentPassword`): emails a 30-minute, one-use link to the new address and a notice to the old one (rate limited) | 🔒 |
+| POST | `/account/email/confirm` | Confirm the change with the link's `token` (only for the account that asked; rate limited) | 🔒 |
+| POST | `/account/password` | Change password (`currentPassword`, `newPassword`); logs out other devices, returns a new token (rate limited) | 🔒 |
+| POST | `/account/logout-all` | Log out on every device (every existing token stops working; rate limited) | 🔒 |
+| GET | `/account/export` | Download all your data as a ZIP: JSON plus uploaded originals and photos (5 per hour) | 🔒 |
+| DELETE | `/account` | Delete the account and everything in it (`currentPassword`, `confirm: "DELETE"`; rate limited) | 🔒 |
 | GET | `/resumes` | List your resumes (title, updatedAt and ATS badge, newest first) | 🔒 |
 | POST | `/resumes` | Create a resume | 🔒 |
 | POST | `/resumes/import` | Create a resume from a PDF or DOCX (multipart `file`; rate limited) | 🔒 |

@@ -6,6 +6,13 @@ import User from "../models/User.js";
 const issuedBeforePasswordChange = (decoded, user) =>
   Boolean(user.passwordChangedAt) && decoded.iat * 1000 < user.passwordChangedAt.getTime();
 
+// True if the token is from before the user's last "log out everywhere" (or password change).
+// Tokens issued before token versions existed have none, which counts as version 0.
+const revokedVersion = (decoded, user) => (decoded.tv ?? 0) !== (user.tokenVersion ?? 0);
+
+// True when a valid token may no longer be used
+const tokenRevoked = (decoded, user) => issuedBeforePasswordChange(decoded, user) || revokedVersion(decoded, user);
+
 // Protects routes: only lets the request through if it has a valid JWT.
 // Expects the header: Authorization: Bearer <token>
 export const protect = async (req, res, next) => {
@@ -36,6 +43,10 @@ export const protect = async (req, res, next) => {
     res.status(401);
     throw new Error("Not authorized, password was changed. Please log in again");
   }
+  if (revokedVersion(decoded, user)) {
+    res.status(401);
+    throw new Error("Not authorized, you were logged out. Please log in again");
+  }
 
   req.user = user;
   next();
@@ -49,7 +60,7 @@ export const optionalAuth = async (req, res, next) => {
     try {
       const decoded = jwt.verify(authHeader.split(" ")[1], process.env.JWT_SECRET);
       const user = await User.findById(decoded.id);
-      req.user = user && !issuedBeforePasswordChange(decoded, user) ? user : undefined;
+      req.user = user && !tokenRevoked(decoded, user) ? user : undefined;
     } catch {
       // Invalid or expired token: treat the request as a guest
     }

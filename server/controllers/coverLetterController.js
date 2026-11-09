@@ -26,6 +26,9 @@ async function findOwned(Model, req, res, id, label) {
   return doc;
 }
 
+// The letter language from the account's preferences (Settings), used when none is given
+const preferredLanguage = (req) => (LANGUAGES.includes(req.user.preferences?.language) ? req.user.preferences.language : "en");
+
 // The editable fields from a request body, with the option values checked
 function readFields(req, res) {
   const data = {};
@@ -78,7 +81,7 @@ export const getCoverLetter = async (req, res) => {
 export const createCoverLetter = async (req, res) => {
   const resume = await findOwned(Resume, req, res, req.body?.resumeId, "Resume");
   const job = req.body?.jobId ? await findOwned(Job, req, res, req.body.jobId, "Job") : null;
-  const letter = await CoverLetter.create({ ...readFields(req, res), userId: req.user._id, resumeId: resume._id, jobId: job?._id ?? null });
+  const letter = await CoverLetter.create({ language: preferredLanguage(req), ...readFields(req, res), userId: req.user._id, resumeId: resume._id, jobId: job?._id ?? null });
   res.status(201).json(await withStrength(letter, req));
 };
 
@@ -108,7 +111,7 @@ function readOptions(req, res) {
   const data = readFields(req, res);
   const text = (field) => (typeof data[field] === "string" ? data[field].trim() : "");
   const recipientName = text("recipientName").slice(0, 120);
-  const language = data.language ?? "en";
+  const language = data.language ?? preferredLanguage(req);
   return {
     tone: data.tone ?? "professional",
     length: data.length ?? "standard",

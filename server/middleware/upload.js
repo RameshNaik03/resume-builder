@@ -48,22 +48,31 @@ const photoFilter = (req, file, cb) => {
   }
 };
 
-const photoUpload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_PHOTO_SIZE, files: 1 },
-  fileFilter: photoFilter,
-}).single("photo"); // The form field must be called "photo"
+// An image upload in the form field `field`, with image-specific "too large" and "wrong field"
+// messages (the central error handler's are about the 5 MB resume file limit).
+// Other form fields are read into req.body as text.
+const imageUpload = (field, label) => {
+  const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: MAX_PHOTO_SIZE, files: 1, fields: 20, fieldSize: 10 * 1024 },
+    fileFilter: photoFilter,
+  }).single(field);
 
-// Same as the multer middleware, but with a photo-specific "too large" message
-// (the central error handler's message is about the 5 MB resume file limit)
-export const uploadPhotoFile = (req, res, next) => {
-  photoUpload(req, res, (error) => {
-    if (error?.code === "LIMIT_FILE_SIZE") {
-      return next(Object.assign(new Error("Photo is too large. The maximum size is 2 MB."), { status: 413 }));
-    }
-    if (error?.code === "LIMIT_UNEXPECTED_FILE") {
-      return next(Object.assign(new Error('Please upload one image in a form field named "photo".'), { status: 400 }));
-    }
-    next(error);
-  });
+  return (req, res, next) => {
+    upload(req, res, (error) => {
+      if (error?.code === "LIMIT_FILE_SIZE") {
+        return next(Object.assign(new Error(`${label} is too large. The maximum size is 2 MB.`), { status: 413 }));
+      }
+      if (error?.code === "LIMIT_UNEXPECTED_FILE") {
+        return next(Object.assign(new Error(`Please upload one image in a form field named "${field}".`), { status: 400 }));
+      }
+      next(error);
+    });
+  };
 };
+
+// Resume photos: the form field must be called "photo"
+export const uploadPhotoFile = imageUpload("photo", "Photo");
+
+// Account avatars (PATCH /api/account/profile): optional, in a field called "avatar"
+export const uploadAvatarFile = imageUpload("avatar", "Avatar");

@@ -79,8 +79,9 @@ export const analyzeJobDescription = async (req, res) => {
   res.json({ analysis: await analyzeJob(description), aiEnabled: isAIEnabled() });
 };
 
-// The tailoring options from a request body (anything invalid falls back to its default)
-function readTailorOptions(body = {}) {
+// The tailoring options from a request body (anything invalid falls back to its default; the
+// language's default is the account's preferred language)
+function readTailorOptions(body = {}, preferences = {}) {
   const strings = (value, max) => (Array.isArray(value) ? value.filter((item) => typeof item === "string" && item.trim()).map((item) => item.trim().slice(0, 200)).slice(0, max) : null);
   const maxBullets = Number(body.maxBulletsPerJob);
   return {
@@ -89,7 +90,7 @@ function readTailorOptions(body = {}) {
     excludedProjects: strings(body.excludedProjects, 100) ?? [],
     maxBulletsPerJob: Number.isInteger(maxBullets) && maxBullets >= 1 && maxBullets <= MAX_BULLETS_LIMIT ? maxBullets : null,
     template: typeof body.template === "string" && /^[a-z0-9-]{1,60}$/.test(body.template) ? body.template : null,
-    language: LANGUAGES.includes(body.language) ? body.language : "en",
+    language: LANGUAGES.includes(body.language) ? body.language : LANGUAGES.includes(preferences.language) ? preferences.language : "en",
     fitOnePage: body.fitOnePage !== false,
   };
 }
@@ -138,7 +139,7 @@ export const tailorOptions = async (req, res) => {
 export const tailorToJob = async (req, res) => {
   const source = await findUsersResume(req, res, req.body?.resumeId);
   const { description, analysis } = await readJob(req, res);
-  const options = readTailorOptions(req.body?.options ?? req.body);
+  const options = readTailorOptions(req.body?.options ?? req.body, req.user.preferences);
   const replacing = req.body?.replaceJobId ? await findUsersJob(req, res, req.body.replaceJobId) : null;
   if (replacing && String(replacing.sourceResumeId) !== String(source._id)) {
     res.status(400);

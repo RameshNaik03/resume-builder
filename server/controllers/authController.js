@@ -1,23 +1,9 @@
-import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import sendEmail from "../utils/sendEmail.js";
+import { EMAIL_REGEX, escapeHtml, generateToken, hashToken, passwordProblem, randomToken } from "../utils/security.js";
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const RESET_TOKEN_MINUTES = 15; // How long a reset link stays valid
-
-// Reset tokens are stored hashed, so a leaked database can't be used to reset passwords
-const hashToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
-
-// Makes user-typed text (like a name) safe to put inside an HTML email
-const escapeHtml = (value) =>
-  value.replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
-
-// Creates a JWT that stores the user's id and expires in 7 days
-const generateToken = (userId) => {
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
-};
 
 // POST /api/auth/register
 export const register = async (req, res) => {
@@ -32,9 +18,9 @@ export const register = async (req, res) => {
     res.status(400);
     throw new Error("Please enter a valid email");
   }
-  if (password.length < 6) {
+  if (passwordProblem(password)) {
     res.status(400);
-    throw new Error("Password must be at least 6 characters");
+    throw new Error(passwordProblem(password));
   }
 
   const existingUser = await User.findOne({ email: email.trim().toLowerCase() });
@@ -46,7 +32,7 @@ export const register = async (req, res) => {
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await User.create({ name, email, passwordHash });
 
-  res.status(201).json({ token: generateToken(user._id), user });
+  res.status(201).json({ token: generateToken(user), user });
 };
 
 // POST /api/auth/login
@@ -68,7 +54,7 @@ export const login = async (req, res) => {
     throw new Error("Invalid email or password");
   }
 
-  res.json({ token: generateToken(user._id), user });
+  res.json({ token: generateToken(user), user });
 };
 
 // POST /api/auth/forgot-password
@@ -89,7 +75,7 @@ export const forgotPassword = async (req, res) => {
   const user = await User.findOne({ email: email.trim().toLowerCase() });
   if (!user) return res.json(reply);
 
-  const token = crypto.randomBytes(32).toString("hex");
+  const token = randomToken();
   user.resetPasswordTokenHash = hashToken(token);
   user.resetPasswordExpires = new Date(Date.now() + RESET_TOKEN_MINUTES * 60 * 1000);
   await user.save();
@@ -120,9 +106,9 @@ export const forgotPassword = async (req, res) => {
 export const resetPassword = async (req, res) => {
   const { password } = req.body ?? {};
 
-  if (!password || password.length < 6) {
+  if (passwordProblem(password)) {
     res.status(400);
-    throw new Error("Password must be at least 6 characters");
+    throw new Error(passwordProblem(password));
   }
 
   const user = await User.findOne({ resetPasswordTokenHash: hashToken(req.params.token) }).select(
