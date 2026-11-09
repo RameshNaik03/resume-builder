@@ -10,7 +10,8 @@ export const BULLET_LIMITS = [3, 4, 5, 6, 8];
 const DEFAULT_FEATURED = 8;
 
 // The starting choices for a resume and job
-export function initialChoices(options, previous = {}) {
+//   defaults - the account's preferences ({ language }, Settings > Preferences)
+export function initialChoices(options, previous = {}, defaults = {}) {
   const available = options.skills.map((entry) => entry.skill);
   // Keep the user's order and picks where they still apply (the analysis can change)
   const kept = (previous.skillOrder ?? []).filter((skill) => available.includes(skill));
@@ -25,7 +26,7 @@ export function initialChoices(options, previous = {}) {
     excludedProjects: (previous.excludedProjects ?? []).filter((name) => options.projects.some((project) => project.name === name)),
     maxBulletsPerJob: previous.maxBulletsPerJob ?? null,
     template: previous.template ?? null,
-    language: previous.language ?? "en",
+    language: previous.language ?? defaults.language ?? "en",
     fitOnePage: previous.fitOnePage ?? true,
     title: previous.titleEdited ? previous.title : options.suggestedTitle,
     titleEdited: previous.titleEdited ?? false,

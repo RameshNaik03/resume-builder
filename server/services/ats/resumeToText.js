@@ -16,7 +16,7 @@ export default function resumeToText(resume) {
     personalInfo.fullName,
     personalInfo.headline,
     [personalInfo.email, personalInfo.phone, personalInfo.location].filter(Boolean).join(" | "),
-    [personalInfo.linkedin, personalInfo.github].filter(Boolean).join(" | ")
+    [personalInfo.linkedin, personalInfo.github, personalInfo.website].filter(Boolean).join(" | ")
   );
 
   section("Summary", [summary]);

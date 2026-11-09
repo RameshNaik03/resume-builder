@@ -43,6 +43,7 @@ export default function prepareResume(resume, withLinks = true, design, changed 
     info.location && { text: info.location },
     info.linkedin && { text: toDisplayText(info.linkedin), href: link(toUrl(info.linkedin)) },
     info.github && { text: toDisplayText(info.github), href: link(toUrl(info.github)) },
+    info.website && { text: toDisplayText(info.website), href: link(toUrl(info.website)) },
   ].filter(Boolean);
 
   const data = {

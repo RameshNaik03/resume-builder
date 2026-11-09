@@ -56,6 +56,7 @@ const SAMPLE = {
     location: "Pune, India",
     linkedin: "linkedin.com/in/aaravmehta",
     github: "github.com/aaravmehta",
+    website: "aaravmehta.dev",
   },
   summary: "Full stack developer with 3 years of experience building web apps with React and Node.js (see Projects).",
   experience: [
@@ -174,6 +175,11 @@ test("PDF round trip: every template exports a PDF an ATS can read", async (t) =
 
       const stray = lines.filter((line) => /^[\s·•|–—,/-]+$/.test(line) || /^[·•|]\s|\s[·|]$/.test(line));
       assert.deepEqual(stray, [], "stray separator characters");
+
+      // Every contact detail, the website included, is in the text (each one whole)
+      const { email, phone, linkedin, github, website } = SAMPLE.personalInfo;
+      const missingContacts = [email, phone, linkedin, github, website].filter((value) => !lines.some((line) => line.includes(value)));
+      assert.deepEqual(missingContacts, [], "contact details missing from the text");
 
       // Every skill is still there as text (levels and other graphics are drawn, never text)
       const missingSkills = SAMPLE.skills.filter((skill) => !text.includes(skill));

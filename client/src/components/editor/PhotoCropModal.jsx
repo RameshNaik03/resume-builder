@@ -7,7 +7,16 @@ import Modal from "../Modal";
 //   src      - the picked image (object URL)
 //   onSave   - receives the cropped area in image pixels: { x, y, width, height }
 //   saving   - true while the cropped photo is uploading
-export default function PhotoCropModal({ src, onCancel, onSave, saving = false }) {
+//   title, description, saveLabel - override the texts (e.g. for the account avatar)
+export default function PhotoCropModal({
+  src,
+  onCancel,
+  onSave,
+  saving = false,
+  title = "Crop your photo",
+  description = "Drag to position your face in the middle. Zoom in so it fills most of the square.",
+  saveLabel = "Save photo",
+}) {
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [area, setArea] = useState(null);
@@ -17,11 +26,9 @@ export default function PhotoCropModal({ src, onCancel, onSave, saving = false }
     <Modal onClose={() => !saving && onCancel()} labelledBy="crop-photo-title" className="max-w-lg overflow-hidden">
       <div className="px-5 pt-5 pb-3">
         <h2 id="crop-photo-title" className="text-lg font-semibold text-fg">
-          Crop your photo
+          {title}
         </h2>
-        <p className="mt-0.5 text-sm text-fg-muted">
-          Drag to position your face in the middle. Zoom in so it fills most of the square.
-        </p>
+        <p className="mt-0.5 text-sm text-fg-muted">{description}</p>
       </div>
 
       <div className="relative h-80 bg-surface-2">
@@ -57,7 +64,7 @@ export default function PhotoCropModal({ src, onCancel, onSave, saving = false }
             Cancel
           </button>
           <button type="button" onClick={() => area && onSave(area)} disabled={!area || saving} className="btn-primary">
-            {saving ? "Uploading..." : "Save photo"}
+            {saving ? "Uploading..." : saveLabel}
           </button>
         </div>
       </div>

@@ -214,6 +214,8 @@ export async function startStack(t, name) {
 
   return {
     browser,
+    // Everything the API printed so far (e.g. emails: without RESEND_API_KEY they're printed)
+    apiOutput: () => apiProcess.output,
     // Calls the API: api("POST", "/resumes", token, body) -> { status, body }
     api: async (method, url, token, body) => {
       const res = await fetch(`${API}${url}`, {

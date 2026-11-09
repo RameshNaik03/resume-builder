@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import toast from "../utils/toast";
 import api from "../api/axios";
+import { setTheme } from "../utils/theme";
 
 const AuthContext = createContext(null);
 
@@ -41,6 +42,12 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener("auth:logout", handleForcedLogout);
   }, []);
 
+  // The account's theme (Settings > Preferences) follows the user to every device
+  const themeChoice = user?.preferences?.theme;
+  useEffect(() => {
+    if (themeChoice) setTheme(themeChoice);
+  }, [themeChoice]);
+
   // Saves the token and user returned by /login or /register
   const saveSession = (data) => {
     localStorage.setItem("token", data.token);
@@ -64,11 +71,13 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  // After a settings change: the user as the server returned it
+  const updateUser = useCallback((nextUser) => setUser(nextUser), []);
+
+  // After a password change: the new token for this device (the old one stopped working)
+  const replaceToken = useCallback((token) => localStorage.setItem("token", token), []);
+
+  return <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser, replaceToken }}>{children}</AuthContext.Provider>;
 }
 
 // Shortcut so components can write: const { user } = useAuth();

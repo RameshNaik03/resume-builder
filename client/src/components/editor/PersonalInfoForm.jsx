@@ -7,6 +7,7 @@ const FIELDS = [
   { name: "location", label: "Location", placeholder: "Bengaluru, India", type: "text" },
   { name: "linkedin", label: "LinkedIn", placeholder: "linkedin.com/in/yourname", type: "text" },
   { name: "github", label: "GitHub", placeholder: "github.com/yourname", type: "text" },
+  { name: "website", label: "Website", placeholder: "yourname.dev", type: "text" },
 ];
 
 import PhotoUpload from "./PhotoUpload";

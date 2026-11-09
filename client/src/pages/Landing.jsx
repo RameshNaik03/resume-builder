@@ -1,10 +1,11 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, Gauge, LayoutTemplate, Target } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import usePageTitle from "../hooks/usePageTitle";
 import { TEMPLATES } from "../templates/registry";
 import galleryResume from "../templates/galleryResume";
 import Button from "../components/ui/Button";
+import { Alert } from "../components/ui/Display";
 import Wordmark from "../components/ui/Wordmark";
 import ResumeThumbnail from "../components/ui/ResumeThumbnail";
 
@@ -50,9 +51,21 @@ export default function Landing() {
   usePageTitle("Clear, honest resumes");
   const { user } = useAuth();
   const buildPath = user ? "/dashboard" : "/register";
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Set by Settings > Your data after deleting the account (cleared when dismissed)
+  const accountDeleted = location.state?.notice === "account-deleted";
 
   return (
     <>
+      {accountDeleted && (
+        <div className={`${SECTION} pt-6`}>
+          <Alert tone="success" title="Your account has been deleted" onDismiss={() => navigate(".", { replace: true, state: null })} data-testid="account-deleted-notice">
+            Your account and everything in it are gone for good. We've sent a confirmation to your email. Thanks for using ResumeCraft.
+          </Alert>
+        </div>
+      )}
+
       {/* ---------- Hero ---------- */}
       <section className={`${SECTION} grid items-center gap-14 pt-14 pb-20 sm:pt-20 lg:grid-cols-2 lg:gap-16 lg:pt-24 lg:pb-28`}>
         <div className="motion-safe:animate-fade-in">

@@ -4,6 +4,7 @@ import { useReactToPrint } from "react-to-print";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Download, FileText, XCircle } from "lucide-react";
 import toast from "../utils/toast";
 import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 import usePageTitle from "../hooks/usePageTitle";
 import getErrorMessage from "../utils/getErrorMessage";
 import { toPlainText } from "../utils/richText";
@@ -244,7 +245,8 @@ function NewLetter() {
   const jobId = searchParams.get("job");
   const [job, setJob] = useState(null);
   const [failed, setFailed] = useState(!jobId);
-  const [options, setOptions] = useState({ tone: "professional", length: "standard", language: "en", recipientName: "", recipientSalutation: "", ...answersOf(null) });
+  const preferredLanguage = useAuth().user?.preferences?.language ?? "en"; // Settings > Preferences
+  const [options, setOptions] = useState({ tone: "professional", length: "standard", language: preferredLanguage, recipientName: "", recipientSalutation: "", ...answersOf(null) });
   const [busy, setBusy] = useState(false);
   const set = (field) => (value) => setOptions((previous) => ({ ...previous, [field]: value }));
 

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Trash2 } from "lucide-react";
 import toast from "../utils/toast";
 import api from "../api/axios";
+import { useAuth } from "../context/AuthContext";
 import usePageTitle from "../hooks/usePageTitle";
 import getErrorMessage from "../utils/getErrorMessage";
 import timeAgo from "../utils/timeAgo";
@@ -61,6 +62,7 @@ function TailorFlow() {
   const [options, setOptions] = useState(null); // What the options panel offers (POST /jobs/options)
   const [choices, setChoices] = useState(null); // The user's options
   const [askVersion, setAskVersion] = useState(false); // "Replace the existing version" or "Create a new version"
+  const preferredLanguage = useAuth().user?.preferences?.language ?? "en"; // Settings > Preferences
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
 
@@ -74,7 +76,7 @@ function TailorFlow() {
         .then(({ data }) => {
           if (cancelled) return;
           setOptions(data);
-          setChoices((previous) => initialChoices(data, previous ?? {}));
+          setChoices((previous) => initialChoices(data, previous ?? {}, { language: preferredLanguage }));
         })
         .catch((error) => !cancelled && toast.error(getErrorMessage(error)));
     }, OPTIONS_DELAY);
@@ -82,7 +84,7 @@ function TailorFlow() {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [step, analysis, resumeId, description]);
+  }, [step, analysis, resumeId, description, preferredLanguage]);
 
   useEffect(() => {
     Promise.all([api.get("/resumes"), api.get("/jobs")])

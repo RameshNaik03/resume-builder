@@ -134,12 +134,33 @@ export function tourPages({ resumeId, reviewId, jobId, letterId, originalId }) {
         await page.waitForSelector('[role="dialog"] canvas[data-drawn]', { timeout: 30000 });
       },
     },
+    // Settings: on a phone /settings is the list of sections; on a desktop it opens Profile
+    { name: "22-settings", path: "/settings", loggedIn: true },
+    { name: "23-settings-email", path: "/settings/email", loggedIn: true },
+    { name: "24-settings-password", path: "/settings/password", loggedIn: true },
+    { name: "25-settings-sessions", path: "/settings/sessions", loggedIn: true },
+    { name: "26-settings-preferences", path: "/settings/preferences", loggedIn: true },
+    { name: "27-settings-data", path: "/settings/data", loggedIn: true },
+    {
+      name: "28-settings-delete-account",
+      path: "/settings/data",
+      loggedIn: true,
+      prepare: (page) => clickText(page, "button", "Delete account"),
+    },
   ];
 }
+
+const accountThemes = new Map(); // token -> the theme last saved to that account
 
 export async function openPage(page, entry, { token, theme = "light" }) {
   await logIn(page, entry.loggedIn ? token : null);
   await page.evaluate((value) => localStorage.setItem("theme", value), theme);
+  // A logged-in user's theme comes from their account (Settings > Preferences). Set only when it
+  // changes: preference changes are rate limited
+  if (entry.loggedIn && accountThemes.get(token) !== theme) {
+    const res = await fetch(`${API}/account/preferences`, { method: "PATCH", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ theme }) });
+    if (res.ok) accountThemes.set(token, theme);
+  }
   await page.goto(`${APP}${entry.path}`, { waitUntil: "networkidle0" });
   if (entry.prepare) await entry.prepare(page).catch((error) => console.error(`${entry.name}: ${error.message.split("\n")[0]}`));
   await page.evaluate(async () => {

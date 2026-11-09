@@ -22,6 +22,8 @@ const OriginalResume = lazy(() => import("./pages/OriginalResume"));
 const AtsReview = lazy(() => import("./pages/AtsReview"));
 const Tailor = lazy(() => import("./pages/Tailor"));
 const CoverLetter = lazy(() => import("./pages/CoverLetter"));
+const Settings = lazy(() => import("./pages/Settings"));
+const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 // Development-only pages: import.meta.env.DEV is false in production builds, so these
 // routes don't exist there and their code is left out of the bundle
@@ -62,6 +64,10 @@ export default function App() {
             <Route path="/tailor" element={page(<Tailor />)} />
             <Route path="/tailor/jobs/:jobId" element={page(<Tailor />, "Opening your match report...")} />
             <Route path="/cover-letters/:id" element={page(<CoverLetter />, "Opening your cover letter...")} />
+            <Route path="/settings" element={page(<Settings />)} />
+            <Route path="/settings/:section" element={page(<Settings />)} />
+            {/* The link sent to a new email address: logged-out users log in first, then come back */}
+            <Route path="/confirm-email/:token" element={page(<ConfirmEmail />, "Confirming your new email...")} />
           </Route>
 
           {/* Development only: every template side by side, and the design system (not linked anywhere) */}
