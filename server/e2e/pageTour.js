@@ -8,6 +8,7 @@
 //                          runs its step (a failed step is reported, not thrown) and scrolls
 //                          through it so scroll-in sections show
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 import { API, APP, logIn, sleep } from "./helpers.js";
 import galleryResume from "../../client/src/templates/galleryResume.js";
 
@@ -118,8 +119,9 @@ export function tourPages({ resumeId, reviewId, jobId, letterId, originalId }) {
     { name: "16-match-report", path: `/tailor/jobs/${jobId}`, loggedIn: true },
     { name: "17-cover-letter", path: `/cover-letters/${letterId}`, loggedIn: true },
     { name: "18-dev-ui", path: "/dev/ui" }, // The design system (dev only)
-    { name: "19-original", path: `/resumes/${originalId}/original`, loggedIn: true },
-    { name: "20-original-match", path: `/resumes/${originalId}/original?match=1`, loggedIn: true },
+    // (the original's pages are drawn by pdf.js after the page loads: wait for them)
+    { name: "19-original", path: `/resumes/${originalId}/original`, loggedIn: true, prepare: (page) => page.waitForSelector("canvas[data-drawn]", { timeout: 20000 }) },
+    { name: "20-original-match", path: `/resumes/${originalId}/original?match=1`, loggedIn: true, prepare: (page) => page.waitForSelector('[data-testid="matched-design"] canvas[data-drawn]', { timeout: 20000 }) },
     {
       // The upload dialog's first step: the uploaded file and the two choices
       name: "21-import-original",
@@ -128,7 +130,7 @@ export function tourPages({ resumeId, reviewId, jobId, letterId, originalId }) {
       prepare: async (page) => {
         await clickText(page, "button", "Upload");
         const input = await page.waitForSelector('[role="dialog"] input[type=file]');
-        await input.uploadFile(new URL("../tests/fixtures/design/sidebar-two-columns.pdf", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1"));
+        await input.uploadFile(fileURLToPath(new URL("../tests/fixtures/design/sidebar-two-columns.pdf", import.meta.url)));
         await page.waitForSelector('[role="dialog"] canvas[data-drawn]', { timeout: 30000 });
       },
     },

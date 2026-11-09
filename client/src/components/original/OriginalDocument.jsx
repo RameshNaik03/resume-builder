@@ -47,7 +47,9 @@ function PdfPages({ resumeId, pages, width, label }) {
         doc = await pdfjs.getDocument({ data: new Uint8Array(bytes.slice(0)), isEvalSupported: false }).promise;
         if (cancelled) return;
         const count = pages === "first" ? 1 : doc.numPages;
-        holder.current.replaceChildren();
+        // Each page is drawn on a new canvas off-screen and swapped in when it's finished, so a
+        // redraw (the column got wider, a scrollbar came or went) never blanks a page
+        const previous = [...holder.current.children];
         for (let n = 1; n <= count; n++) {
           const page = await doc.getPage(n);
           if (cancelled) return;
@@ -63,12 +65,13 @@ function PdfPages({ resumeId, pages, width, label }) {
           canvas.setAttribute("role", "img");
           canvas.setAttribute("aria-label", `${label}, page ${n} of ${doc.numPages}`);
           canvas.dataset.originalPage = String(n);
-          canvas.setAttribute("aria-busy", "true");
-          holder.current.appendChild(canvas);
           await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-          canvas.removeAttribute("aria-busy");
+          if (cancelled) return; // A newer draw has started: it replaces the pages
           canvas.dataset.drawn = "true"; // Drawn (tests wait for this)
+          if (previous[n - 1]) previous[n - 1].replaceWith(canvas);
+          else holder.current.appendChild(canvas);
         }
+        for (const extra of previous.slice(count)) extra.remove();
         if (!cancelled) setState({ status: "ready", count: doc.numPages });
       } catch (error) {
         if (!cancelled) setState({ status: "error", message: getErrorMessage(error) });

@@ -31,8 +31,11 @@ test("AppShell", async (t) => {
     assert.deepEqual(await visible('nav[aria-label="Main"] a'), ["Dashboard", "Tailor to a job", "ATS checker"]);
     assert.equal(await page.$eval('nav[aria-label="Main"] a[aria-current="page"]', (a) => a.textContent), "Dashboard");
     await page.click('nav[aria-label="Main"] a[href="/tailor"]');
-    await page.waitForFunction(() => location.pathname === "/tailor");
-    assert.equal(await page.$eval('nav[aria-label="Main"] a[aria-current="page"]', (a) => a.textContent), "Tailor to a job");
+    // React Router changes the URL at once and renders the new page in a transition a frame or
+    // two later, so wait for the rendered nav (what's checked), not for the URL
+    await page.waitForFunction(() => document.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.textContent === "Tailor to a job");
+    assert.equal(await page.evaluate(() => location.pathname), "/tailor");
+    assert.equal(await page.$$eval('nav[aria-label="Main"] a[aria-current="page"]', (links) => links.length), 1, "only the current page is marked");
   });
 
   await t.test("the dark mode toggle switches the theme and remembers it", async () => {
@@ -66,7 +69,9 @@ test("AppShell", async (t) => {
     await page.$eval('button[aria-label="Account menu"]', (button) => button.click());
     assert.deepEqual(await visible('[role="menuitem"]'), ["Dashboard", "Tailor to a job", "ATS checker", "Log out"]);
     await page.evaluate(() => [...document.querySelectorAll('[role="menuitem"]')].find((item) => item.textContent.trim() === "ATS checker").click());
-    await page.waitForFunction(() => location.pathname === "/ats-checker");
+    // Wait for the rendered page (the marked link), not just the URL (see above)
+    await page.waitForFunction(() => document.querySelector('nav[aria-label="Main"] a[aria-current="page"]')?.textContent === "ATS checker");
+    assert.equal(await page.evaluate(() => location.pathname), "/ats-checker");
     assert.equal(await page.$('[role="menu"]'), null, "the menu closes after choosing");
   });
 });

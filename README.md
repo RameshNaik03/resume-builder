@@ -315,3 +315,4 @@ CI installs packages with `npm ci` from `package-lock.json`, so commit that file
 - Cover letters that reuse the resume's details and design
 - Version history for a resume (go back to an earlier save)
 - Client-side component tests (Vitest + Testing Library) next to the browser tests
+- Move stored original files (uploaded PDFs and DOCX files) from MongoDB to file storage (e.g. private Cloudinary or S3 objects with signed URLs) before scaling up. Each is up to 5 MB in its own collection today, which is fine for a small user base but makes the database grow quickly and slows backups.

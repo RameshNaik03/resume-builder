@@ -154,12 +154,11 @@ export default function ImportResumeModal({ onClose, onImported, onStartFromScra
     return (
       <Dialog size="lg" title="Your original" description={describeOriginal(importedResume.original)} onClose={onClose}>
         <div className="grid items-start gap-6 md:grid-cols-2">
-          <div className="flex justify-center">
-            <div className="max-h-96 overflow-hidden rounded-sm">
-              <OriginalDocument resume={importedResume} pages="first" width={280} />
-            </div>
+          {/* The whole first page (on phones under the choices, which are what to act on) */}
+          <div className="order-2 flex justify-center md:order-1">
+            <OriginalDocument resume={importedResume} pages="first" width={260} />
           </div>
-          <div className="space-y-3">
+          <div className="order-1 space-y-3 md:order-2">
             <p className="type-body text-fg">We kept your file exactly as you uploaded it. What would you like to do?</p>
             <ChoiceCard
               icon={FileCheck2}

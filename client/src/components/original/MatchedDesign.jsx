@@ -28,7 +28,7 @@ export default function MatchedDesign({ resume, onUse, onChooseOther, busy = fal
           <figcaption className="mb-2 type-label text-fg">
             Matched: <span data-testid="matched-template">{match.templateName}</span>
           </figcaption>
-          <ResumeThumbnail resume={{ ...resume, template: match.templateId, design: match.design }} templateId={match.templateId} width={PAGE_WIDTH} />
+          <ResumeThumbnail resume={{ ...resume, template: match.templateId, design: match.design }} templateId={match.templateId} design={match.design} width={PAGE_WIDTH} />
         </figure>
       </div>
 

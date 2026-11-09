@@ -17,7 +17,7 @@ export default function DocumentCard({ resume, to, title, meta, badge, menuItems
       {...props}
     >
       <div className="flex h-52 justify-center overflow-hidden rounded-t-xl border-b border-line bg-surface-2 px-6 pt-6">
-        {thumbnail ?? (resume && <ResumeThumbnail resume={resume} templateId={resume.template} width={196} className="transition-transform duration-300 motion-safe:group-hover:-translate-y-1" />)}
+        {thumbnail ?? (resume && <ResumeThumbnail resume={resume} templateId={resume.template} design={resume.design} width={196} className="transition-transform duration-300 motion-safe:group-hover:-translate-y-1" />)}
       </div>
 
       {onSelect && (

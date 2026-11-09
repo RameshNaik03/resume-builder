@@ -39,4 +39,5 @@ export async function downloadOriginal(resume) {
 
 // "Priya_Sharma-Resume.pdf · PDF · 84 KB"
 export const describeOriginal = (original) =>
-  original ? `${original.fileName} · ${original.kind.toUpperCase()} · ${Math.max(1, Math.round(original.size / 1024))} KB` : "";
+  // (non-breaking spaces keep "84 KB" together when the line wraps)
+  original ? `${original.fileName} · ${original.kind.toUpperCase()} · ${Math.max(1, Math.round(original.size / 1024))}\u00a0KB` : "";

@@ -68,7 +68,7 @@ test("Importing a resume keeps the original design", async (t) => {
     const [first] = await drawnPages('[role="dialog"]');
     assert.ok(first.width > 200 && first.ink > 20, `the PDF's first page is drawn: ${JSON.stringify(first)}`);
     const dialog = await textOf('[role="dialog"]');
-    assert.match(dialog, /serif-centered\.pdf · PDF · \d+ KB/);
+    assert.match(dialog, /serif-centered\.pdf · PDF · \d+\sKB/); // (a non-breaking space keeps "49 KB" together)
     assert.match(dialog, /Keep my original design/);
     assert.match(dialog, /Edit with a matching template/);
     assert.match(dialog, /Editing rebuilds your resume in one of our templates/);
