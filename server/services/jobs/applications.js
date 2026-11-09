@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import Resume from "../../models/Resume.js";
 import Job from "../../models/Job.js";
 import CoverLetter from "../../models/CoverLetter.js";
-import { deletePhoto, isPhotoStorageConfigured } from "../photoStorage.js";
+import { deletePhotosOrQueue } from "../photoStorage.js";
 import { deleteOriginals } from "../import/originalFiles.js";
 
 // Applications: a tailored resume + its job + its cover letters. Finding a tailored resume's
@@ -73,12 +73,8 @@ export async function deleteResumes(userId, resumeIds) {
   await Resume.deleteMany({ _id: { $in: [...gone] } });
   await deleteOriginals(userId, [...gone]); // The files they were imported from
 
-  // Their photos too (if that fails, the resumes are still deleted)
-  if (isPhotoStorageConfigured()) {
-    for (const { photoPublicId } of resumes) {
-      if (photoPublicId) deletePhoto(photoPublicId).catch((error) => console.error("Deleting photo failed:", error.message));
-    }
-  }
+  // Their photos too, in the background (any that fail are queued and retried later)
+  deletePhotosOrQueue(resumes.map((resume) => resume.photoPublicId)).catch((error) => console.error("Deleting photos failed:", error.message));
   return { resumes: gone.size, lettersMoved, lettersDeleted: orphans.length };
 }
 

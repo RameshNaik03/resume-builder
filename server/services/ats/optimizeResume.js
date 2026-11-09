@@ -97,6 +97,8 @@ export default async function optimizeResume(original, options = {}) {
 
   // ---------- 2. Standard section headings ----------
   // Unknown sections that list jobs with dates ("My Journey") become Experience entries
+  // A copy on purpose: change() below replaces resume.additional while this loop runs
+  // oxlint-disable-next-line unicorn/no-useless-spread
   for (const section of [...resume.additional]) {
     if (headingOf(section.heading) || !section.items.some((item) => dateRanges(item).length)) continue;
     const jobs = sanitizeResume(parseWithRules(`EXPERIENCE\n${section.items.join("\n")}`)).experience;

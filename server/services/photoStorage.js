@@ -1,4 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
+import PendingDeletion from "../models/PendingDeletion.js";
 
 // Profile photos are stored on Cloudinary (free tier), never on our server.
 // Each resume has at most one photo, saved under a fixed id based on the resume id,
@@ -53,6 +54,64 @@ export async function copyPhoto(sourceUrl, resumeId) {
 export async function deletePhoto(publicId) {
   if (!publicId) return;
   await client().uploader.destroy(publicId, { resource_type: "image", invalidate: true });
+}
+
+// ---------- Deletions that must not be lost ----------
+
+// Records an image that couldn't be deleted, so it's retried later (see retryPendingDeletions)
+async function recordPendingDeletion(publicId, error) {
+  await PendingDeletion.updateOne(
+    { publicId },
+    { $set: { lastError: String(error?.message ?? error).slice(0, 500) }, $inc: { attempts: 1 } },
+    { upsert: true }
+  );
+}
+
+// Deletes stored images; any that fail (or can't be deleted because Cloudinary isn't configured)
+// are recorded for a retry instead of being forgotten. Never throws.
+// Returns how many were deleted now.
+export async function deletePhotosOrQueue(publicIds) {
+  const ids = [...new Set(publicIds.filter(Boolean))];
+  if (!ids.length) return 0;
+  if (!isPhotoStorageConfigured()) {
+    for (const id of ids) await recordPendingDeletion(id, "Cloudinary isn't configured").catch(() => {});
+    console.warn(`${ids.length} Cloudinary image(s) queued for deletion: Cloudinary isn't configured.`);
+    return 0;
+  }
+  let deleted = 0;
+  await Promise.all(
+    ids.map(async (id) => {
+      try {
+        await deletePhoto(id);
+        deleted++;
+      } catch (error) {
+        console.error(`Deleting ${id} from Cloudinary failed (queued for a retry):`, error.message);
+        await recordPendingDeletion(id, error).catch((dbError) => console.error(`Couldn't queue ${id} for deletion:`, dbError.message));
+      }
+    })
+  );
+  return deleted;
+}
+
+// Tries every queued deletion again (on server start and with `npm run cloudinary:retry`).
+// Returns { deleted, failed, skipped } (skipped: Cloudinary isn't configured, nothing was tried).
+export async function retryPendingDeletions() {
+  const pending = await PendingDeletion.find().lean();
+  if (!pending.length) return { deleted: 0, failed: 0, skipped: 0 };
+  if (!isPhotoStorageConfigured()) return { deleted: 0, failed: 0, skipped: pending.length };
+  let deleted = 0;
+  let failed = 0;
+  for (const { _id, publicId } of pending) {
+    try {
+      await deletePhoto(publicId);
+      await PendingDeletion.deleteOne({ _id });
+      deleted++;
+    } catch (error) {
+      await PendingDeletion.updateOne({ _id }, { $set: { lastError: String(error.message).slice(0, 500) }, $inc: { attempts: 1 } });
+      failed++;
+    }
+  }
+  return { deleted, failed, skipped: 0 };
 }
 
 // ---------- Account avatars ----------

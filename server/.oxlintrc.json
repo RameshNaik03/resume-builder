@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["oxc", "unicorn", "node"],
+  "env": { "node": true, "es2024": true },
+  "rules": {
+    // Off: the test helpers pass `body: body && JSON.stringify(body)`, which is undefined for GET
+    "unicorn/no-invalid-fetch-options": "off"
+  },
+  "ignorePatterns": ["node_modules", "tests/fixtures"]
+}

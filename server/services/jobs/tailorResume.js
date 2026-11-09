@@ -558,7 +558,7 @@ export default async function tailorResume(
       "English section headings",
       "German section headings (Profil, Berufserfahrung, Ausbildung, Kenntnisse, Projekte)",
       ai ? "This copy is in German." : "This copy is in German. AI is off, so your own text stays as written; only the headings are German.",
-      { kind: "design", key: "sectionHeadings", value: { ...(resume.design.sectionHeadings ?? {}), ...GERMAN_HEADINGS } }
+      { kind: "design", key: "sectionHeadings", value: { ...resume.design.sectionHeadings, ...GERMAN_HEADINGS } }
     );
   }
 

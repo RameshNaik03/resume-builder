@@ -1,5 +1,5 @@
 import { findOwnedResume } from "./resumeController.js";
-import { deletePhoto, isPhotoStorageConfigured, looksLikeImage, savePhoto } from "../services/photoStorage.js";
+import { deletePhotosOrQueue, isPhotoStorageConfigured, looksLikeImage, savePhoto } from "../services/photoStorage.js";
 
 const requireStorage = (res) => {
   if (!isPhotoStorageConfigured()) {
@@ -43,14 +43,8 @@ export const uploadPhoto = async (req, res) => {
 export const removePhoto = async (req, res) => {
   const resume = await findOwnedResume(req, res);
 
-  if (resume.photoPublicId && isPhotoStorageConfigured()) {
-    try {
-      await deletePhoto(resume.photoPublicId);
-    } catch (error) {
-      // Still remove it from the resume; the stored file is harmless and can be cleaned up later
-      console.error("Deleting photo from Cloudinary failed:", error.message);
-    }
-  }
+  // Still removed from the resume if Cloudinary fails (the deletion is then retried later)
+  if (resume.photoPublicId) await deletePhotosOrQueue([resume.photoPublicId]);
 
   resume.personalInfo.photoUrl = "";
   resume.photoPublicId = "";

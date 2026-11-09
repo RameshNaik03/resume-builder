@@ -44,7 +44,7 @@ export const tokenFrom = (email, path) => email?.text.match(new RegExp(`/${path}
 // ["destroy", publicId]. Fake keys are set so the server thinks Cloudinary is configured.
 export function fakeCloudinary(cloudinary) {
   const calls = [];
-  const state = { failUpload: false };
+  const state = { failUpload: false, failDestroy: false };
   let version = 0;
   cloudinary.uploader.upload = async (source, options) => {
     calls.push(["upload", options.public_id, options]);
@@ -54,6 +54,7 @@ export function fakeCloudinary(cloudinary) {
   };
   cloudinary.uploader.destroy = async (id) => {
     calls.push(["destroy", id]);
+    if (state.failDestroy) throw new Error("Cloudinary is down");
     return { result: "ok" };
   };
   return { calls, state };

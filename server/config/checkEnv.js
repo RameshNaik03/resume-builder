@@ -22,8 +22,23 @@ export function findEnvProblems(env = process.env) {
   return problems;
 }
 
-// Stops the server with a clear message if a required setting is missing
+// Optional settings worth a warning: the server works without them, but something is off.
+// Returns a list of warnings (empty when everything is fine).
+export function findEnvWarnings(env = process.env) {
+  const warnings = [];
+  const cloudinaryKeys = ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"];
+  const missing = cloudinaryKeys.filter((name) => !env[name]?.trim());
+  if (env.NODE_ENV === "production" && missing.length) {
+    warnings.push(
+      `Cloudinary isn't configured (${missing.join(", ")} missing): photo and avatar uploads are off, and deleted photos are only queued (pendingdeletions) until the keys are set`
+    );
+  }
+  return warnings;
+}
+
+// Stops the server with a clear message if a required setting is missing, and prints warnings
 export default function checkEnv() {
+  for (const warning of findEnvWarnings()) console.warn(`Warning: ${warning}`);
   const problems = findEnvProblems();
   if (problems.length === 0) return;
   console.error(`The server can't start. Fix these settings (server/.env, or your host's environment variables):\n- ${problems.join("\n- ")}`);

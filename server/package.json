@@ -9,6 +9,8 @@
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
     "start": "node server.js",
+    "lint": "oxlint --deny-warnings",
+    "cloudinary:retry": "node scripts/retryDeletions.js",
     "test": "node --test \"tests/*.test.js\"",
     "test:import-regression": "node --test tests/import-regression.test.js",
     "test:roundtrip": "node --test e2e/roundtrip.test.js",
@@ -38,6 +40,7 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.14",
+    "oxlint": "^1.88.0",
     "puppeteer-core": "^24.43.1"
   }
 }

@@ -7,7 +7,7 @@ import CoverLetter from "../models/CoverLetter.js";
 import OriginalFile from "../models/OriginalFile.js";
 import sendEmail from "../utils/sendEmail.js";
 import { EMAIL_REGEX, escapeHtml, generateToken, hashToken, maskEmail, passwordProblem, randomToken } from "../utils/security.js";
-import { deletePhoto, downloadPhoto, isPhotoStorageConfigured, looksLikeImage, saveAvatar } from "../services/photoStorage.js";
+import { deletePhotosOrQueue, downloadPhoto, isPhotoStorageConfigured, looksLikeImage, saveAvatar } from "../services/photoStorage.js";
 
 // Account settings: profile, email, password, sessions, preferences, and the user's data
 // (export and deletion). Every route here is behind the protect middleware (req.user is set).
@@ -109,10 +109,8 @@ export const updateProfile = async (req, res) => {
     changes.avatarUrl = avatar.url;
     changes.avatarPublicId = avatar.publicId;
   } else if (removeAvatar && user.avatarPublicId) {
-    if (isPhotoStorageConfigured()) {
-      // Still removed from the profile if this fails; the stored file is harmless
-      await deletePhoto(user.avatarPublicId).catch((error) => console.error("Deleting avatar from Cloudinary failed:", error.message));
-    }
+    // Removed from the profile even if Cloudinary fails (the deletion is then retried later)
+    await deletePhotosOrQueue([user.avatarPublicId]);
     changes.avatarUrl = "";
     changes.avatarPublicId = "";
   }
@@ -345,15 +343,8 @@ export const deleteAccount = async (req, res) => {
 
   // Stored photos first (while we still know their ids)
   const resumes = await Resume.find({ userId }, { photoPublicId: 1 }).lean();
-  const publicIds = [...resumes.map((resume) => resume.photoPublicId), user.avatarPublicId].filter(Boolean);
-  if (publicIds.length && isPhotoStorageConfigured()) {
-    const results = await Promise.allSettled(publicIds.map((id) => deletePhoto(id)));
-    results.forEach((result, index) => {
-      if (result.status === "rejected") console.error(`Deleting ${publicIds[index]} from Cloudinary failed:`, result.reason?.message);
-    });
-  } else if (publicIds.length) {
-    console.error(`Account ${userId} deleted with ${publicIds.length} Cloudinary photo(s) left behind: Cloudinary isn't configured.`);
-  }
+  // Any that can't be deleted now are queued and retried later (never forgotten)
+  await deletePhotosOrQueue([...resumes.map((resume) => resume.photoPublicId), user.avatarPublicId]);
 
   await Promise.all([
     Resume.deleteMany({ userId }),

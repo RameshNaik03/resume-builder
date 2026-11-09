@@ -85,6 +85,7 @@ function trimSeparators(text) {
 function splitOutsideBrackets(text, pattern) {
   const saved = [];
   const masked = text.replace(/\([^()]*\)|\[[^\]]*\]/g, (match) => `\u0000${saved.push(match) - 1}\u0000`);
+  // oxlint-disable-next-line no-control-regex -- U+0000 is the marker added just above
   return masked.split(pattern).map((part) => part.replace(/\u0000(\d+)\u0000/g, (_, index) => saved[index]));
 }
 const splitParts = (text) => splitOutsideBrackets(text, SEPARATORS).map(trimSeparators).filter(Boolean);

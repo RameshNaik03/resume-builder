@@ -177,7 +177,7 @@ test("cover letters", async (t) => {
   await check("  titled with the role and company", letter.coverLetter.title === "Cover letter – Senior Backend Engineer – Northbeam", letter.coverLetter.title);
   await check(
     "  the opening links the top need to the strongest evidence",
-    /^Dear \[Hiring Manager\],\nYour Senior Backend Engineer role puts Node\.js at its centre, and that's where my strongest work lies: at Harbour Health, I built the appointments API in Node\.js serving 2 million requests a day\.\n/.test(text),
+    text.startsWith("Dear [Hiring Manager],\nYour Senior Backend Engineer role puts Node.js at its centre, and that's where my strongest work lies: at Harbour Health, I built the appointments API in Node.js serving 2 million requests a day.\n"),
     text
   );
   const options = letter.coverLetter.openingOptions;

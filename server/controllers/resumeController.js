@@ -177,7 +177,8 @@ export const duplicateResume = async (req, res) => {
   // Turn the document into a plain object and drop the fields MongoDB should regenerate
   // The copy is a new resume: no ATS score or optimizer review of its own yet
   // nor the uploaded original (that file belongs to the imported resume)
-  const { _id, createdAt, updatedAt, photoPublicId, atsScore, atsOptimization, original: uploaded, ...data } = original.toObject();
+  const data = original.toObject();
+  for (const field of ["_id", "createdAt", "updatedAt", "photoPublicId", "atsScore", "atsOptimization", "original"]) delete data[field];
 
   // The copy starts without a photo; it gets its own copy of the photo below
   const copy = await Resume.create({

@@ -1,4 +1,4 @@
-# Fast checks on every push: the API test suites (npm test), and the client's lint and build.
+# Fast checks on every push: the server's lint and API test suites, and the client's lint and build.
 # The slower browser suites run in browser-tests.yml.
 name: CI
 
@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   server-tests:
-    name: Server tests
+    name: Server lint and tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     services:
@@ -53,6 +53,7 @@ jobs:
             exit 1
           fi
       - run: npm ci
+      - run: npm run lint
       - run: npm test
         env:
           TEST_MONGO_URI: mongodb://127.0.0.1:27017

@@ -51,6 +51,7 @@ function classifyFonts(names) {
 
 // Icon-font symbols come out as "private use" characters, or as \u0000 / � when the font
 // has no text mapping for them: either way an ATS sees junk instead of a phone or email icon
+// oxlint-disable-next-line no-control-regex -- U+0000 is one of the junk characters counted
 const countIconSymbols = (text) => (text.match(/[-\u0000�]/gu) ?? []).length;
 const CONTACT = /[\w.+-]+@[\w-]+\.[\w.-]+|\+?\(?\d[\d\s().-]{7,}\d/;
 const DATE_LIKE = /\b((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*\d{4}|\d{1,2}\/\d{4}|(19|20)\d{2}|present|current)\b/i;
@@ -233,7 +234,7 @@ async function inspectPdf(buffer) {
     }
     for (const [line, count] of counts) {
       if (count >= 2 && line.replace(/[#\s/|-]|page|of/g, "").length > 3) {
-        result.headerFooter.texts.push([...zoneLines[zone].flatMap((set) => [...set])].find((text) => normalize(text) === line));
+        result.headerFooter.texts.push(zoneLines[zone].flatMap((set) => [...set]).find((text) => normalize(text) === line));
       }
     }
   }
