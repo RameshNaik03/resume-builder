@@ -50,7 +50,9 @@ const DIFFERENCES = [
 export default function Landing() {
   usePageTitle("Clear, honest resumes");
   const { user } = useAuth();
+  // Logged-in users see the same page, with a way back to their work instead of the sign-up
   const buildPath = user ? "/dashboard" : "/register";
+  const buildLabel = user ? "Go to dashboard" : "Build my resume";
   const location = useLocation();
   const navigate = useNavigate();
   // Set by Settings > Your data after deleting the account (cleared when dismissed)
@@ -76,7 +78,7 @@ export default function Landing() {
           </p>
           <div className="mt-9 flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-7">
             <Button as={Link} to={buildPath} variant="primary" size="lg">
-              Build my resume
+              {buildLabel}
             </Button>
             <Link to="/ats-checker" className="group inline-flex items-center gap-1.5 rounded-sm type-label text-fg underline decoration-line-strong underline-offset-4 hover:decoration-fg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent">
               Check my resume against a job
@@ -139,7 +141,7 @@ export default function Landing() {
           </ul>
           <div className="mt-12">
             <Button as={Link} to={buildPath} variant="primary" size="lg">
-              Build my resume
+              {buildLabel}
             </Button>
           </div>
         </div>
@@ -154,7 +156,7 @@ export default function Landing() {
           </div>
           <nav aria-label="Footer" className="flex flex-wrap gap-x-6 gap-y-2 type-label">
             <Link to={buildPath} className="text-fg-muted hover:text-fg">
-              Build my resume
+              {buildLabel}
             </Link>
             <Link to="/ats-checker" className="text-fg-muted hover:text-fg">
               ATS checker

@@ -1,6 +1,6 @@
 import { startTransition, useSyncExternalStore } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { FileSearch, LayoutDashboard, LogOut, Menu as MenuIcon, Moon, Settings, Sun, Target } from "lucide-react";
+import { FileSearch, House, LayoutDashboard, LogOut, Menu as MenuIcon, Moon, Settings, Sun, Target } from "lucide-react";
 import toast from "../../utils/toast";
 import api from "../../api/axios";
 import { useAuth } from "../../context/AuthContext";
@@ -112,7 +112,8 @@ function TopBar() {
 
 // The user's avatar (or initials) and, from 1024px, their first name; the menu holds their
 // avatar, name and email, the main links (on phones and tablets, where the bar has no room for
-// them), Settings and Log out
+// them), Home (the landing page: the logo goes to the dashboard when logged in), Settings and
+// Log out
 function UserMenu({ user, onLogout }) {
   const firstName = user.name.split(/\s+/)[0];
   return (
@@ -138,6 +139,7 @@ function UserMenu({ user, onLogout }) {
       items={[
         ...NAV.map(({ to, label, icon }) => ({ to, label, icon, className: "md:hidden" })),
         { divider: true, className: "md:hidden" },
+        { to: "/", label: "Home", icon: House },
         { to: "/settings", label: "Settings", icon: Settings },
         { label: "Log out", icon: LogOut, onClick: onLogout },
       ]}
